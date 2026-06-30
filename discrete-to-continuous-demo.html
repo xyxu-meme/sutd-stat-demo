@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Mass to Density</title>
+<style>
+  :root{
+    --paper:   #FAF7F0;
+    --ink:     #1F2937;
+    --bar:     #2E4374;
+    --amber:   #E0793F;
+    --sage:    #3F6F5E;
+    --hair:    #DDD6C7;
+    --hair-2:  #C9C0AC;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin: 0;
+    padding: 32px 16px 56px;
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+
+  .mono{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+
+  .page{
+    width: 100%;
+    max-width: 860px;
+  }
+
+  header{
+    margin-bottom: 22px;
+  }
+
+  .eyebrow{
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sage);
+    font-weight: 600;
+  }
+
+  h1{
+    margin: 0 0 10px;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(28px, 5vw, 38px);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .lede{
+    margin: 0;
+    max-width: 60ch;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: #4B5159;
+  }
+
+  .lede strong{ color: var(--ink); }
+
+  .panel{
+    background: #FFFFFF;
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 22px clamp(16px, 4vw, 28px) 26px;
+  }
+
+  .controls{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px dashed var(--hair);
+  }
+
+  .control-group{ min-width: 0; }
+  .control-group.full{ grid-column: 1 / -1; }
+
+  .control-group label{
+    display: block;
+    font-size: 13px;
+    color: #4B5159;
+    margin-bottom: 7px;
+  }
+
+  .sub{
+    display: block;
+    font-size: 11.5px;
+    color: #8A8378;
+    margin-top: 4px;
+  }
+
+  .chart-with-n{
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .chart-with-n .chart-wrap{
+    flex: 1;
+    min-width: 0;
+  }
+  .n-slider-vertical{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 38px;
+    flex-shrink: 0;
+    background: #F7F3EA;
+    border: 1px solid var(--hair);
+    border-radius: 10px;
+    padding: 10px 2px;
+    touch-action: none;
+  }
+  .n-slider-vertical .n-vlabel{
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .bar-width-caption{
+    text-align: center;
+    margin-top: 4px;
+  }
+  .vrange-wrap{
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 60px;
+    overflow: hidden;
+    touch-action: none;
+  }
+  input[type="range"].vrange{
+    touch-action: none;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  input[type="range"]{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 32px;
+    background: transparent;
+    outline: none;
+    margin: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height: 4px;
+    border-radius: 2px;
+    background: var(--hair);
+  }
+  input[type="range"]::-moz-range-track{
+    height: 4px;
+    border-radius: 2px;
+    background: var(--hair);
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 24px; height: 24px;
+    margin-top: -10px; /* centers 24px thumb on a 4px track */
+    border-radius: 50%;
+    background: var(--bar);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--bar);
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--bar);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--bar);
+    cursor: pointer;
+    border: none;
+  }
+  input[type="range"]:focus-visible::-webkit-slider-thumb{
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+  input[type="range"]:focus-visible::-moz-range-thumb{
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  .buttons{
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn{
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 12px 16px;
+    min-height: 44px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .btn-primary{
+    background: var(--sage);
+    color: #fff;
+  }
+  .btn-primary:hover{ background: #345d4f; }
+
+  .btn-ghost{
+    background: transparent;
+    color: #4B5159;
+    border-color: var(--hair-2);
+  }
+  .btn-ghost:hover{ background: #F4F1E9; }
+
+  .view-toggle{
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .toggle-label{ font-size: 13px; color: #4B5159; padding-bottom: 9px; }
+
+  .segmented{
+    display: inline-flex;
+    background: #F2EEE3;
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .seg-btn{
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 18px;
+    min-height: 38px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    color: #6B6459;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg-btn.active{
+    background: var(--ink);
+    color: #fff;
+  }
+  .seg-btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .legend{
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 2px 0 14px;
+    font-size: 12.5px;
+    color: #6B6459;
+  }
+  .legend span{ display: inline-flex; align-items: center; gap: 6px; }
+  .swatch{ width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  .interval-toggle{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: #6B6459;
+    background: transparent;
+    border: 1px solid var(--hair-2);
+    border-radius: 999px;
+    padding: 4px 10px 4px 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .interval-toggle:hover{ background: #F4F1E9; }
+  .interval-toggle:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+  .interval-toggle[aria-pressed="true"]{
+    background: #FCEEE2;
+    border-color: var(--amber);
+    color: #8A4B22;
+    font-weight: 600;
+  }
+
+  .interval-hint{
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-style: italic;
+    color: #8A8378;
+  }
+
+  .mode-caption{
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.45;
+    color: #6B6459;
+    min-height: 1.45em;
+  }
+
+  .example-line{
+    display: inline-block;
+    margin: 0 0 14px;
+    padding: 5px 10px;
+    background: #F2EEE3;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--ink);
+    min-height: 1.3em;
+  }
+
+  .zoom-bar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .zoom-buttons{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .zoom-btn{
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4B5159;
+    background: #F2EEE3;
+    border: 1px solid var(--hair-2);
+    border-radius: 7px;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 120ms ease, opacity 120ms ease;
+  }
+  .zoom-btn:hover{ background: #E9E3D4; }
+  .zoom-btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+  .zoom-btn:disabled{ opacity: 0.4; cursor: default; background: #F2EEE3; }
+  .zoom-btn.zoom-reset, .zoom-btn.zoom-tosel{
+    width: auto;
+    padding: 0 12px;
+  }
+  .zoom-btn.zoom-tosel{
+    background: #FCEEE2;
+    border-color: var(--amber);
+    color: #8A4B22;
+  }
+  .zoom-btn.zoom-tosel:hover{ background: #F9E0CB; }
+  .zoom-range{
+    font-size: 12px;
+    color: #8A8378;
+  }
+  .zoom-hint{
+    margin-top: 6px;
+  }
+
+  .chart-wrap{
+    width: 100%;
+    touch-action: none;
+  }
+  #chart{
+    display: block;
+    width: 100%;
+    cursor: default;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .readout{
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--hair);
+  }
+  .readout-row{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    font-size: 14px;
+  }
+  .readout-label{ color: #6B6459; }
+  .readout-row.highlight{
+    background: #FCEEE2;
+    border-radius: 8px;
+    padding: 9px 12px;
+    margin: 4px 0 8px;
+  }
+  .readout-row.highlight .readout-label{ color: #8A4B22; font-weight: 600; }
+  .readout-row.highlight .mono{ color: var(--amber); font-weight: 700; font-size: 16px; }
+
+  .interval-inputs{
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .interval-input{
+    width: 60px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    text-align: center;
+    padding: 5px 4px;
+    border: 1px solid var(--hair-2);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    -moz-appearance: textfield;
+  }
+  .interval-input::-webkit-outer-spin-button,
+  .interval-input::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .interval-input:focus-visible{
+    outline: 2px solid var(--amber);
+    outline-offset: 1px;
+    border-color: var(--amber);
+  }
+
+  .hint{
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: #8A8378;
+  }
+
+  footer{
+    margin-top: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #6B6459;
+    max-width: 68ch;
+  }
+  footer strong{ color: var(--ink); }
+
+  @media (max-width: 560px){
+    body{ padding: 18px 10px 36px; }
+    .panel{ padding: 18px 14px 20px; }
+    .controls{ grid-template-columns: 1fr; }
+    .eyebrow{ font-size: 11.5px; }
+  }
+
+  @media (max-width: 380px){
+    .readout-row{ flex-direction: column; align-items: flex-start; gap: 2px; }
+    .readout-row.highlight .mono{ font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty · Week 6, Class 1</p>
+    <h1>From Mass to Density</h1>
+    <p class="lede">Survey <span class="mono">n</span> people; <strong>p&nbsp;=&nbsp;0.4</strong> say "Yes." Below is the familiar binomial pmf for the proportion who say "Yes" — step through <strong>pmf → Histogram → Curve</strong> to watch the same numbers turn continuous.</p>
+  </header>
+
+  <div class="panel">
+
+    <div class="controls">
+      <div class="control-group full">
+        <label for="pSlider">Chance of "Yes", <span class="mono">p</span> = <span id="pVal" class="mono">0.40</span></label>
+        <input type="range" id="pSlider" min="0.05" max="0.95" value="0.4" step="0.005">
+        <span class="sub">drag to try a different survey</span>
+      </div>
+
+      <div class="control-group buttons">
+        <button id="playBtn" class="btn btn-primary">▶ Grow n automatically</button>
+        <button id="resetBtn" class="btn btn-ghost">Reset</button>
+      </div>
+
+      <div class="control-group view-toggle">
+        <span class="toggle-label">View as</span>
+        <div class="segmented" id="viewToggle">
+          <button class="seg-btn active" data-view="pmf">pmf</button>
+          <button class="seg-btn" data-view="bars">Histogram</button>
+          <button class="seg-btn" data-view="curve">Curve</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--bar)"></span> probability / density</span>
+      <button id="intervalToggleBtn" class="interval-toggle" type="button" aria-pressed="false">
+        <span class="swatch" style="background:var(--amber)"></span><span id="intervalToggleLabel">Interval selection: Off</span>
+      </button>
+    </div>
+
+    <p class="mode-caption" id="modeCaption"></p>
+    <p class="example-line mono" id="exampleLine"></p>
+
+    <div class="zoom-bar">
+      <div class="zoom-buttons">
+        <button id="zoomOutBtn" class="zoom-btn" type="button" aria-label="Zoom out">&minus;</button>
+        <button id="zoomInBtn" class="zoom-btn" type="button" aria-label="Zoom in">+</button>
+        <button id="zoomResetBtn" class="zoom-btn zoom-reset" type="button" disabled>Reset zoom</button>
+        <button id="zoomToSelBtn" class="zoom-btn zoom-tosel" type="button" hidden>Zoom to interval</button>
+      </div>
+      <span class="zoom-range mono" id="zoomRangeLabel">Viewing [0.00, 1.00]</span>
+    </div>
+
+    <div class="chart-with-n">
+      <div class="n-slider-vertical">
+        <span class="n-vlabel mono">n=<span id="nVal">3</span></span>
+        <div class="vrange-wrap">
+          <input type="range" id="nSlider" min="3" max="200" value="3" step="1" class="vrange" aria-label="Respondents surveyed, n">
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+
+    <p class="sub mono bar-width-caption" id="barWidthLabel">bar width = 1/n = 0.333</p>
+
+    <p class="hint zoom-hint">Scroll or pinch on the chart to zoom into a region; drag to pan once zoomed in (when interval selection is off).</p>
+
+    <div class="readout">
+      <div id="readoutActive" hidden>
+        <div class="readout-row">
+          <span class="readout-label">Selected interval</span>
+          <span class="interval-inputs">
+            <input type="number" id="aInput" class="interval-input mono" min="0" max="1" step="0.01" value="0.30" aria-label="Lower bound a">
+            <span class="mono">≤ X/n ≤</span>
+            <input type="number" id="bInput" class="interval-input mono" min="0" max="1" step="0.01" value="0.50" aria-label="Upper bound b">
+          </span>
+        </div>
+        <div class="readout-row highlight">
+          <span class="readout-label">P(a ≤ X/n ≤ b)</span>
+          <span class="mono" id="probVal">—</span>
+        </div>
+        <p class="hint">Drag an orange dot, drag the band to slide it, tap empty space to start fresh — or type exact bounds above and press Enter.</p>
+      </div>
+      <p class="interval-hint" id="intervalHint">Turn on interval selection above to explore P(a ≤ X/n ≤ b).</p>
+    </div>
+
+  </div>
+
+  <footer>
+    In <strong>pmf</strong>, height <em>is</em> the probability — exactly what's on Slide 4. Switch to <strong>Histogram</strong>: redraw those same numbers as touching bars, where height = probability ÷ width, so a bar's <strong>area</strong> is now the probability instead. Drag an interval, then grow <span class="mono">n</span>: heights shoot up and bars blur into a <strong>Curve</strong>, but the readout — an area — barely moves. That's the quantity a continuous pdf is built to track.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var MAXN = 200;
+
+  // Precompute log-factorials once, up to MAXN, to evaluate binomial
+  // probabilities for large n without overflow.
+  var logFact = new Float64Array(MAXN + 1);
+  for (var i = 1; i <= MAXN; i++) logFact[i] = logFact[i - 1] + Math.log(i);
+
+  function binomialPmf(n, p) {
+    var arr = new Float64Array(n + 1);
+    var logp = Math.log(p), log1p = Math.log(1 - p);
+    for (var k = 0; k <= n; k++) {
+      var logC = logFact[n] - logFact[k] - logFact[n - k];
+      arr[k] = Math.exp(logC + k * logp + (n - k) * log1p);
+    }
+    return arr;
+  }
+
+  var canvas = document.getElementById('chart');
+  var ctx = canvas.getContext('2d');
+  var nSlider = document.getElementById('nSlider');
+  var pSlider = document.getElementById('pSlider');
+  var nVal = document.getElementById('nVal');
+  var pVal = document.getElementById('pVal');
+  var barWidthLabel = document.getElementById('barWidthLabel');
+  var probVal = document.getElementById('probVal');
+  var zoomInBtn = document.getElementById('zoomInBtn');
+  var zoomOutBtn = document.getElementById('zoomOutBtn');
+  var zoomResetBtn = document.getElementById('zoomResetBtn');
+  var zoomToSelBtn = document.getElementById('zoomToSelBtn');
+  var zoomRangeLabel = document.getElementById('zoomRangeLabel');
+  var aInput = document.getElementById('aInput');
+  var bInput = document.getElementById('bInput');
+  var playBtn = document.getElementById('playBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var viewToggle = document.getElementById('viewToggle');
+  var modeCaption = document.getElementById('modeCaption');
+  var exampleLine = document.getElementById('exampleLine');
+  var intervalToggleBtn = document.getElementById('intervalToggleBtn');
+  var intervalToggleLabel = document.getElementById('intervalToggleLabel');
+  var readoutActive = document.getElementById('readoutActive');
+  var intervalHint = document.getElementById('intervalHint');
+
+  var intervalEnabled = false;
+  function setIntervalEnabled(on) {
+    intervalEnabled = on;
+    intervalToggleBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    intervalToggleLabel.textContent = on ? 'Interval selection: On' : 'Interval selection: Off';
+    readoutActive.hidden = !on;
+    intervalHint.hidden = on;
+    canvas.style.cursor = on ? 'crosshair' : 'default';
+  }
+  intervalToggleBtn.addEventListener('click', function () {
+    setIntervalEnabled(!intervalEnabled);
+    draw();
+  });
+
+  var CAPTIONS = {
+    pmf: 'Each dot is P(X/n = k/n) — a probability, read straight off the height. This is the binomial pmf, same as Slide 4.',
+    bars: 'Same probabilities, redrawn as touching bars: height = probability ÷ width, so a bar\u2019s area \u2014 not its height \u2014 is the probability.',
+    curve: 'The bars fade to a faint reference and a smooth curve traces their tops \u2014 same area, now read as \u222b f(x) dx.'
+  };
+  function updateCaption() { modeCaption.textContent = CAPTIONS[view] || ''; }
+
+  var n = 3, p = 0.4, view = 'pmf';
+  var selA = 0.30, selB = 0.50;
+  var dragging = false, dragTarget = null;
+  var dragAnchorData = 0, dragAnchorA = 0, dragAnchorB = 0;
+  var panAnchorPx = 0, panAnchorA = 0, panAnchorB = 1;
+  // pmf <-> histogram morph: animFromView is non-null only while a morph is
+  // running, animT goes 0 (pure animFromView) -> 1 (pure view).
+  var animFromView = null, animT = 1, morphRAF = null;
+  var animating = false, animTimer = null;
+
+  var PAD = { left: 46, right: 16, top: 18, bottom: 32 };
+
+  function resizeCanvas() {
+    var wrap = canvas.parentElement;
+    var w = wrap.clientWidth;
+    var h = Math.min(440, Math.max(260, Math.round(w * 0.5)));
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // The n-slider is rotated -90deg, so its pre-rotation *width* becomes
+    // its visual *length* — set that to match the chart's height so the
+    // two sit flush, side by side.
+    nSlider.style.width = Math.max(120, h - 24) + 'px';
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function cssSize() {
+    var dpr = window.devicePixelRatio || 1;
+    return { w: canvas.width / dpr, h: canvas.height / dpr };
+  }
+
+  var zoomA = 0, zoomB = 1;
+
+  function zoomSpanMin(nNow) { return Math.max(0.015, 2.5 / nNow); }
+  function clampZoom(a, b, nNow) {
+    var minSpan = zoomSpanMin(nNow);
+    a = Math.max(0, a); b = Math.min(1, b);
+    if (b - a < minSpan) {
+      var mid = (a + b) / 2;
+      a = mid - minSpan / 2; b = mid + minSpan / 2;
+      if (a < 0) { b -= a; a = 0; }
+      if (b > 1) { a -= (b - 1); b = 1; }
+    }
+    return [Math.max(0, a), Math.min(1, b)];
+  }
+
+  function dataToPx(x, cw) {
+    var frac = (x - zoomA) / (zoomB - zoomA);
+    return PAD.left + frac * (cw - PAD.left - PAD.right);
+  }
+  function pxToData(px, cw) {
+    var frac = (px - PAD.left) / (cw - PAD.left - PAD.right);
+    return zoomA + frac * (zoomB - zoomA);
+  }
+  function densityToPy(d, yMax, ch) {
+    return (ch - PAD.bottom) - (d / yMax) * (ch - PAD.top - PAD.bottom);
+  }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function niceTicks(maxVal, targetCount) {
+    if (!isFinite(maxVal) || maxVal <= 0) return [0, 1];
+    var roughStep = maxVal / Math.max(1, targetCount - 1);
+    var mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    var norm = roughStep / mag;
+    var niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+    var step = niceNorm * mag;
+    var count = Math.ceil((maxVal * 1.0001) / step);
+    var ticks = [];
+    for (var ti = 0; ti <= count; ti++) ticks.push(Math.round(ti * step * 1e8) / 1e8);
+    return ticks;
+  }
+  function decimalsFor(step) {
+    if (step >= 1) return 0;
+    var s = step.toString();
+    var di = s.indexOf('.');
+    return di === -1 ? 0 : s.length - di - 1;
+  }
+
+  function draw() {
+    var size = cssSize(), cw = size.w, ch = size.h;
+    ctx.clearRect(0, 0, cw, ch);
+
+    var compact = cw < 420;
+    PAD.left = compact ? 30 : 46;
+    PAD.right = compact ? 8 : 16;
+    PAD.bottom = compact ? 24 : 32;
+    var axisFont = compact ? '10px ui-monospace, monospace' : '11px ui-monospace, monospace';
+
+    var probs = binomialPmf(n, p);
+    var dens = new Float64Array(n + 1);
+    var maxDens = 0, maxProb = 0;
+    var maxDensVis = 0, maxProbVis = 0;
+    for (var k = 0; k <= n; k++) {
+      dens[k] = probs[k] * n;
+      if (dens[k] > maxDens) maxDens = dens[k];
+      if (probs[k] > maxProb) maxProb = probs[k];
+      var xkRaw = k / n;
+      if (xkRaw >= zoomA - 1e-9 && xkRaw <= zoomB + 1e-9) {
+        if (dens[k] > maxDensVis) maxDensVis = dens[k];
+        if (probs[k] > maxProbVis) maxProbVis = probs[k];
+      }
+    }
+    // Fall back to the global max only if zoom is so tight no bar qualifies.
+    if (maxDensVis === 0) maxDensVis = maxDens;
+    if (maxProbVis === 0) maxProbVis = maxProb;
+    var barW = 1 / n;
+
+    // A morph runs between adjacent pairs only (pmf<->bars or bars<->curve)
+    // — never directly pmf<->curve — so fromV/toV always differ by exactly
+    // one step in the pmf -> bars -> curve story.
+    var morphing = (animFromView !== null);
+    var fromV = morphing ? animFromView : view;
+    var toV = view;
+    var tRaw = morphing ? animT : 1; // raw linear progress, 0..1
+    var t = easeInOutCubic(tRaw); // globally-eased progress, used where there's no phase split
+
+    // For pmf<->bars specifically, don't blend width and height together —
+    // split into two sequential phases so the two transformations read as
+    // distinct moves: first the HEIGHT rescales (probability -> density,
+    // while still a thin line — this is the part that's easy to miss,
+    // since density is a genuinely different number, not just "a taller
+    // version of the same height"), then the WIDTH spreads out from 0 to
+    // the full bar width once the height has already settled. Forward
+    // (pmf->bars) does height-then-width; reverse is the exact time
+    // reversal (width collapses first, height settles back down second).
+    // Each phase gets its own independent ease-in-out (computed from the
+    // raw, un-eased time) rather than inheriting a slice of the global
+    // curve, so the height phase reads as a clear, deliberate move of its
+    // own — not a rushed sub-segment of one continuous motion.
+    var isPmfBarsPair = (fromV === 'pmf' && toV === 'bars') || (fromV === 'bars' && toV === 'pmf');
+    var wT = t, hT = t;
+    if (isPmfBarsPair) {
+      var heightFirst = (fromV === 'pmf');
+      var SPLIT = 0.6; // height phase gets the larger share of the timeline
+      if (heightFirst) {
+        hT = easeInOutCubic(clamp01(tRaw / SPLIT));
+        wT = easeInOutCubic(clamp01((tRaw - SPLIT) / (1 - SPLIT)));
+      } else {
+        wT = easeInOutCubic(clamp01(tRaw / (1 - SPLIT)));
+        hT = easeInOutCubic(clamp01((tRaw - (1 - SPLIT)) / SPLIT));
+      }
+    }
+    var labelView = (hT < 0.5) ? fromV : toV;
+
+    function scaleOf(v) { return v === 'pmf' ? maxProbVis : maxDensVis; }
+    function niceYMaxFor(v) {
+      var t = niceTicks(Math.max(scaleOf(v), 1e-9), 5);
+      return t[t.length - 1];
+    }
+    var yMax = Math.max(lerp(niceYMaxFor(fromV), niceYMaxFor(toV), hT), 1e-9);
+    var axisTitle = labelView === 'pmf' ? 'height = probability' : 'height = density';
+
+    var kMode = Math.max(0, Math.min(n, Math.round(n * p)));
+    var exampleText;
+    if (labelView === 'pmf') {
+      exampleText = 'e.g.  P(X/n = ' + (kMode / n).toFixed(2) + ') = ' + probs[kMode].toFixed(4);
+    } else if (labelView === 'bars') {
+      exampleText = 'e.g.  height = ' + probs[kMode].toFixed(4) + ' \u00f7 (1/' + n + ') = ' + dens[kMode].toFixed(3) + '   \u2192   area = height \u00d7 width = ' + probs[kMode].toFixed(4) + ' = pmf\u2019s P(X/n=' + (kMode / n).toFixed(2) + ')';
+    } else {
+      exampleText = 'e.g.  density near x = ' + (kMode / n).toFixed(2) + '  is  ' + dens[kMode].toFixed(3);
+    }
+    exampleLine.textContent = exampleText;
+
+    // gridlines + y labels
+    ctx.strokeStyle = '#EAE4D6';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#9C9485';
+    ctx.font = axisFont;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    var yTicks = niceTicks(yMax, 5);
+    var yDec = decimalsFor(yTicks[1] || 1);
+    yTicks.forEach(function (d) {
+      var py = densityToPy(d, yMax, ch);
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, py);
+      ctx.lineTo(cw - PAD.right, py);
+      ctx.stroke();
+      ctx.fillText(d.toFixed(yDec), PAD.left - 8, py);
+    });
+
+    ctx.fillStyle = '#9C9485';
+    ctx.font = axisFont;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(axisTitle, PAD.left, 2);
+
+    // x labels — span whatever's currently zoomed in, not always [0,1]
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    var xDecimals = (zoomB - zoomA) < 0.03 ? 4 : (zoomB - zoomA) < 0.2 ? 3 : 2;
+    for (var i2 = 0; i2 <= 4; i2++) {
+      var xv = zoomA + (zoomB - zoomA) * i2 / 4;
+      var px = dataToPx(xv, cw);
+      ctx.fillText(xv.toFixed(xDecimals), px, ch - PAD.bottom + 8);
+    }
+
+    var lo = selA, hi = selB;
+    var selPxA = dataToPx(lo, cw), selPxB = dataToPx(hi, cw);
+
+    // Which adjacent pair (if any) is involved tells us what to draw.
+    var curveInvolved = (fromV === 'curve' || toV === 'curve');
+    var showDots = (fromV === 'pmf' || toV === 'pmf');
+
+    function widthFor(v) { return v === 'pmf' ? 0 : barW; }
+    function heightFor(v, k) { return v === 'pmf' ? probs[k] : dens[k]; }
+    function curveWeightOf(v) { return v === 'curve' ? 1 : 0; }
+
+    var w = lerp(widthFor(fromV), widthFor(toV), wT);
+    var curveWeight = lerp(curveWeightOf(fromV), curveWeightOf(toV), t);
+    var MIN_BAR_OPACITY = 0.55;
+    // Bars only shrink in width for pmf<->bars. For bars<->curve they stay
+    // full width and fade instead — so the histogram remains on screen as
+    // a reference once Curve settles in, rather than disappearing.
+    var barOpacity = curveInvolved ? lerp(1, MIN_BAR_OPACITY, curveWeight) : 1;
+    var curveAlpha = curveInvolved ? curveWeight : 0;
+
+    // Layer 1: stems/bars (drawn first, underneath the curve).
+    for (var k2 = 0; k2 <= n; k2++) {
+      var xk = k2 / n;
+      var hgt = lerp(heightFor(fromV, k2), heightFor(toV, k2), hT);
+
+      var left = Math.max(xk - w / 2, 0);
+      var right = Math.min(xk + w / 2, 1);
+      var px0 = dataToPx(left, cw);
+      var px1 = dataToPx(right, cw);
+      var pyTop = densityToPy(hgt, yMax, ch);
+      var inSel = intervalEnabled && xk >= lo && xk <= hi;
+      var col = inSel ? '#E0793F' : '#2E4374';
+
+      if (!curveInvolved) {
+        // connecting stem — only meaningful while pmf is part of the story
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(dataToPx(xk, cw), ch - PAD.bottom);
+        ctx.lineTo(dataToPx(xk, cw), pyTop);
+        ctx.stroke();
+      }
+
+      var fillW = Math.max(px1 - px0, w > 0 ? 0.6 : 0);
+      ctx.globalAlpha = barOpacity;
+      ctx.fillStyle = col;
+      ctx.fillRect(px0, pyTop, fillW, (ch - PAD.bottom) - pyTop);
+      ctx.globalAlpha = 1;
+
+      if (showDots) {
+        var dotAlpha = barW > 0 ? Math.max(0, 1 - w / barW) : 1;
+        if (dotAlpha > 0.02) {
+          ctx.globalAlpha = dotAlpha;
+          ctx.beginPath();
+          ctx.arc(dataToPx(xk, cw), pyTop, compact ? 2.6 : 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // Layer 2: the curve, drawn on top of the (now faint) bars so it reads
+    // clearly, with the selected-interval area shaded in beneath it.
+    if (curveInvolved && curveAlpha > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = curveAlpha;
+
+      if (intervalEnabled) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(selPxA, PAD.top, Math.max(selPxB - selPxA, 0), ch - PAD.top - PAD.bottom);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.moveTo(dataToPx(0, cw), ch - PAD.bottom);
+        for (var k4 = 0; k4 <= n; k4++) {
+          var xk4 = k4 / n;
+          ctx.lineTo(dataToPx(xk4, cw), densityToPy(dens[k4], yMax, ch));
+        }
+        ctx.lineTo(dataToPx(1, cw), ch - PAD.bottom);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(224,121,63,0.45)';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      for (var k3 = 0; k3 <= n; k3++) {
+        var xk3 = k3 / n;
+        var py3 = densityToPy(dens[k3], yMax, ch);
+        if (k3 === 0) ctx.moveTo(dataToPx(xk3, cw), py3); else ctx.lineTo(dataToPx(xk3, cw), py3);
+      }
+      ctx.strokeStyle = '#1F2937';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (intervalEnabled) {
+      // selection boundary lines
+      ctx.strokeStyle = '#E0793F';
+      ctx.lineWidth = 2;
+      [selPxA, selPxB].forEach(function (lpx) {
+        ctx.beginPath();
+        ctx.moveTo(lpx, PAD.top);
+        ctx.lineTo(lpx, ch - PAD.bottom);
+        ctx.stroke();
+      });
+
+      // grab handles
+      [selPxA, selPxB].forEach(function (hx) {
+        ctx.beginPath();
+        ctx.arc(hx, PAD.top, compact ? 6 : 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#E0793F';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+      });
+    }
+
+    // mean reference line at x = p
+    var meanPx = dataToPx(p, cw);
+    ctx.save();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(31,41,55,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(meanPx, PAD.top);
+    ctx.lineTo(meanPx, ch - PAD.bottom);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#9C9485';
+    ctx.font = axisFont;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('p', meanPx, PAD.top + 12);
+
+    // baseline
+    ctx.strokeStyle = '#1F2937';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, ch - PAD.bottom);
+    ctx.lineTo(cw - PAD.right, ch - PAD.bottom);
+    ctx.stroke();
+
+    updateReadout(probs, lo, hi);
+    updateZoomUI();
+  }
+
+  function updateZoomUI() {
+    var atFull = (zoomA <= 1e-9 && zoomB >= 1 - 1e-9);
+    zoomResetBtn.disabled = atFull;
+    zoomToSelBtn.hidden = !intervalEnabled;
+    var dec = (zoomB - zoomA) < 0.03 ? 3 : 2;
+    zoomRangeLabel.textContent = atFull
+      ? 'Viewing full range'
+      : 'Viewing [' + zoomA.toFixed(dec) + ', ' + zoomB.toFixed(dec) + ']';
+  }
+
+  function updateReadout(probs, lo, hi) {
+    var sum = 0;
+    for (var k = 0; k <= n; k++) {
+      var xk = k / n;
+      if (xk >= lo && xk <= hi) sum += probs[k];
+    }
+    probVal.textContent = sum.toFixed(4);
+    if (document.activeElement !== aInput) aInput.value = lo.toFixed(2);
+    if (document.activeElement !== bInput) bInput.value = hi.toFixed(2);
+  }
+
+  function syncLabels() {
+    nVal.textContent = n;
+    pVal.textContent = p.toFixed(2);
+    barWidthLabel.textContent = 'bar width = 1/n = ' + (1 / n).toFixed(3);
+  }
+
+  function easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+
+  function cancelMorph() {
+    if (morphRAF) { cancelAnimationFrame(morphRAF); morphRAF = null; }
+    animFromView = null;
+    animT = 1;
+  }
+
+  function startMorph(fromView) {
+    animFromView = fromView;
+    animT = 0;
+    var isPmfBars = (fromView === 'pmf' && view === 'bars') || (fromView === 'bars' && view === 'pmf');
+    var duration = isPmfBars ? 1000 : 650;
+    var t0 = performance.now();
+    function frame(now) {
+      var raw = Math.min(1, (now - t0) / duration);
+      animT = raw; // raw linear progress — each phase eases itself in draw()
+      draw();
+      if (raw < 1) {
+        morphRAF = requestAnimationFrame(frame);
+      } else {
+        morphRAF = null;
+        animFromView = null;
+        animT = 1;
+        draw();
+      }
+    }
+    morphRAF = requestAnimationFrame(frame);
+  }
+
+  nSlider.addEventListener('input', function (e) {
+    n = parseInt(e.target.value, 10);
+    var clamped = clampZoom(zoomA, zoomB, n);
+    zoomA = clamped[0]; zoomB = clamped[1];
+    syncLabels();
+    draw();
+  });
+  pSlider.addEventListener('input', function (e) {
+    p = parseFloat(e.target.value);
+    syncLabels();
+    draw();
+  });
+
+  viewToggle.addEventListener('click', function (e) {
+    var btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    var newView = btn.dataset.view;
+    if (newView === view) return;
+    var prevView = view;
+
+    cancelMorph();
+    view = newView;
+    Array.prototype.forEach.call(viewToggle.children, function (b) {
+      b.classList.toggle('active', b === btn);
+    });
+    updateCaption();
+
+    var isPmfBarsPair = (prevView === 'pmf' && newView === 'bars') || (prevView === 'bars' && newView === 'pmf');
+    var isBarsCurvePair = (prevView === 'bars' && newView === 'curve') || (prevView === 'curve' && newView === 'bars');
+    if (isPmfBarsPair || isBarsCurvePair) {
+      startMorph(prevView);
+    } else {
+      draw();
+    }
+  });
+
+  function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+  // Keyboard input for exact bounds: type a value, press Enter or tab away.
+  function applyIntervalInputs() {
+    var a = parseFloat(aInput.value);
+    var b = parseFloat(bInput.value);
+    if (isNaN(a) || isNaN(b)) {
+      aInput.value = selA.toFixed(2);
+      bInput.value = selB.toFixed(2);
+      return;
+    }
+    a = clamp01(a);
+    b = clamp01(b);
+    selA = Math.min(a, b);
+    selB = Math.max(a, b);
+    draw();
+  }
+  [aInput, bInput].forEach(function (inp) {
+    inp.addEventListener('change', applyIntervalInputs);
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { applyIntervalInputs(); inp.blur(); }
+    });
+  });
+
+  function getCanvasX(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    return clientX - rect.left;
+  }
+
+  // Decide what a press near (px) should control: an edge, the whole
+  // interval, or a brand new selection.
+  function hitTest(px, radius) {
+    var cw = cssSize().w;
+    var pxA = dataToPx(selA, cw);
+    var pxB = dataToPx(selB, cw);
+    var dA = Math.abs(px - pxA);
+    var dB = Math.abs(px - pxB);
+    if (dA <= radius || dB <= radius) return dA <= dB ? 'left' : 'right';
+    if (px > pxA && px < pxB) return 'move';
+    return 'new';
+  }
+
+  function beginDrag(evt, isTouch) {
+    if (!intervalEnabled) {
+      if (zoomB - zoomA < 0.999) {
+        dragging = true;
+        dragTarget = 'pan';
+        panAnchorPx = getCanvasX(evt);
+        panAnchorA = zoomA; panAnchorB = zoomB;
+      }
+      return;
+    }
+    dragging = true;
+    var cw = cssSize().w;
+    var px = getCanvasX(evt);
+    var radius = isTouch ? 24 : 10;
+    dragTarget = hitTest(px, radius);
+
+    if (dragTarget === 'move') {
+      dragAnchorData = pxToData(px, cw);
+      dragAnchorA = selA;
+      dragAnchorB = selB;
+    } else if (dragTarget === 'new') {
+      var x = clamp01(pxToData(px, cw));
+      selA = x; selB = x;
+      dragAnchorData = x;
+    }
+    draw();
+  }
+
+  function moveDrag(evt) {
+    if (!dragging) return;
+    var cw = cssSize().w;
+
+    if (dragTarget === 'pan') {
+      var curPx = getCanvasX(evt);
+      var plotWidthPx = cw - PAD.left - PAD.right;
+      var span = panAnchorB - panAnchorA;
+      var dataDelta = ((curPx - panAnchorPx) / plotWidthPx) * span;
+      var newA = panAnchorA - dataDelta;
+      var newB = panAnchorB - dataDelta;
+      if (newA < 0) { newB -= newA; newA = 0; }
+      if (newB > 1) { newA -= (newB - 1); newB = 1; }
+      zoomA = Math.max(0, newA); zoomB = Math.min(1, newB);
+      draw();
+      return;
+    }
+
+    var x = clamp01(pxToData(getCanvasX(evt), cw));
+
+    if (dragTarget === 'left') {
+      selA = Math.min(x, selB);
+    } else if (dragTarget === 'right') {
+      selB = Math.max(x, selA);
+    } else if (dragTarget === 'move') {
+      var width = dragAnchorB - dragAnchorA;
+      var delta = x - dragAnchorData;
+      var newA = dragAnchorA + delta;
+      var newB = dragAnchorB + delta;
+      if (newA < 0) { newA = 0; newB = width; }
+      if (newB > 1) { newB = 1; newA = 1 - width; }
+      selA = newA; selB = newB;
+    } else if (dragTarget === 'new') {
+      selA = Math.min(dragAnchorData, x);
+      selB = Math.max(dragAnchorData, x);
+    }
+    draw();
+  }
+
+  function endDrag() { dragging = false; dragTarget = null; }
+
+  canvas.addEventListener('mousedown', function (e) { beginDrag(e, false); });
+  window.addEventListener('mousemove', moveDrag);
+  window.addEventListener('mouseup', endDrag);
+
+  // Hover feedback so a mouse user can see an edge is grabbable before clicking.
+  canvas.addEventListener('mousemove', function (e) {
+    if (dragging) return;
+    if (!intervalEnabled) {
+      canvas.style.cursor = (zoomB - zoomA < 0.999) ? 'grab' : 'default';
+      return;
+    }
+    var t = hitTest(getCanvasX(e), 10);
+    canvas.style.cursor = (t === 'left' || t === 'right') ? 'ew-resize' : (t === 'move' ? 'grab' : 'crosshair');
+  });
+
+  // Scroll / trackpad wheel zooms in or out, centered on the cursor.
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var cw = cssSize().w;
+    var anchorData = pxToData(getCanvasX(e), cw);
+    var factor = e.deltaY < 0 ? 0.82 : 1 / 0.82;
+    applyZoom(anchorData, factor);
+  }, { passive: false });
+
+  function applyZoom(anchorData, factor) {
+    var span = zoomB - zoomA;
+    var newSpan = span * factor;
+    var frac = span > 0 ? (anchorData - zoomA) / span : 0.5;
+    var newA = anchorData - frac * newSpan;
+    var newB = newA + newSpan;
+    var clamped = clampZoom(newA, newB, n);
+    zoomA = clamped[0]; zoomB = clamped[1];
+    draw();
+  }
+
+  zoomInBtn.addEventListener('click', function () { applyZoom((zoomA + zoomB) / 2, 0.65); });
+  zoomOutBtn.addEventListener('click', function () { applyZoom((zoomA + zoomB) / 2, 1 / 0.65); });
+  zoomResetBtn.addEventListener('click', function () { zoomA = 0; zoomB = 1; draw(); });
+  zoomToSelBtn.addEventListener('click', function () {
+    var clamped = clampZoom(Math.min(selA, selB), Math.max(selA, selB), n);
+    zoomA = clamped[0]; zoomB = clamped[1];
+    draw();
+  });
+
+  // Pinch-to-zoom: two fingers on the chart zoom around their midpoint;
+  // one finger keeps doing whatever beginDrag/moveDrag normally does.
+  var pinchActive = false, pinchStartDist = 0, pinchMidData = 0.5;
+  var pinchStartA = 0, pinchStartB = 1;
+
+  function touchDist(t0, t1) {
+    var dx = t0.clientX - t1.clientX, dy = t0.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  canvas.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      dragging = false;
+      pinchActive = true;
+      pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+      var rect = canvas.getBoundingClientRect();
+      var midPx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      pinchMidData = pxToData(midPx, cssSize().w);
+      pinchStartA = zoomA; pinchStartB = zoomB;
+      e.preventDefault();
+      return;
+    }
+    beginDrag(e, true);
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function (e) {
+    if (pinchActive && e.touches.length === 2) {
+      var dist = touchDist(e.touches[0], e.touches[1]);
+      var scale = dist / Math.max(1, pinchStartDist);
+      var startSpan = pinchStartB - pinchStartA;
+      var newSpan = startSpan / scale;
+      var frac = startSpan > 0 ? (pinchMidData - pinchStartA) / startSpan : 0.5;
+      var newA = pinchMidData - frac * newSpan;
+      var newB = newA + newSpan;
+      var clamped = clampZoom(newA, newB, n);
+      zoomA = clamped[0]; zoomB = clamped[1];
+      draw();
+      e.preventDefault();
+      return;
+    }
+    moveDrag(e);
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) pinchActive = false;
+    endDrag();
+  });
+  canvas.addEventListener('touchcancel', function () { pinchActive = false; endDrag(); });
+
+  function startAnimation() {
+    animating = true;
+    playBtn.textContent = '⏸ Pause';
+    var cur = n;
+    function step() {
+      if (!animating) return;
+      cur += Math.max(2, Math.round(cur * 0.07));
+      if (cur >= MAXN) cur = MAXN;
+      n = cur;
+      nSlider.value = n;
+      var clamped = clampZoom(zoomA, zoomB, n);
+      zoomA = clamped[0]; zoomB = clamped[1];
+      syncLabels();
+      draw();
+      if (cur >= MAXN) {
+        animating = false;
+        playBtn.textContent = '▶ Grow n automatically';
+        return;
+      }
+      animTimer = setTimeout(step, 90);
+    }
+    step();
+  }
+  function stopAnimation() {
+    animating = false;
+    clearTimeout(animTimer);
+    playBtn.textContent = '▶ Grow n automatically';
+  }
+  playBtn.addEventListener('click', function () {
+    if (animating) stopAnimation(); else startAnimation();
+  });
+
+  resetBtn.addEventListener('click', function () {
+    stopAnimation();
+    cancelMorph();
+    n = 3; p = 0.4; selA = 0.30; selB = 0.50; view = 'pmf';
+    zoomA = 0; zoomB = 1;
+    nSlider.value = 3; pSlider.value = 0.4;
+    Array.prototype.forEach.call(viewToggle.children, function (b) {
+      b.classList.toggle('active', b.dataset.view === 'pmf');
+    });
+    setIntervalEnabled(false);
+    syncLabels();
+    updateCaption();
+    draw();
+  });
+
+  setIntervalEnabled(false);
+  syncLabels();
+  updateCaption();
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>
