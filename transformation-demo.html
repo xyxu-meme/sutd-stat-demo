@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stretch and Shift — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper:#FAF7F0; --ink:#1F2937; --bar:#2E4374;
+    --amber:#E0793F; --sage:#3F6F5E; --hair:#DDD6C7; --hair-2:#C9C0AC;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    background-color:var(--paper);
+    background-image:radial-gradient(var(--hair-2) 1px,transparent 1px);
+    background-size:18px 18px;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    display:flex; justify-content:center;
+    padding:28px 10px 40px; -webkit-text-size-adjust:100%;
+  }
+  .page{ width:100%; max-width:920px; }
+  .eyebrow{
+    margin:0 0 4px; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--sage); font-weight:600;
+  }
+  h1{
+    margin:0 0 4px;
+    font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    font-weight:600; font-size:clamp(22px,5vw,30px); letter-spacing:-.01em;
+  }
+  .subtitle{ margin:0 0 14px; font-size:13.5px; color:#6B6459; }
+
+  .top-controls{
+    background:#fff; border:1px solid var(--hair); border-radius:12px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 6px 18px rgba(31,41,55,.05);
+    padding:10px 14px; margin-bottom:10px;
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .seg-toggle{ display:inline-flex; border:1px solid var(--hair); border-radius:8px; overflow:hidden; }
+  .seg-btn{
+    padding:5px 12px; font-size:11.5px; font-weight:600; cursor:pointer;
+    background:#fff; color:#6B6459; border:none; min-height:32px; transition:all 100ms;
+  }
+  .seg-btn.active{ background:var(--bar); color:#fff; }
+  .seg-btn+.seg-btn{ border-left:1px solid var(--hair); }
+
+  .sub-panel{
+    background:#fff; border:1px solid var(--hair); border-radius:12px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 6px 18px rgba(31,41,55,.05);
+    padding:8px 8px 4px; overflow:hidden;
+  }
+  .sub-label{
+    font-size:13px; font-weight:700; text-align:center; padding-bottom:4px;
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace; color:var(--bar);
+  }
+  .chart-wrap{
+    position:relative; width:100%;
+    touch-action:none; -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none; user-select:none;
+  }
+  canvas{
+    display:block; width:100%;
+    touch-action:none; -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none; user-select:none; cursor:ew-resize;
+  }
+
+  .bridge-strip{
+    display:flex; align-items:center; gap:10px 16px;
+    padding:10px 14px; margin:8px 0;
+    background:#fff; border:1px solid var(--hair); border-radius:12px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 6px 18px rgba(31,41,55,.05);
+    flex-wrap:wrap;
+  }
+  .bridge-formula{
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    font-size:13px; font-weight:700; color:var(--sage);
+    white-space:nowrap; padding-right:14px; border-right:1px solid var(--hair);
+  }
+  .sliders-area{ display:flex; flex:1; gap:8px 18px; flex-wrap:wrap; align-items:center; }
+  .ctrl-row{ display:flex; align-items:center; gap:6px; flex:1; min-width:160px; }
+  .ctrl-label{
+    font-size:13px; font-weight:600; color:#6B6459; min-width:20px; text-align:right;
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  .ctrl-val{
+    font-size:13px; font-weight:700; color:var(--bar); min-width:40px;
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  input[type="range"]{
+    flex:1; height:28px; -webkit-appearance:none; appearance:none; background:transparent; touch-action:none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height:4px; background:var(--hair); border-radius:2px; }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+    background:var(--bar); border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.2);
+    margin-top:-9px; cursor:pointer;
+  }
+  input[type="range"]::-moz-range-track{ height:4px; background:var(--hair); border-radius:2px; border:none; }
+  input[type="range"]::-moz-range-thumb{
+    width:22px; height:22px; border-radius:50%; background:var(--bar);
+    border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.2); cursor:pointer;
+  }
+  input[type="range"]:disabled{ opacity:0.4; cursor:not-allowed; }
+  .anim-btn{
+    padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer;
+    background:#fff; color:var(--sage); border:1.5px solid var(--sage);
+    border-radius:8px; min-height:34px; transition:all 120ms; white-space:nowrap;
+  }
+  .anim-btn:hover{ background:var(--sage); color:#fff; }
+  .anim-btn.active{ background:var(--sage); color:#fff; }
+
+  .readout{
+    background:#fff; border:1px solid var(--hair); border-radius:12px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 6px 18px rgba(31,41,55,.05);
+    padding:10px 14px; margin-bottom:10px;
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    font-size:13px; line-height:1.9; overflow-x:auto;
+  }
+  .readout .lbl{ color:#6B6459; }
+  .readout .val{ font-weight:700; color:var(--bar); }
+  .readout .amber{ font-weight:700; color:var(--amber); }
+  .readout .eq-row{ margin-top:4px; padding-top:4px; border-top:1px dashed var(--hair); color:#6B6459; }
+
+  footer{ margin-top:14px; font-size:13px; line-height:1.6; color:#6B6459; }
+  footer p{ margin-bottom:10px; }
+  .byline{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--hair); font-size:11.5px; color:#9C9485; }
+  .byline a{ color:var(--sage); text-decoration:none; }
+  @media(max-width:520px){ .readout{ font-size:12px; } .bridge-formula{ border-right:none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 1 &middot; Singapore University of Technology and Design</p>
+  <h1>Stretch and Shift</h1>
+  <p class="subtitle">Both panels share the same axis &mdash; watch how the curves relate on the same scale.</p>
+
+  <div class="top-controls">
+    <div class="seg-toggle">
+      <button class="seg-btn active" data-mode="point">Point</button>
+      <button class="seg-btn" data-mode="interval">Interval</button>
+    </div>
+    <span style="font-size:12px;color:#9C9485;">Drag in either panel &mdash; both update</span>
+  </div>
+
+  <!-- Standard normal -->
+  <div class="sub-panel" style="margin-bottom:0;">
+    <div class="sub-label">Z &sim; N(0, 1) &mdash; Standard Normal</div>
+    <div class="chart-wrap" id="wrapL"><canvas id="chartL"></canvas></div>
+  </div>
+
+  <!-- Bridge -->
+  <div class="bridge-strip">
+    <div class="bridge-formula">X = &sigma;Z + &mu; &nbsp;&#x21C4;&nbsp; Z = (X&minus;&mu;)/&sigma;</div>
+    <div class="sliders-area">
+      <div class="ctrl-row">
+        <span class="ctrl-label">&mu;</span>
+        <input type="range" id="muSlider" min="-4" max="6" step="0.1" value="3">
+        <span class="ctrl-val" id="muVal">3.0</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">&sigma;</span>
+        <input type="range" id="sigmaSlider" min="0.3" max="3" step="0.05" value="2">
+        <span class="ctrl-val" id="sigmaVal">2.00</span>
+      </div>
+      <button class="anim-btn" id="animBtn">&#x25B6; Standardize</button>
+    </div>
+  </div>
+
+  <!-- General normal -->
+  <div class="sub-panel" style="margin-bottom:10px;">
+    <div class="sub-label" id="rightLabel">X &sim; N(3.0, 4.00) &mdash; General Normal</div>
+    <div class="chart-wrap" id="wrapR"><canvas id="chartR"></canvas></div>
+  </div>
+
+  <div class="readout" id="readout"></div>
+
+  <footer>
+    <p>
+      Both panels share the <strong>same x-axis and y-axis</strong>, so you can directly compare where z sits vs.
+      where x = &sigma;z + &mu; sits on the same number line.
+      The standard normal (top) is always a unit bell at 0. The general normal (bottom) shifts with &mu; and widens or
+      narrows with &sigma;, changing its peak height too &mdash; but because width and height trade off (1/&sigma;),
+      the total area stays 1, and equal-probability regions stay equal.
+    </p>
+    <p>
+      Click <strong>&#x25B6; Standardize</strong>: the bottom curve shifts to center 0, then squeezes to width 1,
+      until it <em>exactly overlaps</em> the top curve. The shaded area never changes. That overlap is the proof.
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ── Math ── */
+  function erf(x){
+    var s=x<0?-1:1; x=Math.abs(x);
+    var a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+    var t=1/(1+p*x);
+    return s*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));
+  }
+  function phi(x){ return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI); }
+  function Phi(x){ return 0.5*(1+erf(x/Math.SQRT2)); }
+  function npdf(x,mu,sg){ return sg<=0?0:Math.exp(-((x-mu)*(x-mu))/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI)); }
+
+  /* ── State ── */
+  var mu=3, sigma=2;
+  var selZ=0.5;
+  var selAz=-1.0, selBz=1.0;
+  var mode='point';
+  var dragging=null;
+  var dragStartPx=0, dragAzStart=0, dragBzStart=0;
+
+  /* ── Animation ── */
+  var animT=0, animDir=0, animRafId=null, animLastTs=null;
+  var ANIM_DUR=1600;
+
+  /* getAnimParams: interpolates curve params between natural and standard */
+  function getAnimParams(){
+    var t=animT, mu_eff, sigma_eff;
+    if(t<=0.5){ var s=t*2; mu_eff=mu*(1-s); sigma_eff=sigma; }
+    else { var s=(t-0.5)*2; mu_eff=0; sigma_eff=sigma+(1-sigma)*s; }
+    return {mu:mu_eff, sigma:sigma_eff};
+  }
+
+  /* getSharedView: SAME range used for both panels at all times */
+  function getSharedView(){
+    var span=Math.max(4.5*sigma, 4.5);
+    var lo=Math.min(-4.5, mu-span);
+    var hi=Math.max(4.5, mu+span);
+    /* y-max is the taller of the two curves (standard vs general) */
+    var maxPdf=Math.max(phi(0), npdf(mu,mu,sigma))*1.22;
+    return {lo:lo, hi:hi, maxPdf:maxPdf};
+  }
+
+  function animTick(ts){
+    if(!animLastTs) animLastTs=ts;
+    var dt=(ts-animLastTs)/ANIM_DUR; animLastTs=ts;
+    animT=Math.max(0,Math.min(1,animT+animDir*dt));
+    draw();
+    if((animDir>0&&animT<1)||(animDir<0&&animT>0)){
+      animRafId=requestAnimationFrame(animTick);
+    } else {
+      animDir=0; animLastTs=null; animRafId=null; updateAnimBtn();
+    }
+  }
+  function startAnim(dir){
+    if(animRafId){cancelAnimationFrame(animRafId); animRafId=null;}
+    animDir=dir; animLastTs=null; animRafId=requestAnimationFrame(animTick);
+  }
+  function updateAnimBtn(){
+    var btn=document.getElementById('animBtn');
+    if(!btn) return;
+    var busy=animRafId!==null;
+    if(animT<0.02&&!busy){ btn.textContent='\u25B6 Standardize'; btn.classList.remove('active'); }
+    else if(animT>0.98&&!busy){ btn.textContent='\u21A9 Reset view'; btn.classList.add('active'); }
+    else { btn.textContent=animDir>0?'\u25B6 Standardizing\u2026':'\u21A9 Resetting\u2026'; btn.classList.add('active'); }
+    muSlider.disabled=busy; sigmaSlider.disabled=busy;
+  }
+
+  function zToX(z){ return sigma*z+mu; }
+  function xToZ(x){ return (x-mu)/sigma; }
+
+  /* ── DOM ── */
+  var chartL=document.getElementById('chartL'), ctxL=chartL.getContext('2d');
+  var chartR=document.getElementById('chartR'), ctxR=chartR.getContext('2d');
+  var wrapL=document.getElementById('wrapL'), wrapR=document.getElementById('wrapR');
+  var muSlider=document.getElementById('muSlider'), sigmaSlider=document.getElementById('sigmaSlider');
+  var muValEl=document.getElementById('muVal'), sigmaValEl=document.getElementById('sigmaVal');
+  var rightLabel=document.getElementById('rightLabel'), readoutEl=document.getElementById('readout');
+  var modeBtns=document.querySelectorAll('.seg-btn');
+
+  /* ── Layout ── */
+  var PAD={top:30,right:14,bottom:36,left:48};
+  var dpr=window.devicePixelRatio||1;
+  var cwL,chL,cwR,chR;
+
+  function resizeCanvas(canvas,wrap){
+    var w=wrap.clientWidth;
+    var h=Math.min(Math.max(w*0.38,180),300);
+    canvas.style.height=h+'px';
+    canvas.width=w*dpr; canvas.height=h*dpr;
+    canvas.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+    return {cw:w,ch:h};
+  }
+  function resize(){
+    var sL=resizeCanvas(chartL,wrapL); cwL=sL.cw; chL=sL.ch;
+    var sR=resizeCanvas(chartR,wrapR); cwR=sR.cw; chR=sR.ch;
+    draw();
+  }
+
+  /* ── Coord transforms (shared view) ── */
+  function dToPx(x,sv,cw){ return PAD.left+((x-sv.lo)/(sv.hi-sv.lo))*(cw-PAD.left-PAD.right); }
+  function pxToD(px,sv,cw){ return sv.lo+((px-PAD.left)/(cw-PAD.left-PAD.right))*(sv.hi-sv.lo); }
+  function vToPy(v,sv,ch){ return PAD.top+(1-v/sv.maxPdf)*(ch-PAD.top-PAD.bottom); }
+  function clampSV(x,sv){ return Math.max(sv.lo+0.02,Math.min(sv.hi-0.02,x)); }
+
+  /* ── Drawing helpers ── */
+  function fillAreaPdf(ctx,lo,hi,sv,muF,sigF,cw,ch,color){
+    var aClip=Math.max(lo,sv.lo), bClip=Math.min(hi,sv.hi);
+    if(bClip<=aClip) return;
+    var steps=Math.ceil(cw-PAD.left-PAD.right);
+    ctx.fillStyle=color;
+    ctx.beginPath(); ctx.moveTo(dToPx(aClip,sv,cw),ch-PAD.bottom);
+    for(var i=0;i<=steps;i++){
+      var xv=aClip+(bClip-aClip)*(i/steps);
+      var yv=(muF===null)?phi(xv):npdf(xv,muF,sigF);
+      ctx.lineTo(dToPx(xv,sv,cw),vToPy(yv,sv,ch));
+    }
+    ctx.lineTo(dToPx(bClip,sv,cw),ch-PAD.bottom);
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawCurvePdf(ctx,sv,muF,sigF,cw,ch,color){
+    var steps=Math.ceil(cw-PAD.left-PAD.right);
+    ctx.strokeStyle=color; ctx.lineWidth=2.2;
+    ctx.beginPath();
+    for(var i=0;i<=steps;i++){
+      var xv=sv.lo+(sv.hi-sv.lo)*(i/steps);
+      var yv=(muF===null)?phi(xv):npdf(xv,muF,sigF);
+      var px=dToPx(xv,sv,cw), py=vToPy(yv,sv,ch);
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+  }
+
+  function drawVLine(ctx,x,sv,cw,ch,color){
+    var px=dToPx(x,sv,cw);
+    if(px<PAD.left-1||px>cw-PAD.right+1) return;
+    ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(px,PAD.top); ctx.lineTo(px,ch-PAD.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawDot(ctx,x,y,r,fill){
+    ctx.fillStyle=fill; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  function drawHandle(ctx,px,baseY,r,color){
+    ctx.fillStyle=color;
+    ctx.beginPath(); ctx.moveTo(px,baseY+2);
+    ctx.lineTo(px-r,baseY+2+r*1.3); ctx.lineTo(px+r,baseY+2+r*1.3);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  function drawAxes(ctx,sv,cw,ch,axisLetter){
+    var mono='ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace';
+    var compact=cw<320, plotB=ch-PAD.bottom;
+    ctx.strokeStyle='#C9C0AC'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,plotB);
+    ctx.lineTo(cw-PAD.right,plotB); ctx.stroke();
+    ctx.strokeStyle='#E8E4DB'; ctx.lineWidth=1;
+    var span=sv.hi-sv.lo, rough=span/(compact?5:8);
+    var mag=Math.pow(10,Math.floor(Math.log10(rough)));
+    var norm=rough/mag;
+    var nStep=(norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10)*mag;
+    var firstT=Math.ceil(sv.lo/nStep)*nStep;
+    var tDec=nStep>=1?0:Math.max(0,Math.ceil(-Math.log10(nStep)));
+    for(var t=firstT;t<=sv.hi+nStep*0.001;t+=nStep){
+      t=Math.round(t*1e8)/1e8;
+      var tp=dToPx(t,sv,cw);
+      if(tp<PAD.left-0.5||tp>cw-PAD.right+0.5) continue;
+      ctx.beginPath(); ctx.moveTo(tp,PAD.top); ctx.lineTo(tp,plotB); ctx.stroke();
+      ctx.fillStyle='#3D3832'; ctx.font=(compact?'11px ':'12px ')+mono;
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText(t.toFixed(tDec),tp,plotB+4);
+    }
+    var yTicks=[0,0.1,0.2,0.3,0.4];
+    for(var yi=0;yi<yTicks.length;yi++){
+      if(yTicks[yi]>sv.maxPdf*0.95) continue;
+      var yp=vToPy(yTicks[yi],sv,ch);
+      ctx.beginPath(); ctx.moveTo(PAD.left,yp); ctx.lineTo(cw-PAD.right,yp); ctx.stroke();
+      ctx.fillStyle='#635E55'; ctx.font=(compact?'10px ':'11px ')+mono;
+      ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.fillText(yTicks[yi].toFixed(1),PAD.left-4,yp);
+    }
+    ctx.fillStyle='#635E55'; ctx.font=(compact?'11px ':'12px ')+'-apple-system,sans-serif';
+    ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText(axisLetter,cw-PAD.right,plotB+4);
+  }
+
+  function drawChip(ctx,px,text,sv,cw,color,row){
+    var mono='ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace';
+    ctx.font='bold 12px '+mono;
+    var tw=ctx.measureText(text).width, padX=5, boxH=16, boxW=tw+padX*2;
+    var lb=PAD.left+boxW/2+2, rb=cw-PAD.right-boxW/2-2;
+    var tx=Math.max(Math.min(lb,rb),Math.min(px,Math.max(lb,rb)));
+    var ty=PAD.top-10+row*20;
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fillRect(tx-boxW/2,ty-boxH/2,boxW,boxH);
+    ctx.strokeStyle=color; ctx.globalAlpha=0.6; ctx.lineWidth=1;
+    ctx.strokeRect(tx-boxW/2,ty-boxH/2,boxW,boxH);
+    ctx.globalAlpha=1; ctx.fillStyle=color; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(text,tx,ty+1);
+  }
+
+  function drawBigProb(ctx,prob,midPx,sv,ch,cw,label){
+    var mono='ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace';
+    var compact=cw<320, plotB=ch-PAD.bottom;
+    ctx.font=(compact?'bold 14px ':'bold 17px ')+mono;
+    ctx.fillStyle='rgba(224,121,63,0.85)'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(label+'='+prob.toFixed(4), midPx, PAD.top+(plotB-PAD.top)*0.58);
+  }
+
+  /* ── Draw left panel ── */
+  function drawL(){
+    var ctx=ctxL, cw=cwL, ch=chL;
+    if(!cw||!ch) return;
+    var compact=cw<320, plotB=ch-PAD.bottom;
+    var sv=getSharedView();
+    ctx.clearRect(0,0,cw,ch);
+
+    if(mode==='point'){
+      fillAreaPdf(ctx,sv.lo,selZ,sv,null,null,cw,ch,'rgba(224,121,63,0.28)');
+    } else {
+      fillAreaPdf(ctx,selAz,selBz,sv,null,null,cw,ch,'rgba(224,121,63,0.28)');
+    }
+    drawAxes(ctx,sv,cw,ch,'z');
+    drawCurvePdf(ctx,sv,null,null,cw,ch,'#2E4374');
+
+    if(mode==='point'){
+      var zPx=dToPx(selZ,sv,cw), prob=Phi(selZ);
+      drawVLine(ctx,selZ,sv,cw,ch,'rgba(224,121,63,0.7)');
+      drawDot(ctx,zPx,vToPy(phi(selZ),sv,ch),5,'#E0793F');
+      drawHandle(ctx,zPx,plotB,compact?7:8,'#E0793F');
+      var shadeMid=(Math.max(PAD.left,dToPx(sv.lo,sv,cw))+Math.min(zPx,cw-PAD.right))/2;
+      drawBigProb(ctx,prob,shadeMid,sv,ch,cw,'\u03A6(z)');
+      drawChip(ctx,zPx,'z='+selZ.toFixed(2),sv,cw,'#E0793F',0);
+    } else {
+      var aPx=dToPx(selAz,sv,cw), bPx=dToPx(selBz,sv,cw);
+      var prob2=Phi(selBz)-Phi(selAz), mid2=(aPx+bPx)/2;
+      drawVLine(ctx,selAz,sv,cw,ch,'rgba(224,121,63,0.7)'); drawVLine(ctx,selBz,sv,cw,ch,'rgba(224,121,63,0.7)');
+      drawHandle(ctx,aPx,plotB,compact?7:8,'#E0793F'); drawHandle(ctx,bPx,plotB,compact?7:8,'#E0793F');
+      drawBigProb(ctx,prob2,mid2,sv,ch,cw,'P');
+      drawChip(ctx,aPx,'a='+selAz.toFixed(2),sv,cw,'#E0793F',0);
+      drawChip(ctx,bPx,'b='+selBz.toFixed(2),sv,cw,'#E0793F',1);
+    }
+  }
+
+  /* ── Draw right panel ── */
+  function drawR(){
+    var ctx=ctxR, cw=cwR, ch=chR;
+    if(!cw||!ch) return;
+    var compact=cw<320, plotB=ch-PAD.bottom;
+    var sv=getSharedView(); // SAME shared view as left panel
+    var p=(animT>0)?getAnimParams():{mu:mu,sigma:sigma};
+    var muE=p.mu, sigE=p.sigma;
+    /* Derived marker positions using animated params */
+    var selXe=sigE*selZ+muE, selAxe=sigE*selAz+muE, selBxe=sigE*selBz+muE;
+    ctx.clearRect(0,0,cw,ch);
+
+    if(mode==='point'){
+      fillAreaPdf(ctx,sv.lo,selXe,sv,muE,sigE,cw,ch,'rgba(224,121,63,0.28)');
+    } else {
+      fillAreaPdf(ctx,selAxe,selBxe,sv,muE,sigE,cw,ch,'rgba(224,121,63,0.28)');
+    }
+    drawAxes(ctx,sv,cw,ch,'x');
+    drawCurvePdf(ctx,sv,muE,sigE,cw,ch,'#2E4374');
+
+    /* At end of animation (animT≈1), also draw the left curve faintly to show overlap */
+    if(animT>0.9){
+      var alpha=Math.min(1,(animT-0.9)/0.08);
+      ctx.globalAlpha=0.35*alpha;
+      drawCurvePdf(ctx,sv,null,null,cw,ch,'#E0793F');
+      ctx.globalAlpha=1;
+    }
+
+    if(mode==='point'){
+      var xPx=dToPx(selXe,sv,cw), prob=Phi(selZ);
+      drawVLine(ctx,selXe,sv,cw,ch,'rgba(224,121,63,0.7)');
+      if(xPx>=PAD.left&&xPx<=cw-PAD.right)
+        drawDot(ctx,xPx,vToPy(npdf(selXe,muE,sigE),sv,ch),5,'#E0793F');
+      drawHandle(ctx,xPx,plotB,compact?7:8,'#E0793F');
+      var shadeMid=(Math.max(PAD.left,dToPx(sv.lo,sv,cw))+Math.min(xPx,cw-PAD.right))/2;
+      drawBigProb(ctx,prob,shadeMid,sv,ch,cw,'F(x)');
+      drawChip(ctx,xPx,'x='+selXe.toFixed(2),sv,cw,'#E0793F',0);
+    } else {
+      var axPx=dToPx(selAxe,sv,cw), bxPx=dToPx(selBxe,sv,cw);
+      var prob2=Phi(selBz)-Phi(selAz), mid2=(axPx+bxPx)/2;
+      drawVLine(ctx,selAxe,sv,cw,ch,'rgba(224,121,63,0.7)'); drawVLine(ctx,selBxe,sv,cw,ch,'rgba(224,121,63,0.7)');
+      drawHandle(ctx,axPx,plotB,compact?7:8,'#E0793F'); drawHandle(ctx,bxPx,plotB,compact?7:8,'#E0793F');
+      drawBigProb(ctx,prob2,mid2,sv,ch,cw,'P');
+      drawChip(ctx,axPx,'x\u2081='+selAxe.toFixed(2),sv,cw,'#E0793F',0);
+      drawChip(ctx,bxPx,'x\u2082='+selBxe.toFixed(2),sv,cw,'#E0793F',1);
+    }
+
+    /* Animation phase label */
+    var mono='ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace';
+    var labelText='';
+    if(animT>0.01&&animT<0.49) labelText='Step 1: subtract \u03BC  \u2192  X \u2212 '+mu.toFixed(1);
+    else if(animT>=0.49&&animT<0.98) labelText='Step 2: divide by \u03C3  \u2192  \u00F7 '+sigma.toFixed(2);
+    else if(animT>=0.98) labelText='(X\u2212\u03BC)/\u03C3 \u223C N(0,1) \u2014 curves now overlap \u2713';
+    if(labelText){
+      ctx.font=(compact?'bold 11px ':'bold 12px ')+mono;
+      var tw=ctx.measureText(labelText).width;
+      var col=animT<0.5?'rgba(46,67,116,0.85)':'rgba(63,111,94,0.9)';
+      ctx.fillStyle='rgba(255,255,255,0.9)';
+      ctx.fillRect(PAD.left+4,PAD.top+4,tw+14,20);
+      ctx.fillStyle=col; ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText(labelText,PAD.left+11,PAD.top+8);
+    }
+
+    /* Right label */
+    if(animT<0.02) rightLabel.textContent='X \u223C N('+mu.toFixed(1)+', '+(sigma*sigma).toFixed(2)+') \u2014 General Normal';
+    else if(animT<0.52){ var me=getAnimParams().mu; rightLabel.textContent='X\u2212\u03BC \u223C N('+me.toFixed(2)+', '+(sigma*sigma).toFixed(2)+') \u2014 Shifting\u2026'; }
+    else if(animT<0.98){ var se=getAnimParams().sigma; rightLabel.textContent='(X\u2212\u03BC)/\u03C3 \u223C N(0, '+(se*se).toFixed(2)+') \u2014 Scaling\u2026'; }
+    else rightLabel.textContent='(X\u2212\u03BC)/\u03C3 \u223C N(0, 1) \u2014 Identical to top panel \u2713';
+  }
+
+  function draw(){ drawL(); drawR(); updateReadout(); }
+
+  /* ── Readout ── */
+  function updateReadout(){
+    var selX=zToX(selZ), selAx=zToX(selAz), selBx=zToX(selBz);
+    var html='';
+    if(mode==='point'){
+      var prob=Phi(selZ);
+      html+='<div><span class="lbl">Forward:  </span>z = <span class="val">'+selZ.toFixed(2)+'</span>';
+      html+=' \u2192 x = \u03C3z + \u03BC = '+sigma.toFixed(2)+'\u00D7'+selZ.toFixed(2)+' + '+mu.toFixed(1)+' = <span class="val">'+selX.toFixed(3)+'</span></div>';
+      html+='<div><span class="lbl">Backward: </span>x = <span class="val">'+selX.toFixed(3)+'</span>';
+      html+=' \u2192 z = (x\u2212\u03BC)/\u03C3 = ('+selX.toFixed(3)+'\u2212'+mu.toFixed(1)+')/'+sigma.toFixed(2)+' = <span class="val">'+selZ.toFixed(3)+'</span></div>';
+      html+='<div class="eq-row">\u03A6(z) = <span class="amber">'+prob.toFixed(4)+'</span>';
+      html+=' &nbsp;=&nbsp; F(x) = \u03A6((x\u2212\u03BC)/\u03C3) = <span class="amber">'+prob.toFixed(4)+'</span> &nbsp;\u2713 same probability</div>';
+    } else {
+      var prob=Phi(selBz)-Phi(selAz);
+      html+='<div><span class="lbl">z-interval: </span>[<span class="val">'+selAz.toFixed(2)+'</span>, <span class="val">'+selBz.toFixed(2)+'</span>]';
+      html+=' \u2192 x-interval: [<span class="val">'+selAx.toFixed(3)+'</span>, <span class="val">'+selBx.toFixed(3)+'</span>]</div>';
+      html+='<div><span class="lbl">Transform: </span>';
+      html+='x\u2081 = '+sigma.toFixed(2)+'\u00D7('+selAz.toFixed(2)+') + '+mu.toFixed(1)+' = <span class="val">'+selAx.toFixed(3)+'</span>';
+      html+=',&nbsp; x\u2082 = '+sigma.toFixed(2)+'\u00D7('+selBz.toFixed(2)+') + '+mu.toFixed(1)+' = <span class="val">'+selBx.toFixed(3)+'</span></div>';
+      html+='<div class="eq-row">P(a\u2264Z\u2264b) = <span class="amber">'+prob.toFixed(4)+'</span>';
+      html+=' &nbsp;=&nbsp; P(x\u2081\u2264X\u2264x\u2082) = <span class="amber">'+prob.toFixed(4)+'</span> &nbsp;\u2713 same probability</div>';
+    }
+    readoutEl.innerHTML=html;
+  }
+
+  /* ── Hit testing ── */
+  function hitInterval(px,pxA,pxB){ var r=('ontouchstart' in window)?24:12; var dA=Math.abs(px-pxA),dB=Math.abs(px-pxB); if(dA<=r||dB<=r) return dA<=dB?'left':'right'; if(px>pxA&&px<pxB) return 'move'; return 'new'; }
+
+  /* ── Pointer events ── */
+  function getPx(e,canvas){ var r=canvas.getBoundingClientRect(); return (e.touches?e.touches[0].clientX:e.clientX)-r.left; }
+
+  function onDownL(e){
+    if(animRafId||animT>0) return;
+    e.preventDefault(); var sv=getSharedView(); var px=getPx(e,chartL);
+    if(mode==='point'){ dragging={panel:'L',handle:'pt'}; selZ=clampSV(pxToD(px,sv,cwL),sv); }
+    else {
+      var pxA=dToPx(selAz,sv,cwL),pxB=dToPx(selBz,sv,cwL); var hit=hitInterval(px,pxA,pxB);
+      dragging={panel:'L',handle:hit}; dragStartPx=px; dragAzStart=selAz; dragBzStart=selBz;
+      if(hit==='new'){selAz=selBz=clampSV(pxToD(px,sv,cwL),sv);dragging.handle='right';}
+    }
+    draw();
+  }
+
+  function onDownR(e){
+    if(animRafId||animT>0) return;
+    e.preventDefault(); var sv=getSharedView(); var px=getPx(e,chartR);
+    if(mode==='point'){
+      dragging={panel:'R',handle:'pt'};
+      selZ=clampSV(xToZ(pxToD(px,sv,cwR)),{lo:sv.lo,hi:sv.hi}); // clamp z in z-space
+      selZ=Math.max(-4.15,Math.min(4.15,selZ));
+    } else {
+      var selAx=zToX(selAz),selBx=zToX(selBz);
+      var pxA=dToPx(selAx,sv,cwR),pxB=dToPx(selBx,sv,cwR); var hit=hitInterval(px,pxA,pxB);
+      dragging={panel:'R',handle:hit}; dragStartPx=px; dragAzStart=selAz; dragBzStart=selBz;
+      if(hit==='new'){var xv=pxToD(px,sv,cwR); selAz=selBz=Math.max(-4.15,Math.min(4.15,xToZ(xv))); dragging.handle='right';}
+    }
+    draw();
+  }
+
+  function applyDrag(px,panel){
+    if(!dragging) return;
+    var sv=getSharedView();
+    var cw=panel==='L'?cwL:cwR;
+    var rawVal=pxToD(px,sv,cw);
+    var z=panel==='L'?rawVal:xToZ(rawVal);
+    z=Math.max(-4.15,Math.min(4.15,z));
+    if(dragging.handle==='pt'){ selZ=z; }
+    else if(dragging.handle==='left'){
+      selAz=z; if(selAz>selBz){var t=selAz;selAz=selBz;selBz=t;dragging.handle='right';}
+    } else if(dragging.handle==='right'){
+      selBz=z; if(selBz<selAz){var t=selAz;selAz=selBz;selBz=t;dragging.handle='left';}
+    } else if(dragging.handle==='move'){
+      var refRaw=pxToD(dragStartPx,sv,cw);
+      var refZ=panel==='L'?refRaw:xToZ(refRaw);
+      var dz=z-refZ, w=dragBzStart-dragAzStart;
+      var nA=dragAzStart+dz,nB=dragBzStart+dz;
+      if(nA<-4.15){nA=-4.15;nB=nA+w;} if(nB>4.15){nB=4.15;nA=nB-w;}
+      selAz=nA; selBz=nB;
+    }
+  }
+
+  function onMoveL(e){ if(!dragging||dragging.panel!=='L') return; e.preventDefault(); applyDrag(getPx(e,chartL),'L'); draw(); }
+  function onMoveR(e){ if(!dragging||dragging.panel!=='R') return; e.preventDefault(); applyDrag(getPx(e,chartR),'R'); draw(); }
+  function onUp(){ dragging=null; }
+
+  chartL.addEventListener('mousedown',onDownL); chartL.addEventListener('mousemove',onMoveL);
+  chartL.addEventListener('mouseup',onUp); chartL.addEventListener('mouseleave',onUp);
+  chartL.addEventListener('touchstart',onDownL,{passive:false}); chartL.addEventListener('touchmove',onMoveL,{passive:false});
+  chartL.addEventListener('touchend',onUp); chartL.addEventListener('touchcancel',onUp);
+  chartR.addEventListener('mousedown',onDownR); chartR.addEventListener('mousemove',onMoveR);
+  chartR.addEventListener('mouseup',onUp); chartR.addEventListener('mouseleave',onUp);
+  chartR.addEventListener('touchstart',onDownR,{passive:false}); chartR.addEventListener('touchmove',onMoveR,{passive:false});
+  chartR.addEventListener('touchend',onUp); chartR.addEventListener('touchcancel',onUp);
+
+  /* ── Controls ── */
+  muSlider.addEventListener('input',function(){ mu=parseFloat(this.value); muValEl.textContent=mu.toFixed(1); draw(); });
+  sigmaSlider.addEventListener('input',function(){ sigma=parseFloat(this.value); sigmaValEl.textContent=sigma.toFixed(2); draw(); });
+  modeBtns.forEach(function(btn){
+    btn.addEventListener('click',function(){
+      modeBtns.forEach(function(b){b.classList.remove('active');}); this.classList.add('active');
+      mode=this.getAttribute('data-mode');
+      if(mode==='interval'){selAz=selZ-1;selBz=selZ+1;} else {selZ=(selAz+selBz)/2;}
+      draw();
+    });
+  });
+  document.getElementById('animBtn').addEventListener('click',function(){
+    if(animRafId){cancelAnimationFrame(animRafId);animRafId=null;animDir=0;animLastTs=null;updateAnimBtn();return;}
+    if(animT<0.5) startAnim(1); else startAnim(-1);
+  });
+
+  window.addEventListener('resize',resize);
+  resize();
+})();
+</script>
+</body>
+</html>
