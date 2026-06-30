@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Z-Table Lookup — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper:#FAF7F0; --ink:#1F2937; --bar:#2E4374;
+    --amber:#E0793F; --sage:#3F6F5E; --hair:#DDD6C7; --hair-2:#C9C0AC;
+    --row-hl:#DBEAFE; --col-hl:#DBEAFE; --cell-bg:#E0793F; --cell-fg:#fff;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    background-color:var(--paper);
+    background-image:radial-gradient(var(--hair-2) 1px,transparent 1px);
+    background-size:18px 18px;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    display:flex; justify-content:center;
+    padding:28px 10px 44px; -webkit-text-size-adjust:100%;
+  }
+  .page{ width:100%; max-width:860px; }
+  .eyebrow{
+    margin:0 0 4px; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--sage); font-weight:600;
+  }
+  h1{
+    margin:0 0 4px;
+    font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    font-weight:600; font-size:clamp(22px,5vw,30px); letter-spacing:-.01em;
+  }
+  .subtitle{ margin:0 0 14px; font-size:13.5px; color:#6B6459; }
+  .card{
+    background:#fff; border:1px solid var(--hair); border-radius:14px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.05);
+    padding:14px 14px 10px; margin-bottom:10px;
+  }
+
+  /* ── Input row ── */
+  .input-area{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;
+  }
+  .z-label{
+    font-size:15px; font-weight:700; color:var(--bar);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  .z-input{
+    width:90px; padding:6px 10px; font-size:15px; font-weight:700;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    color:var(--bar); background:#fff; border:2px solid var(--hair);
+    border-radius:8px; text-align:center; outline:none;
+    -moz-appearance:textfield;
+  }
+  .z-input:focus{ border-color:var(--amber); }
+  .z-input::-webkit-inner-spin-button,.z-input::-webkit-outer-spin-button{ -webkit-appearance:none; }
+  .preset-btns{ display:flex; gap:5px; flex-wrap:wrap; }
+  .preset-btn{
+    padding:4px 9px; font-size:11.5px; font-weight:600; cursor:pointer;
+    background:#fff; color:#6B6459; border:1px solid var(--hair); border-radius:7px;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; min-height:30px;
+    transition:all 100ms;
+  }
+  .preset-btn:hover{ border-color:var(--amber); color:var(--amber); }
+
+  /* ── Bell curve canvas ── */
+  .bell-wrap{
+    width:100%; touch-action:none;
+    -webkit-tap-highlight-color:transparent; user-select:none;
+  }
+  canvas{ display:block; width:100%; cursor:ew-resize; }
+
+  /* ── Steps panel ── */
+  .steps-card{
+    background:#fff; border:1px solid var(--hair); border-radius:14px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.05);
+    padding:12px 14px; margin-bottom:10px;
+  }
+  .steps-title{
+    font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:#9C9485; margin-bottom:8px;
+  }
+  .step{
+    display:flex; gap:10px; align-items:baseline;
+    padding:5px 0; border-bottom:1px dashed #EDE9E1; font-size:13.5px; line-height:1.55;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  .step:last-child{ border-bottom:none; }
+  .step-num{
+    flex-shrink:0; width:20px; height:20px; line-height:20px; border-radius:50%;
+    background:var(--bar); color:#fff; font-size:11px; font-weight:700;
+    text-align:center; margin-top:1px;
+  }
+  .step-body{ flex:1; }
+  .step-body .hi{ font-weight:700; color:var(--amber); }
+  .step-body .blu{ font-weight:700; color:var(--bar); }
+  .step.result .step-num{ background:var(--amber); }
+  .step.result .step-body{ font-weight:700; color:var(--amber); font-size:15px; }
+
+  /* ── Table panel ── */
+  .table-card{
+    background:#fff; border:1px solid var(--hair); border-radius:14px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.05);
+    padding:12px 0 10px; margin-bottom:10px; overflow:hidden;
+  }
+  .table-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:0 14px 8px; flex-wrap:wrap; gap:6px;
+  }
+  .table-title-text{
+    font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:#9C9485;
+  }
+  .table-note{ font-size:11px; color:#9C9485; font-style:italic; }
+
+  .table-scroll{
+    overflow-x:auto; overflow-y:auto;
+    max-height:340px;
+    border-top:1px solid var(--hair);
+  }
+  .ztable{
+    border-collapse:collapse; font-size:12px;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    white-space:nowrap;
+  }
+  .ztable th,.ztable td{
+    padding:4px 8px; text-align:center; border:1px solid #EDE9E1;
+    min-width:52px;
+  }
+  .ztable thead th{
+    background:#FAF7F0; font-weight:700; color:var(--bar);
+    position:sticky; top:0; z-index:3; border-bottom:2px solid var(--hair);
+  }
+  /* sticky corner */
+  .ztable thead th:first-child{
+    position:sticky; left:0; z-index:4;
+    background:#FAF7F0;
+  }
+  /* sticky row-label column */
+  .ztable .row-label{
+    position:sticky; left:0; z-index:2; background:#FAF7F0;
+    font-weight:700; color:var(--bar); min-width:50px;
+    border-right:2px solid var(--hair);
+  }
+  /* highlight states */
+  .ztable td.hl-row{ background:rgba(219,234,254,0.55); }
+  .ztable td.hl-col{ background:rgba(219,234,254,0.55); }
+  .ztable td.hl-both{ background:#BFDBFE; }
+  .ztable td.hl-cell{
+    background:var(--amber) !important; color:#fff !important;
+    font-weight:700; font-size:13px;
+    box-shadow:0 0 0 2px var(--amber), 0 0 0 4px rgba(224,121,63,0.3);
+    position:relative; z-index:1;
+  }
+  .ztable .hl-row-label{ background:#DBEAFE !important; color:var(--bar); }
+  .ztable th.hl-col-header{ background:#DBEAFE !important; color:var(--bar); }
+
+  /* footer */
+  footer{ margin-top:14px; font-size:13px; line-height:1.6; color:#6B6459; }
+  footer p{ margin-bottom:10px; }
+  .byline{
+    margin-top:10px; padding-top:10px; border-top:1px dashed var(--hair);
+    font-size:11.5px; color:#9C9485;
+  }
+  .byline a{ color:var(--sage); text-decoration:none; }
+  @media(max-width:480px){
+    .step{ font-size:12.5px; }
+    .step.result .step-body{ font-size:14px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 1 &middot; Singapore University of Technology and Design</p>
+  <h1>Z-Table Lookup</h1>
+  <p class="subtitle">How to read off &Phi;(z) = P(Z &le; z) from the standard normal table.</p>
+
+  <!-- Input + Bell curve -->
+  <div class="card">
+    <div class="input-area">
+      <span class="z-label">z =</span>
+      <input type="number" class="z-input" id="zInput" value="-1.23" step="0.01" min="-3.49" max="3.49">
+      <div class="preset-btns">
+        <button class="preset-btn" data-z="-1.96">-1.96</button>
+        <button class="preset-btn" data-z="-1.645">-1.645</button>
+        <button class="preset-btn" data-z="-1.00">-1.00</button>
+        <button class="preset-btn" data-z="0">0</button>
+        <button class="preset-btn" data-z="1.645">1.645</button>
+        <button class="preset-btn" data-z="1.96">1.96</button>
+      </div>
+    </div>
+    <div class="bell-wrap" id="bellWrap">
+      <canvas id="bellCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Step-by-step -->
+  <div class="steps-card">
+    <div class="steps-title">Step-by-step lookup</div>
+    <div id="stepsBody"></div>
+  </div>
+
+  <!-- Z table -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title-text">Standard Normal Table &nbsp;&mdash;&nbsp; &Phi;(z) for z &le; 0</span>
+      <span class="table-note">For z &gt; 0: use &Phi;(z) = 1 &minus; &Phi;(&minus;z)</span>
+    </div>
+    <div class="table-scroll" id="tableScroll">
+      <table class="ztable" id="ztable"></table>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      The Z-table lists &Phi;(z) = P(Z &le; z) for negative z-values.
+      Each <strong>row</strong> gives the first two significant digits of z (e.g. &minus;1.2),
+      and each <strong>column</strong> gives the last decimal digit (e.g. .03).
+      Together they identify a unique z = &minus;1.23.
+    </p>
+    <p>
+      For <strong>positive z</strong>, use the symmetry property: &Phi;(z) = 1 &minus; &Phi;(&minus;z).
+      Look up &minus;z in the table, then subtract from 1.
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ── Math ── */
+  function erf(x){
+    var s=x<0?-1:1; x=Math.abs(x);
+    var a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+    var t=1/(1+p*x);
+    return s*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));
+  }
+  function phi(x){ return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI); }
+  function Phi(x){ return 0.5*(1+erf(x/Math.SQRT2)); }
+
+  /* ── State ── */
+  var curZ = -1.23;
+  var dragging = false;
+
+  /* ── Given z ≤ 0, get row index (0=row "-0.0" … 34=row "-3.4") and col index (0..9) ── */
+  function getRC(z){
+    z = Math.max(-3.49, Math.min(0, z));
+    var absZ = Math.abs(z);
+    /* floor to 1st decimal robustly: 1.96 → 1.9, 1.23 → 1.2, 0.05 → 0.0 */
+    var rowAbs = Math.floor(Math.round(absZ*100)/10)/10;
+    if(rowAbs > 3.4) rowAbs = 3.4;
+    var col = Math.round((absZ - rowAbs)*100);
+    if(col >= 10){ rowAbs = Math.min(3.4, rowAbs+0.1); col = 0; }
+    var r = Math.round(rowAbs*10);
+    return { r:r, c:col, rowVal:-rowAbs, colVal:col/100 };
+  }
+
+  /* ── Build Z table ── */
+  function buildTable(){
+    var mono='ui-monospace,"SF Mono",Menlo,Consolas,monospace';
+    var html='<thead><tr><th>z</th>';
+    for(var c=0;c<=9;c++) html+='<th id="ch_'+c+'">.0'+c+'</th>';
+    html+='</tr></thead><tbody>';
+    for(var r=34;r>=0;r--){
+      var rowVal = -r/10;
+      var rowLabel = r===0 ? '\u22120.0' : rowVal.toFixed(1);
+      html+='<tr id="tr_'+r+'"><th class="row-label" id="rl_'+r+'">'+rowLabel+'</th>';
+      for(var c=0;c<=9;c++){
+        var z=rowVal-c/100;
+        var v=Phi(z).toFixed(4);
+        html+='<td id="cell_'+r+'_'+c+'">'+v+'</td>';
+      }
+      html+='</tr>';
+    }
+    html+='</tbody>';
+    document.getElementById('ztable').innerHTML=html;
+  }
+
+  /* ── Clear all table highlights ── */
+  function clearHL(){
+    document.querySelectorAll('.ztable .hl-row,.ztable .hl-col,.ztable .hl-both,.ztable .hl-cell,.ztable .hl-row-label,.ztable .hl-col-header')
+      .forEach(function(el){el.className=el.className.replace(/\bhl-\S+/g,'').trim();});
+  }
+
+  /* ── Apply highlights for a given row r, col c ── */
+  function applyHL(r,c){
+    clearHL();
+    /* row label */
+    var rl=document.getElementById('rl_'+r);
+    if(rl) rl.classList.add('hl-row-label');
+    /* col header */
+    var ch=document.getElementById('ch_'+c);
+    if(ch) ch.classList.add('hl-col-header');
+    /* all cells in this row */
+    for(var cc=0;cc<=9;cc++){
+      var td=document.getElementById('cell_'+r+'_'+cc);
+      if(!td) continue;
+      if(cc===c) td.classList.add('hl-both');
+      else td.classList.add('hl-row');
+    }
+    /* all cells in this column */
+    for(var rr=0;rr<=34;rr++){
+      var td2=document.getElementById('cell_'+rr+'_'+c);
+      if(!td2) continue;
+      if(rr!==r) td2.classList.add('hl-col');
+    }
+    /* target cell */
+    var cell=document.getElementById('cell_'+r+'_'+c);
+    if(cell){
+      cell.classList.remove('hl-row','hl-col','hl-both');
+      cell.classList.add('hl-cell');
+      /* scroll into view */
+      setTimeout(function(){
+        cell.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+      },50);
+    }
+  }
+
+  /* ── Draw bell curve ── */
+  var canvas=document.getElementById('bellCanvas');
+  var ctx=canvas.getContext('2d');
+  var wrap=document.getElementById('bellWrap');
+  var dpr=window.devicePixelRatio||1;
+  var cw,ch;
+  var PAD={top:24,right:16,bottom:36,left:48};
+  var VIEW_LO=-3.8, VIEW_HI=3.8;
+  var MAX_PDF=phi(0)*1.18;
+
+  function resizeBell(){
+    var w=wrap.clientWidth;
+    var h=Math.min(Math.max(w*0.38,160),260);
+    canvas.style.height=h+'px';
+    cw=w; ch=h;
+    canvas.width=w*dpr; canvas.height=h*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    drawBell();
+  }
+
+  function dToPx(x){ return PAD.left+((x-VIEW_LO)/(VIEW_HI-VIEW_LO))*(cw-PAD.left-PAD.right); }
+  function pxToD(px){ return VIEW_LO+((px-PAD.left)/(cw-PAD.left-PAD.right))*(VIEW_HI-VIEW_LO); }
+  function vToPy(v){ return PAD.top+(1-v/MAX_PDF)*(ch-PAD.top-PAD.bottom); }
+
+  function drawBell(){
+    var mono='ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace';
+    var z=curZ;
+    var plotB=ch-PAD.bottom, plotR=cw-PAD.right, plotL=PAD.left;
+    var pxW=plotR-plotL;
+    ctx.clearRect(0,0,cw,ch);
+
+    /* determine the shading zone: always shade left tail to shadeZ */
+    var shadeZ = (z>0)?z:z; // to z (covers both cases visually)
+
+    /* For positive z, also show the -z reference */
+    var lookupZ = z>0 ? -z : z;
+
+    /* Shading */
+    ctx.fillStyle='rgba(224,121,63,0.22)';
+    ctx.beginPath(); ctx.moveTo(dToPx(VIEW_LO),plotB);
+    for(var sx=VIEW_LO;sx<=shadeZ;sx+=(VIEW_HI-VIEW_LO)/pxW){
+      ctx.lineTo(dToPx(sx),vToPy(phi(sx)));
+    }
+    ctx.lineTo(dToPx(shadeZ),vToPy(phi(shadeZ)));
+    ctx.lineTo(dToPx(shadeZ),plotB);
+    ctx.closePath(); ctx.fill();
+
+    /* gridlines */
+    ctx.strokeStyle='#E8E4DB'; ctx.lineWidth=1;
+    for(var gx=-3;gx<=3;gx++){
+      var gp=dToPx(gx);
+      ctx.beginPath(); ctx.moveTo(gp,PAD.top); ctx.lineTo(gp,plotB); ctx.stroke();
+    }
+
+    /* bell curve */
+    ctx.strokeStyle='#2E4374'; ctx.lineWidth=2.2;
+    ctx.beginPath();
+    for(var cpx=0;cpx<=pxW;cpx++){
+      var cx=VIEW_LO+(cpx/pxW)*(VIEW_HI-VIEW_LO);
+      var cy=vToPy(phi(cx));
+      if(cpx===0) ctx.moveTo(plotL,cy); else ctx.lineTo(plotL+cpx,cy);
+    }
+    ctx.stroke();
+
+    /* For positive z: also show -z line faintly to illustrate symmetry */
+    if(z>0){
+      ctx.strokeStyle='rgba(63,111,94,0.5)'; ctx.lineWidth=1.2; ctx.setLineDash([4,3]);
+      var negPx=dToPx(-z);
+      ctx.beginPath(); ctx.moveTo(negPx,PAD.top); ctx.lineTo(negPx,plotB); ctx.stroke();
+      ctx.setLineDash([]);
+      /* sage shading for -z reference */
+      ctx.fillStyle='rgba(63,111,94,0.1)';
+      ctx.beginPath(); ctx.moveTo(dToPx(VIEW_LO),plotB);
+      for(var sx2=VIEW_LO;sx2<=-z;sx2+=(VIEW_HI-VIEW_LO)/pxW){
+        ctx.lineTo(dToPx(sx2),vToPy(phi(sx2)));
+      }
+      ctx.lineTo(dToPx(-z),vToPy(phi(-z)));
+      ctx.lineTo(dToPx(-z),plotB);
+      ctx.closePath(); ctx.fill();
+    }
+
+    /* z vertical line */
+    var zPx=dToPx(z);
+    ctx.strokeStyle='rgba(224,121,63,0.75)'; ctx.lineWidth=1.8; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(zPx,PAD.top); ctx.lineTo(zPx,plotB); ctx.stroke();
+    ctx.setLineDash([]);
+    /* dot on curve */
+    ctx.fillStyle='#E0793F';
+    ctx.beginPath(); ctx.arc(zPx,vToPy(phi(z)),5,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    /* handle */
+    ctx.fillStyle='#E0793F';
+    ctx.beginPath(); ctx.moveTo(zPx,plotB+2); ctx.lineTo(zPx-7,plotB+11); ctx.lineTo(zPx+7,plotB+11);
+    ctx.closePath(); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1.2; ctx.stroke();
+
+    /* Φ(z) label inside shaded area */
+    var PhiZ=Phi(z);
+    var shadeMid=(dToPx(VIEW_LO)+Math.min(zPx,plotR))/2;
+    ctx.font='bold 16px '+mono;
+    ctx.fillStyle='rgba(224,121,63,0.88)'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('\u03A6(z) = '+PhiZ.toFixed(4), shadeMid, PAD.top+(plotB-PAD.top)*0.60);
+
+    /* axis */
+    ctx.strokeStyle='#C9C0AC'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(plotL,PAD.top); ctx.lineTo(plotL,plotB); ctx.lineTo(plotR,plotB); ctx.stroke();
+
+    /* x-axis labels */
+    ctx.fillStyle='#3D3832'; ctx.font='12px '+mono;
+    ctx.textBaseline='top'; ctx.textAlign='center';
+    for(var xl=-3;xl<=3;xl++){
+      var xlp=dToPx(xl);
+      if(xlp<plotL+10||xlp>plotR-10) continue;
+      ctx.fillText(xl.toString(),xlp,plotB+4);
+    }
+    /* z chip */
+    ctx.font='bold 12px '+mono;
+    var chipText='z = '+z.toFixed(2);
+    var tw=ctx.measureText(chipText).width+10;
+    var chipX=Math.max(plotL+tw/2+4,Math.min(plotR-tw/2-4,zPx));
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fillRect(chipX-tw/2,PAD.top-9,tw,16);
+    ctx.strokeStyle='rgba(224,121,63,0.5)'; ctx.lineWidth=1; ctx.strokeRect(chipX-tw/2,PAD.top-9,tw,16);
+    ctx.fillStyle='#E0793F'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(chipText,chipX,PAD.top-1);
+
+    /* label: axis letter */
+    ctx.fillStyle='#635E55'; ctx.font='12px -apple-system,sans-serif';
+    ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText('z',plotR,plotB+4);
+
+    /* label: phi formula */
+    ctx.font='bold 12px '+mono;
+    ctx.fillStyle='#2E4374'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText('Z \u223C N(0, 1)',plotL+6,PAD.top+4);
+  }
+
+  /* ── Build step-by-step HTML ── */
+  function updateSteps(){
+    var z=curZ;
+    var html='';
+
+    if(Math.abs(z)<0.005){ /* z ≈ 0 */
+      var v=Phi(0).toFixed(4);
+      html+=step(1,'z = <span class="blu">0</span> &rarr; boundary case');
+      html+=step(2,'Row <span class="hi">-0.0</span>, Column <span class="hi">.00</span>');
+      html+=step(3,'Read cell: &Phi;(0) = <span class="hi">0.5000</span>',true);
+      document.getElementById('stepsBody').innerHTML=html; return;
+    }
+
+    if(z<0){
+      /* direct lookup */
+      var rc=getRC(z);
+      var v=Phi(z).toFixed(4);
+      var rowLabel=rc.rowVal===0?'&minus;0.0':rc.rowVal.toFixed(1);
+      var colLabel='.'+String(rc.c).padStart(2,'0');
+      html+=step(1,'z = <span class="blu">'+z.toFixed(2)+'</span> &le; 0 &rarr; look up directly');
+      html+=step(2,'Row = <span class="hi">'+rowLabel+'</span> &nbsp;(digits up to first decimal)');
+      html+=step(3,'Column = <span class="hi">'+colLabel+'</span> &nbsp;(last decimal digit)');
+      html+=step(4,'Read intersection: &Phi;('+z.toFixed(2)+') = <span class="hi">'+v+'</span>',true);
+    } else {
+      /* symmetry */
+      var negZ=-z;
+      var rc=getRC(negZ);
+      var vNeg=Phi(negZ).toFixed(4);
+      var vPos=(1-Phi(negZ)).toFixed(4);
+      var rowLabel=rc.rowVal===0?'&minus;0.0':rc.rowVal.toFixed(1);
+      var colLabel='.'+String(rc.c).padStart(2,'0');
+      html+=step(1,'z = <span class="blu">'+z.toFixed(2)+'</span> &gt; 0 &rarr; use symmetry:<br>&Phi;('+z.toFixed(2)+') = 1 &minus; &Phi;(&minus;'+z.toFixed(2)+')');
+      html+=step(2,'Look up &Phi;('+negZ.toFixed(2)+'): Row <span class="hi">'+rowLabel+'</span>, Column <span class="hi">'+colLabel+'</span>');
+      html+=step(3,'Read cell: &Phi;('+negZ.toFixed(2)+') = <span class="hi">'+vNeg+'</span>');
+      html+=step(4,'&Phi;('+z.toFixed(2)+') = 1 &minus; '+vNeg+' = <span class="hi">'+vPos+'</span>',true);
+    }
+    document.getElementById('stepsBody').innerHTML=html;
+  }
+
+  function step(n,body,isResult){
+    return '<div class="step'+(isResult?' result':'')+'"><div class="step-num">'+n+'</div><div class="step-body">'+body+'</div></div>';
+  }
+
+  /* ── Main update ── */
+  function update(z){
+    z=Math.max(-3.49,Math.min(3.49,Math.round(z*100)/100));
+    curZ=z;
+    /* Update input if not focused */
+    if(document.activeElement!==zInput) zInput.value=z.toFixed(2);
+    drawBell();
+    updateSteps();
+    /* Highlight table using lookup z (always ≤ 0) */
+    var lookupZ=z>0?-z:z;
+    var rc=getRC(lookupZ);
+    applyHL(rc.r, rc.c);
+  }
+
+  /* ── Draggable bell curve ── */
+  var zInput=document.getElementById('zInput');
+
+  function getPointerX(e){
+    var r=canvas.getBoundingClientRect();
+    return (e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  }
+  canvas.addEventListener('mousedown',function(e){e.preventDefault();dragging=true;update(pxToD(getPointerX(e)));});
+  canvas.addEventListener('mousemove',function(e){if(!dragging)return;e.preventDefault();update(pxToD(getPointerX(e)));});
+  canvas.addEventListener('mouseup',function(){dragging=false;});
+  canvas.addEventListener('mouseleave',function(){dragging=false;});
+  canvas.addEventListener('touchstart',function(e){e.preventDefault();dragging=true;update(pxToD(getPointerX(e)));},{passive:false});
+  canvas.addEventListener('touchmove',function(e){if(!dragging)return;e.preventDefault();update(pxToD(getPointerX(e)));},{passive:false});
+  canvas.addEventListener('touchend',function(){dragging=false;});
+
+  /* ── Text input ── */
+  zInput.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)) update(v);
+  });
+  zInput.addEventListener('change',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ update(v); this.value=curZ.toFixed(2); }
+  });
+
+  /* ── Preset buttons ── */
+  document.querySelectorAll('.preset-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ update(parseFloat(this.getAttribute('data-z'))); });
+  });
+
+  /* ── Init ── */
+  buildTable();
+  window.addEventListener('resize',resizeBell);
+  resizeBell();
+  update(-1.23);
+})();
+</script>
+</body>
+</html>
