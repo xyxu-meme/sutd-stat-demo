@@ -122,6 +122,21 @@
   .readout .amber{ font-weight:700; color:var(--amber); }
   .readout .eq-row{ margin-top:4px; padding-top:4px; border-top:1px dashed var(--hair); color:#6B6459; }
 
+  .input-row{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .input-label{
+    font-size:13px; font-weight:600; color:var(--bar);
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  .val-input{
+    width:64px; padding:4px 6px; font-size:13px; font-weight:600;
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    color:var(--bar); background:#fff; border:1.5px solid var(--hair); border-radius:7px;
+    text-align:center; outline:none; -moz-appearance:textfield;
+  }
+  .val-input:focus{ border-color:var(--amber); }
+  .val-input::-webkit-inner-spin-button,.val-input::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
+  .input-sep{ width:1px; height:18px; background:var(--hair); margin:0 4px; }
+
   footer{ margin-top:14px; font-size:13px; line-height:1.6; color:#6B6459; }
   footer p{ margin-bottom:10px; }
   .byline{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--hair); font-size:11.5px; color:#9C9485; }
@@ -140,8 +155,27 @@
       <button class="seg-btn active" data-mode="point">Point</button>
       <button class="seg-btn" data-mode="interval">Interval</button>
     </div>
-    <span style="font-size:12px;color:#9C9485;">Drag in either panel &mdash; both update</span>
+    <div class="input-row" id="pointInputs">
+      <span class="input-label">z =</span>
+      <input type="number" class="val-input" id="zInput" value="0.50" step="0.05">
+      <div class="input-sep"></div>
+      <span class="input-label">x =</span>
+      <input type="number" class="val-input" id="xInput" value="4.00" step="0.1">
+    </div>
+    <div class="input-row" id="intervalInputs" style="display:none;">
+      <span class="input-label">a =</span>
+      <input type="number" class="val-input" id="aInput" value="-1.00" step="0.05">
+      <span class="input-label">b =</span>
+      <input type="number" class="val-input" id="bInput" value="1.00" step="0.05">
+      <div class="input-sep"></div>
+      <span class="input-label">x&#8321; =</span>
+      <input type="number" class="val-input" id="x1Input" value="1.00" step="0.1">
+      <span class="input-label">x&#8322; =</span>
+      <input type="number" class="val-input" id="x2Input" value="5.00" step="0.1">
+    </div>
   </div>
+
+  <p style="font-size:12px;color:#9C9485;margin:-4px 0 10px;">Drag in either panel, or type a value &mdash; both update together</p>
 
   <!-- Standard normal -->
   <div class="sub-panel" style="margin-bottom:0;">
@@ -215,29 +249,35 @@
   /* ── Animation ── */
   var animT=0, animDir=0, animRafId=null, animLastTs=null;
   var ANIM_DUR=1600;
+  var origMu=mu, origSigma=sigma; /* anchor point the animation interpolates from/to */
 
-  /* getAnimParams: interpolates curve params between natural and standard */
-  function getAnimParams(){
-    var t=animT, mu_eff, sigma_eff;
-    if(t<=0.5){ var s=t*2; mu_eff=mu*(1-s); sigma_eff=sigma; }
-    else { var s=(t-0.5)*2; mu_eff=0; sigma_eff=sigma+(1-sigma)*s; }
-    return {mu:mu_eff, sigma:sigma_eff};
+  /* applyAnimInterpolation: mutates the REAL mu/sigma directly each frame,
+     so there is only ever ONE source of truth — no separate "display value"
+     that can drift out of sync with what the sliders show. */
+  function applyAnimInterpolation(){
+    var t=animT;
+    if(t<=0.5){ var s=t*2; mu=origMu*(1-s); sigma=origSigma; }
+    else { var s=(t-0.5)*2; mu=0; sigma=origSigma+(1-origSigma)*s; }
   }
 
-  /* getSharedView: SAME range used for both panels at all times */
-  function getSharedView(){
-    var span=Math.max(4.5*sigma, 4.5);
-    var lo=Math.min(-4.5, mu-span);
-    var hi=Math.max(4.5, mu+span);
-    /* y-max is the taller of the two curves (standard vs general) */
-    var maxPdf=Math.max(phi(0), npdf(mu,mu,sigma))*1.22;
-    return {lo:lo, hi:hi, maxPdf:maxPdf};
-  }
+  /* FIXED_VIEW: computed ONCE from the full slider range, used identically by
+     BOTH panels forever. Neither panel's axis ever changes — only the curve
+     drawn in the right panel moves/reshapes as mu and sigma change. */
+  var MU_MIN=-4, MU_MAX=6, SIGMA_MIN=0.3, SIGMA_MAX=3;
+  var FIXED_VIEW = (function(){
+    var spanMax = 4.5*SIGMA_MAX;
+    var lo = Math.min(-4.5, MU_MIN-spanMax);
+    var hi = Math.max(4.5, MU_MAX+spanMax);
+    var maxPdf = 0.5; /* fixed y-axis range 0–0.5 for both panels */
+    return { lo:lo, hi:hi, maxPdf:maxPdf };
+  })();
+  function getView(){ return FIXED_VIEW; } // same call for both panels
 
   function animTick(ts){
     if(!animLastTs) animLastTs=ts;
     var dt=(ts-animLastTs)/ANIM_DUR; animLastTs=ts;
     animT=Math.max(0,Math.min(1,animT+animDir*dt));
+    applyAnimInterpolation();
     draw();
     if((animDir>0&&animT<1)||(animDir<0&&animT>0)){
       animRafId=requestAnimationFrame(animTick);
@@ -248,6 +288,7 @@
   function startAnim(dir){
     if(animRafId){cancelAnimationFrame(animRafId); animRafId=null;}
     animDir=dir; animLastTs=null; animRafId=requestAnimationFrame(animTick);
+    updateAnimBtn();
   }
   function updateAnimBtn(){
     var btn=document.getElementById('animBtn');
@@ -270,6 +311,10 @@
   var muValEl=document.getElementById('muVal'), sigmaValEl=document.getElementById('sigmaVal');
   var rightLabel=document.getElementById('rightLabel'), readoutEl=document.getElementById('readout');
   var modeBtns=document.querySelectorAll('.seg-btn');
+  var zInput=document.getElementById('zInput'), xInput=document.getElementById('xInput');
+  var aInput=document.getElementById('aInput'), bInput=document.getElementById('bInput');
+  var x1Input=document.getElementById('x1Input'), x2Input=document.getElementById('x2Input');
+  var pointInputsEl=document.getElementById('pointInputs'), intervalInputsEl=document.getElementById('intervalInputs');
 
   /* ── Layout ── */
   var PAD={top:30,right:14,bottom:36,left:48};
@@ -295,6 +340,22 @@
   function pxToD(px,sv,cw){ return sv.lo+((px-PAD.left)/(cw-PAD.left-PAD.right))*(sv.hi-sv.lo); }
   function vToPy(v,sv,ch){ return PAD.top+(1-v/sv.maxPdf)*(ch-PAD.top-PAD.bottom); }
   function clampSV(x,sv){ return Math.max(sv.lo+0.02,Math.min(sv.hi-0.02,x)); }
+
+  function niceTicksY(maxV, targetCount){
+    if(maxV<=0) return [0];
+    var rough=maxV/targetCount;
+    var mag=Math.pow(10,Math.floor(Math.log10(rough)));
+    var norm=rough/mag;
+    var step=(norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10)*mag;
+    var ticks=[];
+    for(var v=0;v<=maxV+step*0.01;v+=step) ticks.push(Math.round(v*1e6)/1e6);
+    return ticks;
+  }
+  function decimalsForStep(step){
+    if(step>=1) return 0;
+    var s=step.toString(), i=s.indexOf('.');
+    return i===-1?0:Math.min(3,s.length-i-1);
+  }
 
   /* ── Drawing helpers ── */
   function fillAreaPdf(ctx,lo,hi,sv,muF,sigF,cw,ch,color){
@@ -368,14 +429,15 @@
       ctx.textAlign='center'; ctx.textBaseline='top';
       ctx.fillText(t.toFixed(tDec),tp,plotB+4);
     }
-    var yTicks=[0,0.1,0.2,0.3,0.4];
+    var yTicks=niceTicksY(sv.maxPdf, compact?4:5);
+    var yDec=yTicks.length>1?decimalsForStep(yTicks[1]-yTicks[0]):2;
     for(var yi=0;yi<yTicks.length;yi++){
-      if(yTicks[yi]>sv.maxPdf*0.95) continue;
+      if(yTicks[yi]>sv.maxPdf*0.98) continue;
       var yp=vToPy(yTicks[yi],sv,ch);
       ctx.beginPath(); ctx.moveTo(PAD.left,yp); ctx.lineTo(cw-PAD.right,yp); ctx.stroke();
       ctx.fillStyle='#635E55'; ctx.font=(compact?'10px ':'11px ')+mono;
       ctx.textAlign='right'; ctx.textBaseline='middle';
-      ctx.fillText(yTicks[yi].toFixed(1),PAD.left-4,yp);
+      ctx.fillText(yTicks[yi].toFixed(yDec),PAD.left-4,yp);
     }
     ctx.fillStyle='#635E55'; ctx.font=(compact?'11px ':'12px ')+'-apple-system,sans-serif';
     ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText(axisLetter,cw-PAD.right,plotB+4);
@@ -408,7 +470,8 @@
     var ctx=ctxL, cw=cwL, ch=chL;
     if(!cw||!ch) return;
     var compact=cw<320, plotB=ch-PAD.bottom;
-    var sv=getSharedView();
+    var xv=getView();
+    var sv={lo:xv.lo, hi:xv.hi, maxPdf:xv.maxPdf};
     ctx.clearRect(0,0,cw,ch);
 
     if(mode==='point'){
@@ -443,10 +506,10 @@
     var ctx=ctxR, cw=cwR, ch=chR;
     if(!cw||!ch) return;
     var compact=cw<320, plotB=ch-PAD.bottom;
-    var sv=getSharedView(); // SAME shared view as left panel
-    var p=(animT>0)?getAnimParams():{mu:mu,sigma:sigma};
-    var muE=p.mu, sigE=p.sigma;
-    /* Derived marker positions using animated params */
+    var muE=mu, sigE=sigma; /* mu/sigma are already the live, current values */
+    var xv=getView();
+    var sv={lo:xv.lo, hi:xv.hi, maxPdf:xv.maxPdf};
+    /* Derived marker positions */
     var selXe=sigE*selZ+muE, selAxe=sigE*selAz+muE, selBxe=sigE*selBz+muE;
     ctx.clearRect(0,0,cw,ch);
 
@@ -503,12 +566,36 @@
 
     /* Right label */
     if(animT<0.02) rightLabel.textContent='X \u223C N('+mu.toFixed(1)+', '+(sigma*sigma).toFixed(2)+') \u2014 General Normal';
-    else if(animT<0.52){ var me=getAnimParams().mu; rightLabel.textContent='X\u2212\u03BC \u223C N('+me.toFixed(2)+', '+(sigma*sigma).toFixed(2)+') \u2014 Shifting\u2026'; }
-    else if(animT<0.98){ var se=getAnimParams().sigma; rightLabel.textContent='(X\u2212\u03BC)/\u03C3 \u223C N(0, '+(se*se).toFixed(2)+') \u2014 Scaling\u2026'; }
+    else if(animT<0.52) rightLabel.textContent='X\u2212\u03BC \u223C N('+mu.toFixed(2)+', '+(sigma*sigma).toFixed(2)+') \u2014 Shifting\u2026';
+    else if(animT<0.98) rightLabel.textContent='(X\u2212\u03BC)/\u03C3 \u223C N(0, '+(sigma*sigma).toFixed(2)+') \u2014 Scaling\u2026';
     else rightLabel.textContent='(X\u2212\u03BC)/\u03C3 \u223C N(0, 1) \u2014 Identical to top panel \u2713';
   }
 
-  function draw(){ drawL(); drawR(); updateReadout(); }
+  function draw(){ drawL(); drawR(); updateReadout(); updateSliderDisplay(); syncValueInputs(); }
+
+  /* Keep the z/x input boxes showing the current selection, but never
+     overwrite a box the user is actively typing in. */
+  function syncValueInputs(){
+    if(mode==='point'){
+      if(document.activeElement!==zInput) zInput.value=selZ.toFixed(2);
+      if(document.activeElement!==xInput) xInput.value=zToX(selZ).toFixed(2);
+    } else {
+      if(document.activeElement!==aInput) aInput.value=selAz.toFixed(2);
+      if(document.activeElement!==bInput) bInput.value=selBz.toFixed(2);
+      if(document.activeElement!==x1Input) x1Input.value=zToX(selAz).toFixed(2);
+      if(document.activeElement!==x2Input) x2Input.value=zToX(selBz).toFixed(2);
+    }
+  }
+
+  /* Sync the slider thumbs and value labels to the current mu/sigma.
+     Since the animation now mutates mu/sigma directly, these are ALWAYS
+     the correct live values — no separate "animated" vs "real" state. */
+  function updateSliderDisplay(){
+    muSlider.value=mu;
+    sigmaSlider.value=sigma;
+    muValEl.textContent=mu.toFixed(1);
+    sigmaValEl.textContent=sigma.toFixed(2);
+  }
 
   /* ── Readout ── */
   function updateReadout(){
@@ -543,7 +630,7 @@
 
   function onDownL(e){
     if(animRafId||animT>0) return;
-    e.preventDefault(); var sv=getSharedView(); var px=getPx(e,chartL);
+    e.preventDefault(); var sv=getView(); var px=getPx(e,chartL);
     if(mode==='point'){ dragging={panel:'L',handle:'pt'}; selZ=clampSV(pxToD(px,sv,cwL),sv); }
     else {
       var pxA=dToPx(selAz,sv,cwL),pxB=dToPx(selBz,sv,cwL); var hit=hitInterval(px,pxA,pxB);
@@ -555,10 +642,10 @@
 
   function onDownR(e){
     if(animRafId||animT>0) return;
-    e.preventDefault(); var sv=getSharedView(); var px=getPx(e,chartR);
+    e.preventDefault(); var sv=getView(); var px=getPx(e,chartR);
     if(mode==='point'){
       dragging={panel:'R',handle:'pt'};
-      selZ=clampSV(xToZ(pxToD(px,sv,cwR)),{lo:sv.lo,hi:sv.hi}); // clamp z in z-space
+      selZ=xToZ(pxToD(px,sv,cwR));
       selZ=Math.max(-4.15,Math.min(4.15,selZ));
     } else {
       var selAx=zToX(selAz),selBx=zToX(selBz);
@@ -571,7 +658,7 @@
 
   function applyDrag(px,panel){
     if(!dragging) return;
-    var sv=getSharedView();
+    var sv=getView();
     var cw=panel==='L'?cwL:cwR;
     var rawVal=pxToD(px,sv,cw);
     var z=panel==='L'?rawVal:xToZ(rawVal);
@@ -605,19 +692,70 @@
   chartR.addEventListener('touchend',onUp); chartR.addEventListener('touchcancel',onUp);
 
   /* ── Controls ── */
-  muSlider.addEventListener('input',function(){ mu=parseFloat(this.value); muValEl.textContent=mu.toFixed(1); draw(); });
-  sigmaSlider.addEventListener('input',function(){ sigma=parseFloat(this.value); sigmaValEl.textContent=sigma.toFixed(2); draw(); });
+  function exitStandardizedStateIfNeeded(){
+    /* If animation has finished (or is mid-flight) and the user grabs a
+       slider directly, snap back to manual control immediately. */
+    if(animRafId){ cancelAnimationFrame(animRafId); animRafId=null; animDir=0; animLastTs=null; }
+    animT=0;
+    updateAnimBtn();
+  }
+  muSlider.addEventListener('input',function(){
+    exitStandardizedStateIfNeeded();
+    mu=parseFloat(this.value); muValEl.textContent=mu.toFixed(1); draw();
+  });
+  sigmaSlider.addEventListener('input',function(){
+    exitStandardizedStateIfNeeded();
+    sigma=parseFloat(this.value); sigmaValEl.textContent=sigma.toFixed(2); draw();
+  });
   modeBtns.forEach(function(btn){
     btn.addEventListener('click',function(){
       modeBtns.forEach(function(b){b.classList.remove('active');}); this.classList.add('active');
       mode=this.getAttribute('data-mode');
-      if(mode==='interval'){selAz=selZ-1;selBz=selZ+1;} else {selZ=(selAz+selBz)/2;}
+      if(mode==='interval'){
+        selAz=selZ-1;selBz=selZ+1;
+        pointInputsEl.style.display='none'; intervalInputsEl.style.display='flex';
+      } else {
+        selZ=(selAz+selBz)/2;
+        pointInputsEl.style.display='flex'; intervalInputsEl.style.display='none';
+      }
       draw();
     });
   });
+
+  /* ── Point-mode value inputs ── */
+  function clampZ(z){ return Math.max(-4.15,Math.min(4.15,z)); }
+  zInput.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ selZ=clampZ(v); draw(); }
+  });
+  xInput.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ selZ=clampZ(xToZ(v)); draw(); }
+  });
+
+  /* ── Interval-mode value inputs (z-space: a, b) ── */
+  aInput.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ selAz=clampZ(v); if(selAz>selBz){var t=selAz;selAz=selBz;selBz=t;} draw(); }
+  });
+  bInput.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ selBz=clampZ(v); if(selBz<selAz){var t=selAz;selAz=selBz;selBz=t;} draw(); }
+  });
+
+  /* ── Interval-mode value inputs (x-space: x1, x2) ── */
+  x1Input.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ selAz=clampZ(xToZ(v)); if(selAz>selBz){var t=selAz;selAz=selBz;selBz=t;} draw(); }
+  });
+  x2Input.addEventListener('input',function(){
+    var v=parseFloat(this.value);
+    if(!isNaN(v)){ selBz=clampZ(xToZ(v)); if(selBz<selAz){var t=selAz;selAz=selBz;selBz=t;} draw(); }
+  });
   document.getElementById('animBtn').addEventListener('click',function(){
     if(animRafId){cancelAnimationFrame(animRafId);animRafId=null;animDir=0;animLastTs=null;updateAnimBtn();return;}
-    if(animT<0.5) startAnim(1); else startAnim(-1);
+    if(animT<0.5){ origMu=mu; origSigma=sigma; startAnim(1); }
+    else { startAnim(-1); }
   });
 
   window.addEventListener('resize',resize);
