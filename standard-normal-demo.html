@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Meet ϕ and Φ — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper: #FAF7F0; --ink: #1F2937; --bar: #2E4374;
+    --amber: #E0793F; --sage: #3F6F5E; --hair: #DDD6C7; --hair-2: #C9C0AC;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  body{
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex; justify-content: center;
+    padding: 28px 10px 40px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page{ width: 100%; max-width: 860px; }
+  .eyebrow{
+    margin: 0 0 4px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600;
+  }
+  h1{
+    margin: 0 0 4px;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600; font-size: clamp(22px, 5vw, 30px); letter-spacing: -0.01em;
+  }
+  .subtitle{ margin: 0 0 14px; font-size: 13.5px; color: #6B6459; }
+  .panel{
+    background: #fff; border: 1px solid var(--hair); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 14px 12px 10px; margin-bottom: 12px;
+  }
+  .controls{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .seg-toggle{ display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
+  .seg-btn{
+    padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: #6B6459; border: none; transition: all 100ms; min-height: 34px;
+  }
+  .seg-btn.active{ background: var(--bar); color: #fff; }
+  .seg-btn + .seg-btn{ border-left: 1px solid var(--hair); }
+  .sym-btn{
+    padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: #6B6459; border: 1px solid var(--hair); border-radius: 8px;
+    min-height: 34px; transition: all 100ms;
+  }
+  .sym-btn.active{ background: var(--sage); color: #fff; border-color: var(--sage); }
+  .input-row{ display: flex; align-items: center; gap: 5px; }
+  .input-label{
+    font-size: 13px; font-weight: 600; color: var(--bar);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  .val-input{
+    width: 68px; padding: 4px 6px; font-size: 13px; font-weight: 600;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); background: #fff; border: 1.5px solid var(--hair); border-radius: 7px;
+    text-align: center; outline: none; -moz-appearance: textfield;
+  }
+  .val-input:focus{ border-color: var(--amber); }
+  .val-input::-webkit-inner-spin-button,
+  .val-input::-webkit-outer-spin-button{ -webkit-appearance: none; margin: 0; }
+  .chart-wrap{
+    position: relative; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  canvas{
+    display: block; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+    cursor: ew-resize;
+  }
+  .readout{
+    margin-top: 8px; padding: 10px 12px; background: #FAFAF8; border-radius: 10px;
+    border: 1px solid var(--hair);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 13px; line-height: 1.8; color: var(--ink); overflow-x: auto;
+  }
+  .readout .lbl{ color: #6B6459; }
+  .readout .val{ font-weight: 700; color: var(--bar); }
+  .readout .amber{ font-weight: 700; color: var(--amber); }
+  .readout .sage{ font-weight: 700; color: var(--sage); }
+  .readout .sym-row{ margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--hair); }
+  footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
+  footer p{ margin-bottom: 10px; }
+  .byline{
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
+    font-size: 11.5px; color: #9C9485;
+  }
+  .byline a{ color: var(--sage); text-decoration: none; }
+  @media(max-width: 480px){ .readout{ font-size: 12px; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 1 &middot; Singapore University of Technology and Design</p>
+  <h1>Meet &phi; and &Phi;</h1>
+  <p class="subtitle">The standard normal&rsquo;s pdf and cdf.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="seg-toggle">
+        <button class="seg-btn active" data-mode="point">Point x</button>
+        <button class="seg-btn" data-mode="interval">Interval [a, b]</button>
+      </div>
+      <button class="sym-btn" id="symToggle">Symmetry</button>
+      <div class="input-row" id="pointInputs">
+        <span class="input-label">x =</span>
+        <input type="number" class="val-input" id="xInput" value="1.00" step="0.1" min="-4.1" max="4.1">
+      </div>
+      <div class="input-row" id="intervalInputs" style="display:none;">
+        <span class="input-label">a =</span>
+        <input type="number" class="val-input" id="aInput" value="-1.00" step="0.1" min="-4.1" max="4.1">
+        <span class="input-label">b =</span>
+        <input type="number" class="val-input" id="bInput" value="1.00" step="0.1" min="-4.1" max="4.1">
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <footer>
+    <p>
+      For the <strong>standard normal</strong> Z &sim; N(0, 1), we use special notation:
+      <strong>&phi;</strong> (lowercase phi) is the pdf &mdash; the <em>height</em> of the bell curve.
+      <strong>&Phi;</strong> (uppercase Phi) is the cdf &mdash; the <em>area</em> from &minus;&infin; to x, equal to P(Z &le; x).
+    </p>
+    <p>
+      In <strong>Point</strong> mode, drag or type x to see &Phi;(x).
+      In <strong>Interval</strong> mode, drag two handles to see P(a &le; Z &le; b) = &Phi;(b) &minus; &Phi;(a).
+      Toggle <strong>Symmetry</strong> (point mode only) to see &Phi;(&minus;x) = 1 &minus; &Phi;(x).
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ── Math ── */
+  function erf(x) {
+    var sign = x < 0 ? -1 : 1; x = Math.abs(x);
+    var a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+    var t = 1 / (1 + p * x);
+    var y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+    return sign * y;
+  }
+  function phi(x) { return Math.exp(-x*x/2) / Math.sqrt(2*Math.PI); }
+  function Phi(x) { return 0.5*(1+erf(x/Math.SQRT2)); }
+
+  /* ── State ── */
+  var mode = 'point'; // 'point' or 'interval'
+  var selX = 1.0;
+  var selA = -1.0, selB = 1.0;
+  var showSym = false;
+  var dragging = null; // null, 'point', 'left', 'right', 'move'
+  var dragStartPx = 0, dragAStart = 0, dragBStart = 0;
+
+  /* ── DOM ── */
+  var canvas = document.getElementById('chart');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('chartWrap');
+  var readoutEl = document.getElementById('readout');
+  var modeBtns = document.querySelectorAll('.seg-btn');
+  var symBtn = document.getElementById('symToggle');
+  var xInput = document.getElementById('xInput');
+  var aInput = document.getElementById('aInput');
+  var bInput = document.getElementById('bInput');
+  var pointInputsEl = document.getElementById('pointInputs');
+  var intervalInputsEl = document.getElementById('intervalInputs');
+
+  /* ── Layout ── */
+  var VIEW_LO = -4.2, VIEW_HI = 4.2;
+  var PAD = { top: 34, right: 20, bottom: 38, left: 50 };
+  var dpr = window.devicePixelRatio || 1;
+  var cw, ch;
+
+  function resize() {
+    var w = wrap.clientWidth;
+    var compact = w < 420;
+    PAD.left = compact ? 40 : 50;
+    PAD.right = compact ? 14 : 20;
+    var h = Math.min(Math.max(w * 0.52, 250), 400);
+    canvas.style.height = h + 'px';
+    cw = w; ch = h;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function dataToPx(x) { return PAD.left + ((x - VIEW_LO) / (VIEW_HI - VIEW_LO)) * (cw - PAD.left - PAD.right); }
+  function pxToData(px) { return VIEW_LO + ((px - PAD.left) / (cw - PAD.left - PAD.right)) * (VIEW_HI - VIEW_LO); }
+  var MAX_PDF = phi(0) * 1.18;
+  function valToPy(v) { return PAD.top + (1 - v / MAX_PDF) * (ch - PAD.top - PAD.bottom); }
+  function clamp(x) { return Math.max(VIEW_LO + 0.02, Math.min(VIEW_HI - 0.02, x)); }
+
+  /* ── Drawing ── */
+  function draw() {
+    var compact = cw < 420;
+    var mono = 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace';
+    ctx.clearRect(0, 0, cw, ch);
+    var plotL = PAD.left, plotR = cw - PAD.right, plotT = PAD.top, plotB = ch - PAD.bottom;
+    var pxW = plotR - plotL;
+
+    // ── Gridlines ──
+    ctx.strokeStyle = '#E8E4DB'; ctx.lineWidth = 1;
+    for (var gx = -4; gx <= 4; gx++) {
+      var gpx = dataToPx(gx);
+      ctx.beginPath(); ctx.moveTo(gpx, plotT); ctx.lineTo(gpx, plotB); ctx.stroke();
+    }
+    var yTicks = [0, 0.1, 0.2, 0.3, 0.4];
+    for (var yi = 0; yi < yTicks.length; yi++) {
+      var gy = valToPy(yTicks[yi]);
+      ctx.beginPath(); ctx.moveTo(plotL, gy); ctx.lineTo(plotR, gy); ctx.stroke();
+    }
+
+    // ── Shading ──
+    if (mode === 'point') {
+      // Symmetry shading first (behind main)
+      if (showSym) {
+        fillArea(VIEW_LO, -selX, 'rgba(63,111,94,0.22)', pxW, plotB);
+      }
+      // Main Φ(x) area
+      fillArea(VIEW_LO, selX, 'rgba(224,121,63,0.25)', pxW, plotB);
+    } else {
+      // Interval [a, b]
+      fillArea(selA, selB, 'rgba(224,121,63,0.25)', pxW, plotB);
+    }
+
+    // ── Bell curve ──
+    ctx.strokeStyle = '#2E4374'; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (var cpx = 0; cpx <= pxW; cpx++) {
+      var cx = VIEW_LO + (cpx / pxW) * (VIEW_HI - VIEW_LO);
+      var cy = valToPy(phi(cx));
+      if (cpx === 0) ctx.moveTo(plotL, cy); else ctx.lineTo(plotL + cpx, cy);
+    }
+    ctx.stroke();
+
+    // ── Selection visuals ──
+    if (mode === 'point') {
+      var selPx = dataToPx(selX), selPy = valToPy(phi(selX));
+      // dashed line
+      ctx.strokeStyle = 'rgba(224,121,63,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(selPx, plotT); ctx.lineTo(selPx, plotB); ctx.stroke();
+      ctx.setLineDash([]);
+      // guide to y-axis
+      ctx.strokeStyle = 'rgba(224,121,63,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(plotL, selPy); ctx.lineTo(selPx, selPy); ctx.stroke();
+      ctx.setLineDash([]);
+      // dot
+      ctx.fillStyle = '#E0793F';
+      ctx.beginPath(); ctx.arc(selPx, selPy, 5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+      // handle
+      drawHandle(selPx, plotB, compact, '#E0793F');
+
+      // symmetry visuals
+      if (showSym) {
+        var negPx = dataToPx(-selX), negPy = valToPy(phi(-selX));
+        ctx.strokeStyle = 'rgba(63,111,94,0.55)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.moveTo(negPx, plotT); ctx.lineTo(negPx, plotB); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#3F6F5E';
+        ctx.beginPath(); ctx.arc(negPx, negPy, 4, 0, Math.PI*2); ctx.fill();
+        drawHandle(negPx, plotB, compact, '#3F6F5E');
+      }
+
+      // ── Prominent labels ──
+      var PhiX = Phi(selX);
+      var shadeMidX = (Math.max(plotL, dataToPx(VIEW_LO)) + Math.min(selPx, plotR)) / 2;
+      var labelY = plotT + (plotB - plotT) * 0.58;
+      ctx.font = (compact ? 'bold 16px ' : 'bold 19px ') + mono;
+      ctx.fillStyle = 'rgba(224,121,63,0.85)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('\u03A6(' + selX.toFixed(1) + ') = ' + PhiX.toFixed(4), shadeMidX, labelY);
+
+      if (showSym) {
+        var negPhiVal = Phi(-selX);
+        var symMidX = (Math.max(plotL, dataToPx(VIEW_LO)) + Math.min(dataToPx(-selX), plotR)) / 2;
+        ctx.fillStyle = 'rgba(63,111,94,0.85)';
+        ctx.fillText('\u03A6(' + (-selX).toFixed(1) + ') = ' + negPhiVal.toFixed(4), symMidX, labelY + (compact ? 20 : 24));
+      }
+
+      // ϕ(x) label (blue, beside dot)
+      ctx.font = (compact ? 'bold 13px ' : 'bold 14px ') + mono;
+      ctx.fillStyle = '#2E4374'; ctx.textBaseline = 'bottom';
+      var phiLX = selPx + 8; ctx.textAlign = 'left';
+      if (phiLX + 100 > plotR) { ctx.textAlign = 'right'; phiLX = selPx - 8; }
+      ctx.fillText('\u03C6(' + selX.toFixed(1) + ') = ' + phi(selX).toFixed(4), phiLX, selPy - 8);
+
+    } else {
+      // ── Interval handles and lines ──
+      var aPx = dataToPx(selA), bPx = dataToPx(selB);
+      ctx.strokeStyle = 'rgba(224,121,63,0.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(aPx, plotT); ctx.lineTo(aPx, plotB); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bPx, plotT); ctx.lineTo(bPx, plotB); ctx.stroke();
+      ctx.setLineDash([]);
+      drawHandle(aPx, plotB, compact, '#E0793F');
+      drawHandle(bPx, plotB, compact, '#E0793F');
+
+      // ── Prominent area label ──
+      var prob = Phi(selB) - Phi(selA);
+      var midPx = (aPx + bPx) / 2;
+      var labelY2 = plotT + (plotB - plotT) * 0.55;
+      ctx.font = (compact ? 'bold 16px ' : 'bold 19px ') + mono;
+      ctx.fillStyle = 'rgba(224,121,63,0.85)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('P = ' + prob.toFixed(4), midPx, labelY2);
+    }
+
+    // ── Curve label ──
+    ctx.font = (compact ? 'bold 13px ' : 'bold 14px ') + mono;
+    ctx.fillStyle = '#2E4374'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('Z ~ N(0, 1)', plotL + 6, plotT + 4);
+
+    // ── Axes ──
+    ctx.strokeStyle = '#C9C0AC'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(plotL, plotT); ctx.lineTo(plotL, plotB); ctx.lineTo(plotR, plotB); ctx.stroke();
+
+    // x-axis labels
+    ctx.fillStyle = '#3D3832';
+    ctx.font = (compact ? '12px ' : '13px ') + mono;
+    ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+    for (var xl = -4; xl <= 4; xl++) {
+      var xlpx = dataToPx(xl);
+      if (xlpx < plotL + 10 || xlpx > plotR - 10) continue;
+      ctx.fillText(xl.toString(), xlpx, plotB + 4);
+    }
+    ctx.fillStyle = '#635E55'; ctx.textAlign = 'right';
+    ctx.fillText('z', plotR, plotB + 4);
+
+    // y-axis labels
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.font = (compact ? '11px ' : '12px ') + mono; ctx.fillStyle = '#635E55';
+    for (var yli = 0; yli < yTicks.length; yli++) {
+      var ylpx = valToPy(yTicks[yli]);
+      if (ylpx > plotB - 5) continue;
+      ctx.fillText(yTicks[yli].toFixed(1), plotL - 5, ylpx);
+    }
+    ctx.save();
+    ctx.translate(12, (plotT + plotB) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = (compact ? '12px ' : '13px ') + '-apple-system, sans-serif';
+    ctx.fillStyle = '#635E55'; ctx.fillText('\u03C6(z)', 0, 0);
+    ctx.restore();
+
+    updateReadout();
+  }
+
+  function fillArea(lo, hi, color, pxW, plotB) {
+    var aClip = Math.max(lo, VIEW_LO), bClip = Math.min(hi, VIEW_HI);
+    if (bClip <= aClip) return;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(dataToPx(aClip), plotB);
+    for (var sx = aClip; sx <= bClip; sx += (VIEW_HI - VIEW_LO) / pxW)
+      ctx.lineTo(dataToPx(sx), valToPy(phi(sx)));
+    ctx.lineTo(dataToPx(bClip), valToPy(phi(bClip)));
+    ctx.lineTo(dataToPx(bClip), plotB);
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawHandle(px, baseY, compact, color) {
+    var r = compact ? 7 : 8;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(px, baseY + 2);
+    ctx.lineTo(px - r, baseY + 2 + r * 1.3);
+    ctx.lineTo(px + r, baseY + 2 + r * 1.3);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  /* ── Readout ── */
+  function updateReadout() {
+    syncInputs();
+    var html = '';
+    if (mode === 'point') {
+      var phiX = phi(selX), PhiX = Phi(selX);
+      html += '<div><span class="lbl">z = </span><span class="val">' + selX.toFixed(2) + '</span></div>';
+      html += '<div><span class="lbl">Height: </span>\u03C6(' + selX.toFixed(2) + ') = <span class="val">' + phiX.toFixed(4) + '</span></div>';
+      html += '<div><span class="lbl">Area:  </span>\u03A6(' + selX.toFixed(2) + ') = P(Z \u2264 ' + selX.toFixed(2) + ') = <span class="amber">' + PhiX.toFixed(4) + '</span></div>';
+      if (showSym) {
+        var PhiNeg = Phi(-selX);
+        html += '<div class="sym-row">';
+        html += '<span class="lbl">Symmetry: </span>\u03A6(' + (-selX).toFixed(2) + ') = P(Z \u2264 ' + (-selX).toFixed(2) + ') = <span class="sage">' + PhiNeg.toFixed(4) + '</span>';
+        html += '</div>';
+        html += '<div>\u03A6(' + selX.toFixed(2) + ') + \u03A6(' + (-selX).toFixed(2) + ') = ' + PhiX.toFixed(4) + ' + ' + PhiNeg.toFixed(4) + ' = <span class="val">1.0000</span></div>';
+      }
+    } else {
+      var PhiA = Phi(selA), PhiB = Phi(selB), prob = PhiB - PhiA;
+      html += '<div><span class="amber">P(' + selA.toFixed(2) + ' \u2264 Z \u2264 ' + selB.toFixed(2) + ')</span></div>';
+      html += '<div>= \u03A6(' + selB.toFixed(2) + ') \u2212 \u03A6(' + selA.toFixed(2) + ')</div>';
+      html += '<div>= ' + PhiB.toFixed(4) + ' \u2212 ' + PhiA.toFixed(4) + ' = <span class="amber">' + prob.toFixed(4) + '</span></div>';
+    }
+    readoutEl.innerHTML = html;
+  }
+
+  function syncInputs() {
+    if (mode === 'point') {
+      if (document.activeElement !== xInput) xInput.value = selX.toFixed(2);
+    } else {
+      if (document.activeElement !== aInput) aInput.value = selA.toFixed(2);
+      if (document.activeElement !== bInput) bInput.value = selB.toFixed(2);
+    }
+  }
+
+  /* ── Hit testing (interval mode) ── */
+  function hitTest(px) {
+    var pxA = dataToPx(selA), pxB = dataToPx(selB);
+    var radius = ('ontouchstart' in window) ? 24 : 12;
+    var dA = Math.abs(px - pxA), dB = Math.abs(px - pxB);
+    if (dA <= radius || dB <= radius) return dA <= dB ? 'left' : 'right';
+    if (px > pxA && px < pxB) return 'move';
+    return 'new';
+  }
+
+  /* ── Pointer events ── */
+  function getPointerX(e) {
+    var rect = canvas.getBoundingClientRect();
+    return (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  }
+  function onDown(e) {
+    e.preventDefault();
+    var px = getPointerX(e);
+    if (mode === 'point') {
+      dragging = 'point';
+      selX = clamp(pxToData(px));
+    } else {
+      var hit = hitTest(px);
+      dragging = hit; dragStartPx = px; dragAStart = selA; dragBStart = selB;
+      if (hit === 'new') { selA = selB = clamp(pxToData(px)); dragging = 'right'; }
+    }
+    draw();
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    var px = getPointerX(e), x = pxToData(px);
+    if (dragging === 'point') {
+      selX = clamp(x);
+    } else if (dragging === 'left') {
+      selA = clamp(x);
+      if (selA > selB) { var t = selA; selA = selB; selB = t; dragging = 'right'; }
+    } else if (dragging === 'right') {
+      selB = clamp(x);
+      if (selB < selA) { var t = selA; selA = selB; selB = t; dragging = 'left'; }
+    } else if (dragging === 'move') {
+      var dx = pxToData(px) - pxToData(dragStartPx);
+      var nA = dragAStart + dx, nB = dragBStart + dx, w = nB - nA;
+      if (nA < VIEW_LO) { nA = VIEW_LO; nB = nA + w; }
+      if (nB > VIEW_HI) { nB = VIEW_HI; nA = nB - w; }
+      selA = nA; selB = nB;
+    }
+    draw();
+  }
+  function onUp() { dragging = null; }
+
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseup', onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  canvas.addEventListener('touchend', onUp);
+  canvas.addEventListener('touchcancel', onUp);
+
+  /* ── Input handlers ── */
+  function onValInput(el, setter) {
+    el.addEventListener('input', function() {
+      var v = parseFloat(this.value);
+      if (!isNaN(v)) { setter(v); draw(); }
+    });
+    el.addEventListener('change', function() {
+      var v = parseFloat(this.value);
+      if (!isNaN(v)) { setter(v); this.value = clamp(v).toFixed(2); draw(); }
+    });
+  }
+  onValInput(xInput, function(v) { selX = clamp(v); });
+  onValInput(aInput, function(v) { selA = clamp(v); if (selA > selB) { var t=selA; selA=selB; selB=t; } });
+  onValInput(bInput, function(v) { selB = clamp(v); if (selB < selA) { var t=selA; selA=selB; selB=t; } });
+
+  /* ── Mode toggle ── */
+  modeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      modeBtns.forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      mode = this.getAttribute('data-mode');
+      if (mode === 'interval') {
+        pointInputsEl.style.display = 'none';
+        intervalInputsEl.style.display = 'flex';
+        showSym = false; symBtn.classList.remove('active');
+      } else {
+        pointInputsEl.style.display = 'flex';
+        intervalInputsEl.style.display = 'none';
+      }
+      draw();
+    });
+  });
+
+  /* ── Symmetry toggle ── */
+  symBtn.addEventListener('click', function() {
+    if (mode === 'interval') return; // symmetry only in point mode
+    showSym = !showSym;
+    this.classList.toggle('active', showSym);
+    draw();
+  });
+
+  /* ── Init ── */
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
+</body>
+</html>
