@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Explore the Normal — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper: #FAF7F0; --ink: #1F2937; --bar: #2E4374;
+    --amber: #E0793F; --sage: #3F6F5E; --hair: #DDD6C7; --hair-2: #C9C0AC;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  body{
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex; justify-content: center;
+    padding: 28px 10px 40px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page{ width: 100%; max-width: 860px; }
+  .eyebrow{
+    margin: 0 0 4px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600;
+  }
+  h1{
+    margin: 0 0 4px;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600; font-size: clamp(22px, 5vw, 30px); letter-spacing: -0.01em;
+  }
+  .subtitle{ margin: 0 0 14px; font-size: 13.5px; color: #6B6459; }
+  .panel{
+    background: #fff; border: 1px solid var(--hair); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 14px 12px 10px; margin-bottom: 12px;
+  }
+  .controls{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-bottom: 10px; }
+  .ctrl-row{ display: flex; align-items: center; gap: 6px; }
+  .ctrl-row.full{ grid-column: 1 / -1; }
+  .ctrl-label{
+    font-size: 12px; font-weight: 600; color: #6B6459; min-width: 22px; text-align: right;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  .ctrl-val{
+    font-size: 12px; font-weight: 700; color: var(--bar); min-width: 38px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  input[type="range"]{
+    flex: 1; height: 28px; -webkit-appearance: none; appearance: none;
+    background: transparent; touch-action: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height: 4px; background: var(--hair); border-radius: 2px; }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    margin-top: -9px; cursor: pointer;
+  }
+  input[type="range"]::-moz-range-track{ height: 4px; background: var(--hair); border-radius: 2px; border: none; }
+  input[type="range"]::-moz-range-thumb{
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
+  }
+  .toggle-row{ display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .seg-toggle{ display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
+  .seg-btn{
+    padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: #6B6459; border: none; transition: all 100ms; min-height: 32px;
+  }
+  .seg-btn.active{ background: var(--bar); color: #fff; }
+  .seg-btn + .seg-btn{ border-left: 1px solid var(--hair); }
+  .band-btn{
+    padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: #6B6459; border: 1px solid var(--hair); border-radius: 8px;
+    min-height: 32px; transition: all 100ms;
+  }
+  .band-btn.active{ background: var(--sage); color: #fff; border-color: var(--sage); }
+  .chart-wrap{
+    position: relative; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  canvas{
+    display: block; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  .readout{
+    margin-top: 8px; padding: 10px 12px; background: #FAFAF8; border-radius: 10px;
+    border: 1px solid var(--hair);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.8; color: var(--ink); overflow-x: auto;
+  }
+  .readout .step{ color: #6B6459; }
+  .readout .val{ font-weight: 700; color: var(--bar); }
+  .readout .amber{ font-weight: 700; color: var(--amber); }
+  .readout .sage{ font-weight: 700; color: var(--sage); }
+  footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
+  footer p{ margin-bottom: 10px; }
+  .byline{
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
+    font-size: 11.5px; color: #9C9485;
+  }
+  .byline a{ color: var(--sage); text-decoration: none; }
+  @media(max-width: 480px){
+    .controls{ grid-template-columns: 1fr; }
+    .ctrl-row.full{ grid-column: 1; }
+    .readout{ font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 1 &middot; Singapore University of Technology and Design</p>
+  <h1>Explore the Normal</h1>
+  <p class="subtitle">Shade, standardize, solve.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctrl-row">
+        <span class="ctrl-label">&mu;</span>
+        <input type="range" id="muSlider" min="-5" max="8" step="0.1" value="2">
+        <span class="ctrl-val" id="muVal">2.0</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">&sigma;</span>
+        <input type="range" id="sigmaSlider" min="0.3" max="3" step="0.05" value="1">
+        <span class="ctrl-val" id="sigmaVal">1.00</span>
+      </div>
+      <div class="ctrl-row full">
+        <div class="toggle-row">
+          <div class="seg-toggle">
+            <button class="seg-btn active" data-mode="interval">Interval [a, b]</button>
+            <button class="seg-btn" data-mode="point">Point x</button>
+          </div>
+          <button class="band-btn" id="bandToggle">68-95-99.7</button>
+          <button class="band-btn" id="resetBtn">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="chart"></canvas>
+    </div>
+
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <footer>
+    <p>
+      To compute probabilities with <strong>any</strong> normal distribution, <strong>standardize</strong> first:
+      convert X-values to Z = (X &minus; &mu;) / &sigma;, then look up &Phi;(z).
+      The readout below shows every step. Drag the handles to set an interval P(a &le; X &le; b),
+      or switch to Point mode to see the cdf P(X &le; x) = &Phi;(z) directly.
+    </p>
+    <p>
+      The <strong>68-95-99.7 rule</strong> says roughly 68.3% of the probability lies within &plusmn;1&sigma; of the mean,
+      95.5% within &plusmn;2&sigma;, and 99.7% within &plusmn;3&sigma;.
+      These percentages are universal &mdash; they don&rsquo;t change when you adjust &mu; or &sigma;.
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ── Math ── */
+  function erf(x) {
+    var sign = x < 0 ? -1 : 1; x = Math.abs(x);
+    var a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+    var t = 1 / (1 + p * x);
+    var y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+    return sign * y;
+  }
+  function normalPdf(x, mu, sigma) { return sigma<=0?0: Math.exp(-((x-mu)*(x-mu))/(2*sigma*sigma)) / (sigma*Math.sqrt(2*Math.PI)); }
+  function normalCdf(x, mu, sigma) { return sigma<=0?(x<mu?0:1): 0.5*(1+erf((x-mu)/(sigma*Math.SQRT2))); }
+
+  /* ── State ── */
+  var mu = 2, sigma = 1;
+  var selA = 1, selB = 3; // interval mode default: [mu-sigma, mu+sigma]
+  var selX = 2;            // point mode default: mu
+  var mode = 'interval';
+  var showBands = false;
+  var dragging = null;
+  var dragStartPx = 0, dragSelAStart = 0, dragSelBStart = 0;
+
+  /* ── DOM ── */
+  var canvas = document.getElementById('chart');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('chartWrap');
+  var muSlider = document.getElementById('muSlider');
+  var sigmaSlider = document.getElementById('sigmaSlider');
+  var muValEl = document.getElementById('muVal');
+  var sigmaValEl = document.getElementById('sigmaVal');
+  var readoutEl = document.getElementById('readout');
+  var bandBtn = document.getElementById('bandToggle');
+  var resetBtn = document.getElementById('resetBtn');
+  var modeBtns = document.querySelectorAll('.seg-btn');
+
+  /* ── Layout ── */
+  var PAD = { top: 32, right: 20, bottom: 46, left: 50 };
+  var dpr = window.devicePixelRatio || 1;
+  var cw, ch, viewLo, viewHi;
+
+  function resize() {
+    var w = wrap.clientWidth;
+    var compact = w < 420;
+    PAD.left = compact ? 40 : 50;
+    PAD.right = compact ? 14 : 20;
+    PAD.bottom = compact ? 42 : 46;
+    var h = Math.min(Math.max(w * 0.55, 260), 420);
+    canvas.style.height = h + 'px';
+    cw = w; ch = h;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function getViewDomain() {
+    var span = Math.max(4.5 * sigma, 3);
+    var lo = mu - span, hi = mu + span;
+    if (mode === 'interval') {
+      lo = Math.min(lo, selA - sigma * 0.5);
+      hi = Math.max(hi, selB + sigma * 0.5);
+    } else {
+      lo = Math.min(lo, selX - sigma * 0.5);
+      hi = Math.max(hi, selX + sigma * 0.5);
+    }
+    return [lo, hi];
+  }
+
+  function dataToPx(x) { return PAD.left + ((x - viewLo) / (viewHi - viewLo)) * (cw - PAD.left - PAD.right); }
+  function pxToData(px) { return viewLo + ((px - PAD.left) / (cw - PAD.left - PAD.right)) * (viewHi - viewLo); }
+  function valToPy(v, maxV) { return PAD.top + (1 - v / maxV) * (ch - PAD.top - PAD.bottom); }
+
+  function niceTicks(lo, hi, targetCount) {
+    var range = hi - lo;
+    if (range <= 0) return [lo];
+    var roughStep = range / Math.max(1, targetCount - 1);
+    var mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    var norm = roughStep / mag;
+    var niceNorm = norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10;
+    var step = niceNorm * mag;
+    var first = Math.ceil(lo / step) * step;
+    var ticks = [];
+    for (var v = first; v <= hi + step*0.001; v += step) ticks.push(Math.round(v*1e8)/1e8);
+    return ticks;
+  }
+  function decimalsFor(step) {
+    if (step >= 1) return 0;
+    var s = step.toString(), i = s.indexOf('.');
+    return i === -1 ? 0 : s.length - i - 1;
+  }
+
+  /* ── Drawing ── */
+  function draw() {
+    var v = getViewDomain(); viewLo = v[0]; viewHi = v[1];
+    var compact = cw < 420;
+    var mono = 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace';
+    ctx.clearRect(0, 0, cw, ch);
+
+    var plotL = PAD.left, plotR = cw - PAD.right;
+    var plotT = PAD.top, plotB = ch - PAD.bottom;
+    var pxW = plotR - plotL;
+
+    // max pdf in view
+    var maxPdf = 0;
+    for (var px = 0; px <= pxW; px += 2) {
+      var xv = viewLo + (px / pxW) * (viewHi - viewLo);
+      var pv = normalPdf(xv, mu, sigma);
+      if (pv > maxPdf) maxPdf = pv;
+    }
+    maxPdf *= 1.15;
+
+    // ── 68-95-99.7 bands ──
+    if (showBands) {
+      var bands = [
+        { k: 3, alpha: 0.08, label: '99.7%' },
+        { k: 2, alpha: 0.12, label: '95.5%' },
+        { k: 1, alpha: 0.18, label: '68.3%' }
+      ];
+      for (var bi = 0; bi < bands.length; bi++) {
+        var bk = bands[bi];
+        var bL = Math.max(plotL, dataToPx(mu - bk.k * sigma));
+        var bR = Math.min(plotR, dataToPx(mu + bk.k * sigma));
+        if (bR > bL) {
+          ctx.fillStyle = 'rgba(63,111,94,' + bk.alpha + ')';
+          ctx.fillRect(bL, plotT, bR - bL, plotB - plotT);
+        }
+        var midPx = (bL + bR) / 2;
+        ctx.font = (compact ? '11px ' : '12px ') + mono;
+        ctx.fillStyle = '#3F6F5E'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(bk.label, midPx, plotT + 3 + bi * (compact ? 11 : 13));
+        // dashed edges
+        ctx.strokeStyle = 'rgba(63,111,94,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+        if (bL > plotL + 2) { ctx.beginPath(); ctx.moveTo(bL, plotT); ctx.lineTo(bL, plotB); ctx.stroke(); }
+        if (bR < plotR - 2) { ctx.beginPath(); ctx.moveTo(bR, plotT); ctx.lineTo(bR, plotB); ctx.stroke(); }
+        ctx.setLineDash([]);
+      }
+    }
+
+    // ── Gridlines ──
+    var xTicks = niceTicks(viewLo, viewHi, compact ? 6 : 9);
+    var xStep = xTicks.length > 1 ? xTicks[1] - xTicks[0] : 1;
+    var xDec = decimalsFor(xStep);
+    ctx.strokeStyle = '#E8E4DB'; ctx.lineWidth = 1;
+    for (var xi = 0; xi < xTicks.length; xi++) {
+      var xpx = dataToPx(xTicks[xi]);
+      if (xpx < plotL - 0.5 || xpx > plotR + 0.5) continue;
+      ctx.beginPath(); ctx.moveTo(xpx, plotT); ctx.lineTo(xpx, plotB); ctx.stroke();
+    }
+    var yTicks = niceTicks(0, maxPdf, 5);
+    var yStep = yTicks.length > 1 ? yTicks[1] - yTicks[0] : maxPdf;
+    var yDec = decimalsFor(yStep);
+    for (var yi = 0; yi < yTicks.length; yi++) {
+      var ypx = valToPy(yTicks[yi], maxPdf);
+      if (ypx < plotT - 0.5 || ypx > plotB + 0.5) continue;
+      ctx.beginPath(); ctx.moveTo(plotL, ypx); ctx.lineTo(plotR, ypx); ctx.stroke();
+    }
+
+    // ── Shaded area ──
+    if (mode === 'interval') {
+      var aClip = Math.max(selA, viewLo), bClip = Math.min(selB, viewHi);
+      if (bClip > aClip) {
+        ctx.fillStyle = 'rgba(224,121,63,0.25)';
+        ctx.beginPath(); ctx.moveTo(dataToPx(aClip), plotB);
+        for (var sx = aClip; sx <= bClip; sx += (viewHi - viewLo) / pxW) {
+          ctx.lineTo(dataToPx(sx), valToPy(normalPdf(sx, mu, sigma), maxPdf));
+        }
+        ctx.lineTo(dataToPx(bClip), valToPy(normalPdf(bClip, mu, sigma), maxPdf));
+        ctx.lineTo(dataToPx(bClip), plotB);
+        ctx.closePath(); ctx.fill();
+      }
+    } else {
+      var ptClip = Math.min(selX, viewHi);
+      ctx.fillStyle = 'rgba(224,121,63,0.25)';
+      ctx.beginPath(); ctx.moveTo(dataToPx(viewLo), plotB);
+      for (var sx2 = viewLo; sx2 <= ptClip; sx2 += (viewHi - viewLo) / pxW) {
+        ctx.lineTo(dataToPx(sx2), valToPy(normalPdf(sx2, mu, sigma), maxPdf));
+      }
+      ctx.lineTo(dataToPx(ptClip), valToPy(normalPdf(ptClip, mu, sigma), maxPdf));
+      ctx.lineTo(dataToPx(ptClip), plotB);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // ── Bell curve ──
+    ctx.strokeStyle = '#2E4374'; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (var cpx = 0; cpx <= pxW; cpx += 1) {
+      var cx = viewLo + (cpx / pxW) * (viewHi - viewLo);
+      var cy = valToPy(normalPdf(cx, mu, sigma), maxPdf);
+      if (cpx === 0) ctx.moveTo(plotL, cy); else ctx.lineTo(plotL + cpx, cy);
+    }
+    ctx.stroke();
+
+    // ── Handles and selection lines ──
+    if (mode === 'interval') {
+      var aPx = dataToPx(selA), bPx = dataToPx(selB);
+      ctx.strokeStyle = 'rgba(224,121,63,0.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(aPx, plotT); ctx.lineTo(aPx, plotB); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bPx, plotT); ctx.lineTo(bPx, plotB); ctx.stroke();
+      ctx.setLineDash([]);
+      drawHandle(aPx, plotB, compact);
+      drawHandle(bPx, plotB, compact);
+      // chip
+      var prob = normalCdf(selB, mu, sigma) - normalCdf(selA, mu, sigma);
+      drawChip((aPx + bPx) / 2, 'area = ' + prob.toFixed(4), compact, '#E0793F', 0);
+    } else {
+      var ptPx = dataToPx(selX);
+      ctx.strokeStyle = 'rgba(224,121,63,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(ptPx, plotT); ctx.lineTo(ptPx, plotB); ctx.stroke();
+      ctx.setLineDash([]);
+      drawHandle(ptPx, plotB, compact);
+      // dot on curve
+      var ptFy = valToPy(normalPdf(selX, mu, sigma), maxPdf);
+      ctx.fillStyle = '#E0793F'; ctx.beginPath(); ctx.arc(ptPx, ptFy, 4, 0, Math.PI*2); ctx.fill();
+      var cdfVal = normalCdf(selX, mu, sigma);
+      drawChip(ptPx, '\u03A6(z) = ' + cdfVal.toFixed(4), compact, '#E0793F', 0);
+    }
+
+    // ── Axis labels ──
+    ctx.fillStyle = '#3D3832';
+    ctx.font = (compact ? '12px ' : '13px ') + mono;
+    ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+    for (var xl = 0; xl < xTicks.length; xl++) {
+      var xlpx = dataToPx(xTicks[xl]);
+      if (xlpx < plotL + 10 || xlpx > plotR - 10) continue;
+      ctx.fillText(xTicks[xl].toFixed(xDec), xlpx, plotB + 4);
+      // z-value
+      var zv = (xTicks[xl] - mu) / sigma;
+      ctx.fillStyle = '#635E55';
+      ctx.font = (compact ? '11px ' : '12px ') + mono;
+      ctx.fillText('z=' + zv.toFixed(1), xlpx, plotB + (compact ? 17 : 19));
+      ctx.fillStyle = '#3D3832';
+      ctx.font = (compact ? '12px ' : '13px ') + mono;
+    }
+    ctx.fillStyle = '#635E55'; ctx.textAlign = 'right';
+    ctx.fillText('x', plotR, plotB + 4);
+
+    // y-axis
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.font = (compact ? '11px ' : '12px ') + mono; ctx.fillStyle = '#635E55';
+    for (var yl = 0; yl < yTicks.length; yl++) {
+      var ylpx = valToPy(yTicks[yl], maxPdf);
+      if (ylpx < plotT + 5 || ylpx > plotB - 5) continue;
+      ctx.fillText(yTicks[yl].toFixed(yDec), plotL - 5, ylpx);
+    }
+    ctx.save();
+    ctx.translate(12, (plotT + plotB) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = (compact ? '12px ' : '13px ') + '-apple-system, sans-serif';
+    ctx.fillStyle = '#635E55'; ctx.fillText('f(x)', 0, 0);
+    ctx.restore();
+
+    // ── Axes frame ──
+    ctx.strokeStyle = '#C9C0AC'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(plotL, plotT); ctx.lineTo(plotL, plotB); ctx.lineTo(plotR, plotB); ctx.stroke();
+
+    // ── Distribution label ──
+    ctx.font = (compact ? 'bold 13px ' : 'bold 14px ') + mono;
+    ctx.fillStyle = '#2E4374'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('X ~ N(' + mu.toFixed(1) + ', ' + (sigma*sigma).toFixed(2) + ')', plotL + 6, plotT + 4);
+
+    updateReadout();
+  }
+
+  function drawHandle(px, baseY, compact) {
+    var r = compact ? 7 : 8;
+    ctx.fillStyle = '#E0793F';
+    ctx.beginPath();
+    ctx.moveTo(px, baseY + 2);
+    ctx.lineTo(px - r, baseY + 2 + r * 1.3);
+    ctx.lineTo(px + r, baseY + 2 + r * 1.3);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  function drawChip(px, text, compact, color, row) {
+    var font = (compact ? 'bold 12px ' : 'bold 13px ') + 'ui-monospace, "SF Mono", Menlo, monospace';
+    ctx.font = font;
+    var tw = ctx.measureText(text).width, padX = 6, boxH = 17, boxW = tw + padX*2;
+    var lb = PAD.left + boxW/2 + 4, rb = cw - PAD.right - boxW/2 - 4;
+    var tx = Math.max(Math.min(lb, rb), Math.min(px, Math.max(lb, rb)));
+    var ty = PAD.top - 11 + row * 21;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(tx-boxW/2, ty-boxH/2, boxW, boxH);
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.6; ctx.lineWidth = 1;
+    ctx.strokeRect(tx-boxW/2, ty-boxH/2, boxW, boxH);
+    ctx.globalAlpha = 1; ctx.fillStyle = color;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, tx, ty + 1);
+  }
+
+  /* ── Readout ── */
+  function updateReadout() {
+    var html = '';
+    if (mode === 'interval') {
+      var zA = (selA - mu) / sigma, zB = (selB - mu) / sigma;
+      var phiA = normalCdf(selA, mu, sigma), phiB = normalCdf(selB, mu, sigma);
+      var prob = phiB - phiA;
+      html += '<div class="step">Standardize: z = (x \u2212 ' + mu.toFixed(1) + ') / ' + sigma.toFixed(2) + '</div>';
+      html += '<div><span class="amber">P(' + selA.toFixed(2) + ' \u2264 X \u2264 ' + selB.toFixed(2) + ')</span></div>';
+      html += '<div>= P(<span class="val">' + zA.toFixed(3) + '</span> \u2264 Z \u2264 <span class="val">' + zB.toFixed(3) + '</span>)</div>';
+      html += '<div>= \u03A6(' + zB.toFixed(3) + ') \u2212 \u03A6(' + zA.toFixed(3) + ')</div>';
+      html += '<div>= ' + phiB.toFixed(4) + ' \u2212 ' + phiA.toFixed(4) + ' = <span class="amber">' + prob.toFixed(4) + '</span></div>';
+    } else {
+      var z = (selX - mu) / sigma;
+      var cdfV = normalCdf(selX, mu, sigma);
+      html += '<div class="step">Standardize: z = (' + selX.toFixed(2) + ' \u2212 ' + mu.toFixed(1) + ') / ' + sigma.toFixed(2) + ' = <span class="val">' + z.toFixed(3) + '</span></div>';
+      html += '<div><span class="amber">P(X \u2264 ' + selX.toFixed(2) + ')</span> = \u03A6(' + z.toFixed(3) + ') = <span class="amber">' + cdfV.toFixed(4) + '</span></div>';
+      html += '<div class="step" style="margin-top:4px">\u03A6(\u2212z) = 1 \u2212 \u03A6(z)  \u2192  \u03A6(' + (-z).toFixed(3) + ') = <span class="sage">' + (1-cdfV).toFixed(4) + '</span></div>';
+    }
+    readoutEl.innerHTML = html;
+  }
+
+  /* ── Hit testing ── */
+  function hitTest(px) {
+    if (mode === 'point') return 'point';
+    var pxA = dataToPx(selA), pxB = dataToPx(selB);
+    var radius = ('ontouchstart' in window) ? 24 : 12;
+    var dA = Math.abs(px - pxA), dB = Math.abs(px - pxB);
+    if (dA <= radius || dB <= radius) return dA <= dB ? 'left' : 'right';
+    if (px > pxA && px < pxB) return 'move';
+    return 'new';
+  }
+
+  /* ── Pointer events ── */
+  function getPointerX(e) {
+    var rect = canvas.getBoundingClientRect();
+    return (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  }
+  function clamp(x) { return Math.max(viewLo + 0.01, Math.min(viewHi - 0.01, x)); }
+
+  function onDown(e) {
+    e.preventDefault();
+    var px = getPointerX(e);
+    if (mode === 'point') {
+      dragging = 'point'; selX = clamp(pxToData(px));
+    } else {
+      var hit = hitTest(px);
+      dragging = hit; dragStartPx = px; dragSelAStart = selA; dragSelBStart = selB;
+      if (hit === 'new') { selA = selB = clamp(pxToData(px)); dragging = 'right'; }
+    }
+    draw();
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    var px = getPointerX(e), x = pxToData(px);
+    if (dragging === 'point') { selX = clamp(x); }
+    else if (dragging === 'left') { selA = clamp(x); if (selA > selB) { var t=selA; selA=selB; selB=t; dragging='right'; } }
+    else if (dragging === 'right') { selB = clamp(x); if (selB < selA) { var t=selA; selA=selB; selB=t; dragging='left'; } }
+    else if (dragging === 'move') {
+      var dx = pxToData(px) - pxToData(dragStartPx);
+      var nA = dragSelAStart + dx, nB = dragSelBStart + dx, w = nB - nA;
+      if (nA < viewLo) { nA = viewLo; nB = nA + w; }
+      if (nB > viewHi) { nB = viewHi; nA = nB - w; }
+      selA = nA; selB = nB;
+    }
+    draw();
+  }
+  function onUp() { dragging = null; }
+
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseup', onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  canvas.addEventListener('touchend', onUp);
+  canvas.addEventListener('touchcancel', onUp);
+
+  /* ── Controls ── */
+  muSlider.addEventListener('input', function() {
+    mu = parseFloat(this.value); muValEl.textContent = mu.toFixed(1); draw();
+  });
+  sigmaSlider.addEventListener('input', function() {
+    sigma = parseFloat(this.value); sigmaValEl.textContent = sigma.toFixed(2); draw();
+  });
+  modeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      modeBtns.forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      mode = this.getAttribute('data-mode');
+      if (mode === 'point') selX = (selA + selB) / 2;
+      else { selA = selX - sigma; selB = selX + sigma; }
+      draw();
+    });
+  });
+  bandBtn.addEventListener('click', function() {
+    showBands = !showBands; this.classList.toggle('active', showBands); draw();
+  });
+  resetBtn.addEventListener('click', function() {
+    mu = 2; sigma = 1;
+    muSlider.value = 2; sigmaSlider.value = 1;
+    muValEl.textContent = '2.0'; sigmaValEl.textContent = '1.00';
+    selA = 1; selB = 3; selX = 2;
+    showBands = false; bandBtn.classList.remove('active');
+    mode = 'interval';
+    modeBtns.forEach(function(b) { b.classList.remove('active'); });
+    modeBtns[0].classList.add('active');
+    draw();
+  });
+
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
+</body>
+</html>
