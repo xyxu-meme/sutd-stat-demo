@@ -179,7 +179,7 @@
   <div class="card">
     <div class="input-area">
       <span class="z-label">z =</span>
-      <input type="number" class="z-input" id="zInput" value="-1.23" step="0.01" min="-3.49" max="3.49">
+      <input type="number" class="z-input" id="zInput" value="-1.23" step="0.005" min="-3.49" max="3.49">
       <div class="preset-btns">
         <button class="preset-btn" data-z="-1.96">-1.96</button>
         <button class="preset-btn" data-z="-1.645">-1.645</button>
@@ -255,6 +255,24 @@
     return { r:r, c:col, rowVal:-rowAbs, colVal:col/100 };
   }
 
+  /* ── Does z land exactly on a 2-decimal table entry? ── */
+  function isExactEntry(z){
+    var hundredths = Math.round(z*100);
+    return Math.abs(z*100 - hundredths) < 1e-6;
+  }
+
+  /* ── Given z ≤ 0 with a 3rd decimal digit, find the two bracketing
+     2-decimal table entries (lo = more negative, hi = less negative)
+     and the interpolation weight toward hi. ── */
+  function getBracket(z){
+    var z3 = Math.round(z*1000)/1000;
+    var lo = Math.floor(z3*100 - 1e-6)/100;
+    lo = Math.round(lo*100)/100;
+    var hi = Math.round((lo+0.01)*100)/100;
+    var weight = (z3-lo)/(hi-lo); /* 0 = entirely at lo, 1 = entirely at hi */
+    return { lo:lo, hi:hi, weight:weight };
+  }
+
   /* ── Build Z table ── */
   function buildTable(){
     var mono='ui-monospace,"SF Mono",Menlo,Consolas,monospace';
@@ -282,37 +300,41 @@
       .forEach(function(el){el.className=el.className.replace(/\bhl-\S+/g,'').trim();});
   }
 
-  /* ── Apply highlights for a given row r, col c ── */
-  function applyHL(r,c){
+  /* ── Apply highlights for one or two target cells.
+     targets = [{r,c}] — one for direct lookup, two for interpolation. ── */
+  function applyHL(targets){
     clearHL();
-    /* row label */
-    var rl=document.getElementById('rl_'+r);
-    if(rl) rl.classList.add('hl-row-label');
-    /* col header */
-    var ch=document.getElementById('ch_'+c);
-    if(ch) ch.classList.add('hl-col-header');
-    /* all cells in this row */
-    for(var cc=0;cc<=9;cc++){
-      var td=document.getElementById('cell_'+r+'_'+cc);
-      if(!td) continue;
-      if(cc===c) td.classList.add('hl-both');
-      else td.classList.add('hl-row');
-    }
-    /* all cells in this column */
-    for(var rr=0;rr<=34;rr++){
-      var td2=document.getElementById('cell_'+rr+'_'+c);
-      if(!td2) continue;
-      if(rr!==r) td2.classList.add('hl-col');
-    }
-    /* target cell */
-    var cell=document.getElementById('cell_'+r+'_'+c);
-    if(cell){
-      cell.classList.remove('hl-row','hl-col','hl-both');
-      cell.classList.add('hl-cell');
-      /* scroll into view */
-      setTimeout(function(){
-        cell.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
-      },50);
+    targets.forEach(function(t){
+      var rl=document.getElementById('rl_'+t.r);
+      if(rl) rl.classList.add('hl-row-label');
+      var ch=document.getElementById('ch_'+t.c);
+      if(ch) ch.classList.add('hl-col-header');
+      for(var cc=0;cc<=9;cc++){
+        var td=document.getElementById('cell_'+t.r+'_'+cc);
+        if(!td) continue;
+        if(cc===t.c) td.classList.add('hl-both');
+        else td.classList.add('hl-row');
+      }
+      for(var rr=0;rr<=34;rr++){
+        var td2=document.getElementById('cell_'+rr+'_'+t.c);
+        if(!td2) continue;
+        if(rr!==t.r) td2.classList.add('hl-col');
+      }
+    });
+    targets.forEach(function(t){
+      var cell=document.getElementById('cell_'+t.r+'_'+t.c);
+      if(cell){
+        cell.classList.remove('hl-row','hl-col','hl-both');
+        cell.classList.add('hl-cell');
+      }
+    });
+    if(targets.length){
+      var firstCell=document.getElementById('cell_'+targets[0].r+'_'+targets[0].c);
+      if(firstCell){
+        setTimeout(function(){
+          firstCell.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+        },50);
+      }
     }
   }
 
@@ -432,7 +454,7 @@
     }
     /* z chip */
     ctx.font='bold 12px '+mono;
-    var chipText='z = '+z.toFixed(2);
+    var chipText='z = '+formatZ(z);
     var tw=ctx.measureText(chipText).width+10;
     var chipX=Math.max(plotL+tw/2+4,Math.min(plotR-tw/2-4,zPx));
     ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fillRect(chipX-tw/2,PAD.top-9,tw,16);
@@ -455,38 +477,75 @@
     var z=curZ;
     var html='';
 
-    if(Math.abs(z)<0.005){ /* z ≈ 0 */
-      var v=Phi(0).toFixed(4);
+    if(Math.abs(z)<0.0005){ /* z ≈ 0 */
       html+=step(1,'z = <span class="blu">0</span> &rarr; boundary case');
       html+=step(2,'Row <span class="hi">-0.0</span>, Column <span class="hi">.00</span>');
       html+=step(3,'Read cell: &Phi;(0) = <span class="hi">0.5000</span>',true);
       document.getElementById('stepsBody').innerHTML=html; return;
     }
 
+    var zFmt=formatZ(z);
+
     if(z<0){
-      /* direct lookup */
-      var rc=getRC(z);
-      var v=Phi(z).toFixed(4);
-      var rowLabel=rc.rowVal===0?'&minus;0.0':rc.rowVal.toFixed(1);
-      var colLabel='.'+String(rc.c).padStart(2,'0');
-      html+=step(1,'z = <span class="blu">'+z.toFixed(2)+'</span> &le; 0 &rarr; look up directly');
-      html+=step(2,'Row = <span class="hi">'+rowLabel+'</span> &nbsp;(digits up to first decimal)');
-      html+=step(3,'Column = <span class="hi">'+colLabel+'</span> &nbsp;(last decimal digit)');
-      html+=step(4,'Read intersection: &Phi;('+z.toFixed(2)+') = <span class="hi">'+v+'</span>',true);
+      if(isExactEntry(z)){
+        /* direct lookup — z lands exactly on a table entry */
+        var rc=getRC(z);
+        var v=Phi(z).toFixed(4);
+        var rowLabel=rc.rowVal===0?'&minus;0.0':rc.rowVal.toFixed(1);
+        var colLabel='.'+String(rc.c).padStart(2,'0');
+        html+=step(1,'z = <span class="blu">'+zFmt+'</span> &le; 0 &rarr; look up directly');
+        html+=step(2,'Row = <span class="hi">'+rowLabel+'</span> &nbsp;(digits up to first decimal)');
+        html+=step(3,'Column = <span class="hi">'+colLabel+'</span> &nbsp;(last decimal digit)');
+        html+=step(4,'Read intersection: &Phi;('+zFmt+') = <span class="hi">'+v+'</span>',true);
+      } else {
+        /* z has a 3rd decimal digit not on the table — interpolate
+           between the two nearest table entries, same method as the slide */
+        var br=getBracket(z);
+        var vLo=Phi(br.lo), vHi=Phi(br.hi);
+        var vInterp=vLo+br.weight*(vHi-vLo);
+        html+=step(1,'z = <span class="blu">'+zFmt+'</span> is not a table entry &rarr; interpolate between the two nearest rows/columns');
+        html+=step(2,'Bracket: <span class="hi">'+br.lo.toFixed(2)+'</span> &le; z &le; <span class="hi">'+br.hi.toFixed(2)+'</span>');
+        html+=step(3,'Look up both: &Phi;('+br.lo.toFixed(2)+') = <span class="hi">'+vLo.toFixed(4)+'</span> &nbsp;and&nbsp; &Phi;('+br.hi.toFixed(2)+') = <span class="hi">'+vHi.toFixed(4)+'</span>');
+        if(Math.abs(br.weight-0.5)<0.001){
+          html+=step(4,'z is exactly halfway &rarr; average the two:<br>&Phi;('+zFmt+') &asymp; ('+vLo.toFixed(4)+' + '+vHi.toFixed(4)+') / 2 = <span class="hi">'+vInterp.toFixed(4)+'</span>',true);
+        } else {
+          html+=step(4,'Interpolate (weight '+br.weight.toFixed(2)+' toward '+br.hi.toFixed(2)+'):<br>&Phi;('+zFmt+') &asymp; '+vLo.toFixed(4)+' + '+br.weight.toFixed(2)+'\u00D7('+vHi.toFixed(4)+'\u2212'+vLo.toFixed(4)+') = <span class="hi">'+vInterp.toFixed(4)+'</span>',true);
+        }
+      }
     } else {
-      /* symmetry */
+      /* z > 0: use symmetry first, then either direct lookup or interpolation on -z */
       var negZ=-z;
-      var rc=getRC(negZ);
-      var vNeg=Phi(negZ).toFixed(4);
-      var vPos=(1-Phi(negZ)).toFixed(4);
-      var rowLabel=rc.rowVal===0?'&minus;0.0':rc.rowVal.toFixed(1);
-      var colLabel='.'+String(rc.c).padStart(2,'0');
-      html+=step(1,'z = <span class="blu">'+z.toFixed(2)+'</span> &gt; 0 &rarr; use symmetry:<br>&Phi;('+z.toFixed(2)+') = 1 &minus; &Phi;(&minus;'+z.toFixed(2)+')');
-      html+=step(2,'Look up &Phi;('+negZ.toFixed(2)+'): Row <span class="hi">'+rowLabel+'</span>, Column <span class="hi">'+colLabel+'</span>');
-      html+=step(3,'Read cell: &Phi;('+negZ.toFixed(2)+') = <span class="hi">'+vNeg+'</span>');
-      html+=step(4,'&Phi;('+z.toFixed(2)+') = 1 &minus; '+vNeg+' = <span class="hi">'+vPos+'</span>',true);
+      if(isExactEntry(negZ)){
+        var rc=getRC(negZ);
+        var vNeg=Phi(negZ).toFixed(4);
+        var vPos=(1-Phi(negZ)).toFixed(4);
+        var rowLabel=rc.rowVal===0?'&minus;0.0':rc.rowVal.toFixed(1);
+        var colLabel='.'+String(rc.c).padStart(2,'0');
+        html+=step(1,'z = <span class="blu">'+zFmt+'</span> &gt; 0 &rarr; use symmetry:<br>&Phi;('+zFmt+') = 1 &minus; &Phi;(&minus;'+zFmt+')');
+        html+=step(2,'Look up &Phi;('+negZ.toFixed(2)+'): Row <span class="hi">'+rowLabel+'</span>, Column <span class="hi">'+colLabel+'</span>');
+        html+=step(3,'Read cell: &Phi;('+negZ.toFixed(2)+') = <span class="hi">'+vNeg+'</span>');
+        html+=step(4,'&Phi;('+zFmt+') = 1 &minus; '+vNeg+' = <span class="hi">'+vPos+'</span>',true);
+      } else {
+        var br=getBracket(negZ);
+        var vLo=Phi(br.lo), vHi=Phi(br.hi);
+        var vInterpNeg=vLo+br.weight*(vHi-vLo);
+        var vInterpPos=1-vInterpNeg;
+        html+=step(1,'z = <span class="blu">'+zFmt+'</span> &gt; 0 &rarr; use symmetry:<br>&Phi;('+zFmt+') = 1 &minus; &Phi;(&minus;'+zFmt+')');
+        html+=step(2,'&minus;'+zFmt+' is not a table entry &rarr; bracket: <span class="hi">'+br.lo.toFixed(2)+'</span> &le; z &le; <span class="hi">'+br.hi.toFixed(2)+'</span>');
+        html+=step(3,'Look up both: &Phi;('+br.lo.toFixed(2)+') = <span class="hi">'+vLo.toFixed(4)+'</span> &nbsp;and&nbsp; &Phi;('+br.hi.toFixed(2)+') = <span class="hi">'+vHi.toFixed(4)+'</span>');
+        if(Math.abs(br.weight-0.5)<0.001){
+          html+=step(4,'Average the two, then apply symmetry:<br>&Phi;(&minus;'+zFmt+') &asymp; ('+vLo.toFixed(4)+'+'+vHi.toFixed(4)+')/2 = '+vInterpNeg.toFixed(4)+'<br>&Phi;('+zFmt+') = 1 &minus; '+vInterpNeg.toFixed(4)+' = <span class="hi">'+vInterpPos.toFixed(4)+'</span>',true);
+        } else {
+          html+=step(4,'Interpolate (weight '+br.weight.toFixed(2)+'), then apply symmetry:<br>&Phi;(&minus;'+zFmt+') &asymp; '+vInterpNeg.toFixed(4)+' &rarr; &Phi;('+zFmt+') = 1\u2212'+vInterpNeg.toFixed(4)+' = <span class="hi">'+vInterpPos.toFixed(4)+'</span>',true);
+        }
+      }
     }
     document.getElementById('stepsBody').innerHTML=html;
+  }
+
+  /* Format z, showing 3 decimals only when the 3rd decimal is meaningful */
+  function formatZ(z){
+    return isExactEntry(z) ? z.toFixed(2) : z.toFixed(3);
   }
 
   function step(n,body,isResult){
@@ -495,16 +554,22 @@
 
   /* ── Main update ── */
   function update(z){
-    z=Math.max(-3.49,Math.min(3.49,Math.round(z*100)/100));
+    z=Math.max(-3.49,Math.min(3.49,Math.round(z*1000)/1000));
     curZ=z;
     /* Update input if not focused */
-    if(document.activeElement!==zInput) zInput.value=z.toFixed(2);
+    if(document.activeElement!==zInput) zInput.value=formatZ(z);
     drawBell();
     updateSteps();
     /* Highlight table using lookup z (always ≤ 0) */
     var lookupZ=z>0?-z:z;
-    var rc=getRC(lookupZ);
-    applyHL(rc.r, rc.c);
+    if(Math.abs(z)<0.0005){
+      applyHL([getRC(0)]);
+    } else if(isExactEntry(lookupZ)){
+      applyHL([getRC(lookupZ)]);
+    } else {
+      var br=getBracket(lookupZ);
+      applyHL([getRC(br.lo), getRC(br.hi)]);
+    }
   }
 
   /* ── Draggable bell curve ── */
@@ -529,7 +594,7 @@
   });
   zInput.addEventListener('change',function(){
     var v=parseFloat(this.value);
-    if(!isNaN(v)){ update(v); this.value=curZ.toFixed(2); }
+    if(!isNaN(v)){ update(v); this.value=formatZ(curZ); }
   });
 
   /* ── Preset buttons ── */
