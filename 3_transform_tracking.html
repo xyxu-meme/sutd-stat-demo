@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Cdf Is the Bridge — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper: #FAF7F0; --ink: #1F2937; --bar: #2E4374;
+    --amber: #E0793F; --sage: #3F6F5E; --hair: #DDD6C7; --hair-2: #C9C0AC;
+    --violet: #8E5DC9;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  body{
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex; justify-content: center;
+    padding: 28px 10px 40px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page{ width: 100%; max-width: 860px; }
+  .eyebrow{
+    margin: 0 0 4px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600;
+  }
+  h1{
+    margin: 0 0 4px;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600; font-size: clamp(22px, 5vw, 30px); letter-spacing: -0.01em;
+  }
+  .subtitle{ margin: 0 0 14px; font-size: 13.5px; color: #6B6459; }
+  .panel{
+    background: #fff; border: 1px solid var(--hair); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 14px 12px 10px; margin-bottom: 12px;
+  }
+  .controls{ display: grid; grid-template-columns: 1fr; gap: 8px 14px; margin-bottom: 10px; }
+  .ctrl-row{ display: flex; align-items: center; gap: 6px; }
+  .ctrl-label{
+    font-size: 12px; font-weight: 600; color: #6B6459; min-width: 14px; text-align: right;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  .ctrl-val{
+    font-size: 12px; font-weight: 700; color: var(--bar); min-width: 34px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  input[type="range"]{
+    flex: 1; height: 28px; -webkit-appearance: none; appearance: none;
+    background: transparent; touch-action: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height: 4px; background: var(--hair); border-radius: 2px; }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    margin-top: -9px; cursor: pointer;
+  }
+  input[type="range"]::-moz-range-track{ height: 4px; background: var(--hair); border-radius: 2px; border: none; }
+  input[type="range"]::-moz-range-thumb{
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
+  }
+  .threecol{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: start; }
+  @media(max-width: 700px){ .threecol{ grid-template-columns: 1fr; } }
+  .chart-title{ font-size: 11px; font-weight: 700; color: var(--bar); text-align: center; margin: 0 0 4px; }
+  .chart-wrap{
+    position: relative; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  canvas{
+    display: block; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  .readout{
+    margin-top: 8px; padding: 10px 12px; background: #FAFAF8; border-radius: 10px;
+    border: 1px solid var(--hair);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.8; color: var(--ink); overflow-x: auto;
+  }
+  .readout .lbl{ color: #6B6459; }
+  .readout .val{ font-weight: 700; color: var(--bar); }
+  .readout .amber{ font-weight: 700; color: var(--amber); }
+  .readout .sage{ font-weight: 700; color: var(--sage); }
+  .readout .violet{ font-weight: 700; color: var(--violet); }
+  .panel-title{
+    font-size: 12.5px; font-weight: 700; color: var(--bar); margin: 4px 0 6px;
+  }
+  .panel-sub{ font-size: 12px; color: #6B6459; margin: 0 0 8px; line-height: 1.5; }
+  .formula-box{
+    margin-top: 6px; padding: 9px 12px; background: #FAFAF8; border-radius: 10px;
+    border: 1px solid var(--hair);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.8; color: var(--ink);
+  }
+  .formula-box .lbl{ color: #6B6459; }
+  .formula-box .val{ font-weight: 700; color: var(--bar); }
+  footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
+  footer p{ margin-bottom: 10px; }
+  .byline{
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
+    font-size: 11.5px; color: #9C9485;
+  }
+  .byline a{ color: var(--sage); text-decoration: none; }
+  @media(max-width: 480px){
+    .readout{ font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 2 &middot; Singapore University of Technology and Design</p>
+  <h1>The Cdf Is the Bridge</h1>
+  <p class="subtitle">Slide 21&ndash;22: X ~ Uniform(0,1), Y = &minus;ln(1&minus;X) ~ Exponential(1)</p>
+
+  <div class="panel">
+    <p class="panel-title">Background: transforming a random variable</p>
+    <p class="panel-sub">
+      Given X with a known cdf, and Y = g(X) for some function g, we can find Y&rsquo;s cdf directly:
+      F<sub>Y</sub>(y) = P(Y &le; y) = P(g(X) &le; y), which is rewritten in terms of F<sub>X</sub> by solving the
+      inequality for X. For the increasing transform g(x) = &minus;ln(1&minus;x) used here, this gives:
+    </p>
+    <div class="formula-box">
+      <div class="lbl">F<sub>Y</sub>(y) = F<sub>X</sub>(x) &nbsp;&mdash;&nbsp; whenever y = g(x)</div>
+    </div>
+    <p class="panel-sub" style="margin-top:8px;margin-bottom:0;">
+      Because g is monotonic, {X &le; x} and {Y &le; y} are literally the same event &mdash; so their cdfs agree at
+      that shared probability level. That identity is exactly the inverse-transform method for random number
+      generation. Drag the slider below to watch it hold at every x.
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctrl-row">
+        <span class="ctrl-label">x</span>
+        <input type="range" id="xSlider" min="0.01" max="0.97" step="0.01" value="0.50">
+        <span class="ctrl-val" id="xVal">0.50</span>
+      </div>
+    </div>
+
+    <div class="threecol">
+      <div>
+        <p class="chart-title">cdf of X — F<sub>X</sub>(x) = x on [0,1]</p>
+        <div class="chart-wrap" id="xWrap"><canvas id="xChart"></canvas></div>
+      </div>
+      <div>
+        <p class="chart-title">transform Y = g(X) = &minus;ln(1&minus;X)</p>
+        <div class="chart-wrap" id="gWrap"><canvas id="gChart"></canvas></div>
+      </div>
+      <div>
+        <p class="chart-title">cdf of Y — F<sub>Y</sub>(y) = 1&minus;e<sup>&minus;y</sup></p>
+        <div class="chart-wrap" id="yWrap"><canvas id="yChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <footer>
+    <p>
+      Drag the slider to move x across [0,1). Two linked quantities run across all three panels, each picked out
+      in its own colour: the <strong style="color:var(--sage);">sage probability level</strong> in panel 1
+      (F<sub>X</sub>(x)) is the exact same number as the sage level in panel 3 (F<sub>Y</sub>(y)) &mdash; both panels
+      share an identical probability axis, so it sits at the same height in both. Separately, the
+      <strong style="color:var(--violet);">violet value y</strong> that comes <em>out</em> of the middle panel (its
+      vertical axis) is the exact same number that goes <em>into</em> panel 3 (its horizontal axis) &mdash; panel 2&rsquo;s
+      output is panel 3&rsquo;s input.
+    </p>
+    <p>
+      Because g is monotonic increasing, the events {X &le; x} and {Y &le; y} are literally the same event &mdash; so
+      P(X &le; x) = P(Y &le; y), i.e. F<sub>X</sub>(x) = F<sub>Y</sub>(y) for every value x. This identity is exactly the
+      inverse-transform method: draw x as a realisation of Uniform(0,1); since F<sub>X</sub>(x) = x already <em>is</em>
+      the target probability, y = g(x) lands precisely where F<sub>Y</sub> reaches that same probability.
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var COL_P = '#3F6F5E', COL_MARK = '#E0793F', COL_VAL = '#8E5DC9';
+
+  function g(x) { return -Math.log(1-x); }
+  function FX(x) { return Math.max(0, Math.min(1, x)); }
+  function FY(y) { return y<=0 ? 0 : 1 - Math.exp(-y); }
+
+  var xSlider = document.getElementById('xSlider');
+  var xValEl = document.getElementById('xVal');
+  var xCanvas = document.getElementById('xChart'), xctx = xCanvas.getContext('2d');
+  var xWrap = document.getElementById('xWrap');
+  var gCanvas = document.getElementById('gChart'), gctx = gCanvas.getContext('2d');
+  var gWrap = document.getElementById('gWrap');
+  var yCanvas = document.getElementById('yChart'), yctx = yCanvas.getContext('2d');
+  var yWrap = document.getElementById('yWrap');
+  var readoutEl = document.getElementById('readout');
+  var dpr = window.devicePixelRatio || 1;
+
+  var xcw, xch, gcw, gch, ycw, ych;
+
+  function resize() {
+    var w1 = xWrap.clientWidth, h1 = Math.min(Math.max(w1 * 1.0, 200), 300);
+    xCanvas.style.height = h1 + 'px'; xcw = w1; xch = h1;
+    xCanvas.width = w1 * dpr; xCanvas.height = h1 * dpr;
+    xctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var w2 = gWrap.clientWidth, h2 = Math.min(Math.max(w2 * 1.0, 200), 300);
+    gCanvas.style.height = h2 + 'px'; gcw = w2; gch = h2;
+    gCanvas.width = w2 * dpr; gCanvas.height = h2 * dpr;
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var w3 = yWrap.clientWidth, h3 = Math.min(Math.max(w3 * 1.0, 200), 300);
+    yCanvas.style.height = h3 + 'px'; ycw = w3; ych = h3;
+    yCanvas.width = w3 * dpr; yCanvas.height = h3 * dpr;
+    yctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    draw();
+  }
+
+  function drawX(x0, p0) {
+    var compact = xcw < 220;
+    xctx.clearRect(0,0,xcw,xch);
+    var PAD = { left: compact?32:38, right:10, top:14, bottom:compact?42:46 };
+    var plotW = xcw-PAD.left-PAD.right, plotH = xch-PAD.top-PAD.bottom;
+    var xLo=0, xHi=1, baseline = xch-PAD.bottom;
+
+    function xPx(x){ return PAD.left + ((x-xLo)/(xHi-xLo))*plotW; }
+    function pPy(p){ return baseline - p*plotH; }
+
+    xctx.strokeStyle='#DDD6C7'; xctx.lineWidth=1;
+    xctx.beginPath(); xctx.moveTo(PAD.left,PAD.top); xctx.lineTo(PAD.left,baseline); xctx.lineTo(xcw-PAD.right,baseline); xctx.stroke();
+
+    var pTicks=[0,0.25,0.5,0.75,1];
+    xctx.font=(compact?'8.5px':'9.5px')+' ui-monospace,monospace'; xctx.fillStyle='#9C9485';
+    pTicks.forEach(function(t){
+      var py=pPy(t);
+      xctx.strokeStyle='#EEEAE0'; xctx.lineWidth=1;
+      xctx.beginPath(); xctx.moveTo(PAD.left,py); xctx.lineTo(xcw-PAD.right,py); xctx.stroke();
+      xctx.textAlign='right'; xctx.textBaseline='middle';
+      xctx.fillText(t.toFixed(2), PAD.left-5, py);
+    });
+    xctx.textAlign='center'; xctx.textBaseline='top';
+    [0,0.5,1].forEach(function(t){ xctx.fillText(t, xPx(t), baseline+5); });
+
+    xctx.strokeStyle='#2E4374'; xctx.lineWidth=2;
+    xctx.beginPath(); xctx.moveTo(xPx(0), pPy(0)); xctx.lineTo(xPx(1), pPy(1)); xctx.stroke();
+
+    xctx.strokeStyle = COL_P; xctx.lineWidth = 1.6; xctx.setLineDash([5,4]);
+    xctx.beginPath(); xctx.moveTo(PAD.left, pPy(p0)); xctx.lineTo(xcw-PAD.right, pPy(p0)); xctx.stroke();
+    xctx.setLineDash([]);
+
+    xctx.strokeStyle = COL_MARK; xctx.lineWidth = 1.6; xctx.setLineDash([4,3]);
+    xctx.beginPath(); xctx.moveTo(xPx(x0), pPy(p0)); xctx.lineTo(xPx(x0), baseline); xctx.stroke();
+    xctx.setLineDash([]);
+
+    xctx.fillStyle = COL_MARK; xctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
+    xctx.textAlign='center'; xctx.textBaseline='top';
+    xctx.fillText('x='+x0.toFixed(2), xPx(x0), baseline+16);
+
+    xctx.fillStyle = COL_MARK;
+    xctx.beginPath(); xctx.arc(xPx(x0), pPy(p0), compact?4.5:5.5, 0, 2*Math.PI); xctx.fill();
+
+    xctx.fillStyle = COL_P; xctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
+    xctx.textAlign='left'; xctx.textBaseline='bottom';
+    xctx.fillText('F_X='+p0.toFixed(2), PAD.left+4, pPy(p0)-5);
+
+    xctx.fillStyle='#6B6459'; xctx.font=(compact?'9px':'10px')+' sans-serif';
+    xctx.textAlign='center'; xctx.textBaseline='top';
+    xctx.fillText('x', xcw/2, baseline + (compact?30:32));
+  }
+
+  function drawG(x0, y0) {
+    var compact = gcw < 220;
+    gctx.clearRect(0,0,gcw,gch);
+    var PAD = { left: compact?32:38, right:10, top:14, bottom:compact?42:46 };
+    var plotW = gcw-PAD.left-PAD.right, plotH = gch-PAD.top-PAD.bottom;
+    var xLo=0, xHi=0.97, yLo=0, yHi=4.0, baseline = gch-PAD.bottom;
+
+    function xPx(x){ return PAD.left + ((x-xLo)/(xHi-xLo))*plotW; }
+    function yPy(y){ return baseline - ((y-yLo)/(yHi-yLo))*plotH; }
+
+    gctx.strokeStyle='#DDD6C7'; gctx.lineWidth=1;
+    gctx.beginPath(); gctx.moveTo(PAD.left,PAD.top); gctx.lineTo(PAD.left,baseline); gctx.lineTo(gcw-PAD.right,baseline); gctx.stroke();
+
+    var yTicks=[0,1,2,3,4];
+    gctx.font=(compact?'8.5px':'9.5px')+' ui-monospace,monospace'; gctx.fillStyle='#9C9485';
+    yTicks.forEach(function(t){
+      var py=yPy(t);
+      gctx.strokeStyle='#EEEAE0'; gctx.lineWidth=1;
+      gctx.beginPath(); gctx.moveTo(PAD.left,py); gctx.lineTo(gcw-PAD.right,py); gctx.stroke();
+      gctx.textAlign='right'; gctx.textBaseline='middle';
+      gctx.fillText(t, PAD.left-5, py);
+    });
+    gctx.textAlign='center'; gctx.textBaseline='top';
+    [0,0.5,1].forEach(function(t){ gctx.fillText(t, xPx(t), baseline+5); });
+
+    gctx.strokeStyle='#2E4374'; gctx.lineWidth=2;
+    gctx.beginPath();
+    var first=true;
+    for (var x=0; x<=xHi; x+=0.005) {
+      var yy = g(x);
+      if (yy>yHi) continue;
+      var px=xPx(x), py=yPy(yy);
+      if (first) { gctx.moveTo(px,py); first=false; } else gctx.lineTo(px,py);
+    }
+    gctx.stroke();
+
+    gctx.strokeStyle=COL_MARK; gctx.lineWidth=1.6; gctx.setLineDash([4,3]);
+    gctx.beginPath(); gctx.moveTo(xPx(x0), baseline); gctx.lineTo(xPx(x0), yPy(y0)); gctx.stroke();
+    gctx.setLineDash([]);
+
+    gctx.strokeStyle=COL_VAL; gctx.lineWidth=2; gctx.setLineDash([5,4]);
+    gctx.beginPath(); gctx.moveTo(PAD.left, yPy(y0)); gctx.lineTo(gcw-PAD.right, yPy(y0)); gctx.stroke();
+    gctx.setLineDash([]);
+
+    gctx.fillStyle=COL_MARK;
+    gctx.beginPath(); gctx.arc(xPx(x0), yPy(y0), compact?4.5:5.5, 0, 2*Math.PI); gctx.fill();
+
+    gctx.fillStyle=COL_VAL; gctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
+    gctx.textAlign='left'; gctx.textBaseline='bottom';
+    gctx.fillText('y='+y0.toFixed(2), xPx(x0)+6, yPy(y0)-4);
+
+    gctx.fillStyle=COL_MARK; gctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
+    gctx.textAlign='center'; gctx.textBaseline='top';
+    gctx.fillText('x='+x0.toFixed(2), xPx(x0), baseline+16);
+
+    gctx.fillStyle='#6B6459'; gctx.font=(compact?'9px':'10px')+' sans-serif';
+    gctx.textAlign='center'; gctx.textBaseline='top';
+    gctx.fillText('X', gcw/2, baseline + (compact?30:32));
+    gctx.save(); gctx.translate(compact?10:12, gch/2); gctx.rotate(-Math.PI/2);
+    gctx.textAlign='center'; gctx.fillText('Y', 0,0); gctx.restore();
+  }
+
+  function drawY(y0, p0) {
+    var compact = ycw < 220;
+    yctx.clearRect(0,0,ycw,ych);
+    var PAD = { left: compact?32:38, right:10, top:14, bottom:compact?42:46 };
+    var plotW = ycw-PAD.left-PAD.right, plotH = ych-PAD.top-PAD.bottom;
+    var yLo=0, yHi=4.0, baseline = ych-PAD.bottom;
+
+    function yPx(y){ return PAD.left + ((y-yLo)/(yHi-yLo))*plotW; }
+    function pPy(p){ return baseline - p*plotH; }
+
+    yctx.strokeStyle='#DDD6C7'; yctx.lineWidth=1;
+    yctx.beginPath(); yctx.moveTo(PAD.left,PAD.top); yctx.lineTo(PAD.left,baseline); yctx.lineTo(ycw-PAD.right,baseline); yctx.stroke();
+
+    var pTicks=[0,0.25,0.5,0.75,1];
+    yctx.font=(compact?'8.5px':'9.5px')+' ui-monospace,monospace'; yctx.fillStyle='#9C9485';
+    pTicks.forEach(function(t){
+      var py=pPy(t);
+      yctx.strokeStyle='#EEEAE0'; yctx.lineWidth=1;
+      yctx.beginPath(); yctx.moveTo(PAD.left,py); yctx.lineTo(ycw-PAD.right,py); yctx.stroke();
+      yctx.textAlign='right'; yctx.textBaseline='middle';
+      yctx.fillText(t.toFixed(2), PAD.left-5, py);
+    });
+    yctx.textAlign='center'; yctx.textBaseline='top';
+    [0,1,2,3,4].forEach(function(t){ yctx.fillText(t, yPx(t), baseline+5); });
+
+    yctx.strokeStyle='#2E4374'; yctx.lineWidth=2;
+    yctx.beginPath();
+    var first=true;
+    for (var y=0;y<=yHi;y+=0.02) {
+      var px=yPx(y), py=pPy(FY(y));
+      if (first) { yctx.moveTo(px,py); first=false; } else yctx.lineTo(px,py);
+    }
+    yctx.stroke();
+
+    yctx.strokeStyle = COL_P; yctx.lineWidth = 1.6; yctx.setLineDash([5,4]);
+    yctx.beginPath(); yctx.moveTo(PAD.left, pPy(p0)); yctx.lineTo(ycw-PAD.right, pPy(p0)); yctx.stroke();
+    yctx.setLineDash([]);
+
+    yctx.strokeStyle = COL_VAL; yctx.lineWidth = 2; yctx.setLineDash([5,4]);
+    yctx.beginPath(); yctx.moveTo(yPx(y0), PAD.top); yctx.lineTo(yPx(y0), baseline); yctx.stroke();
+    yctx.setLineDash([]);
+
+    yctx.fillStyle = COL_MARK;
+    yctx.beginPath(); yctx.arc(yPx(y0), pPy(p0), compact?4.5:5.5, 0, 2*Math.PI); yctx.fill();
+
+    yctx.fillStyle = COL_P; yctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
+    yctx.textAlign='right'; yctx.textBaseline='bottom';
+    yctx.fillText('F_Y='+p0.toFixed(2), ycw-PAD.right-4, pPy(p0)-5);
+
+    yctx.fillStyle = COL_VAL; yctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
+    yctx.textAlign='center'; yctx.textBaseline='bottom';
+    yctx.fillText('y='+y0.toFixed(2), yPx(y0), PAD.top+12);
+
+    yctx.fillStyle='#6B6459'; yctx.font=(compact?'9px':'10px')+' sans-serif';
+    yctx.textAlign='center'; yctx.textBaseline='top';
+    yctx.fillText('y', ycw/2, baseline + (compact?16:18));
+  }
+
+  function updateReadout(x0, y0, cdfX, cdfY) {
+    var html = '';
+    html += '<div class="lbl">x = <span class="val">' + x0.toFixed(3) + '</span> &nbsp;&rarr;&nbsp; y = g(x) = <span class="val">' + y0.toFixed(3) + '</span></div>';
+    html += '<div class="lbl">F<sub>X</sub>(x) = <span class="sage">' + cdfX.toFixed(3) + '</span> &nbsp;=&nbsp; F<sub>Y</sub>(y) = <span class="sage">' + cdfY.toFixed(3) + '</span></div>';
+    readoutEl.innerHTML = html;
+  }
+
+  function draw() {
+    var x0 = parseFloat(xSlider.value);
+    var y0 = g(x0);
+    var cdfX = FX(x0), cdfY = FY(y0);
+    drawX(x0, cdfX);
+    drawG(x0, y0);
+    drawY(y0, cdfY);
+    updateReadout(x0, y0, cdfX, cdfY);
+  }
+
+  xSlider.addEventListener('input', function(){
+    xValEl.textContent = parseFloat(this.value).toFixed(2);
+    draw();
+  });
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
+</body>
+</html>
