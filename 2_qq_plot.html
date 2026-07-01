@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quantile Meets Quantile — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper: #FAF7F0; --ink: #1F2937; --bar: #2E4374;
+    --amber: #E0793F; --sage: #3F6F5E; --hair: #DDD6C7; --hair-2: #C9C0AC;
+    --violet: #8E5DC9;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  body{
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex; justify-content: center;
+    padding: 28px 10px 40px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page{ width: 100%; max-width: 860px; }
+  .eyebrow{
+    margin: 0 0 4px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600;
+  }
+  h1{
+    margin: 0 0 4px;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600; font-size: clamp(22px, 5vw, 30px); letter-spacing: -0.01em;
+  }
+  .subtitle{ margin: 0 0 14px; font-size: 13.5px; color: #6B6459; }
+  .panel{
+    background: #fff; border: 1px solid var(--hair); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 14px 12px 10px; margin-bottom: 12px;
+  }
+  .controls{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-bottom: 10px; }
+  .ctrl-row{ display: flex; align-items: center; gap: 6px; }
+  .ctrl-row.full{ grid-column: 1 / -1; }
+  .ctrl-label{
+    font-size: 12px; font-weight: 600; color: #6B6459; min-width: 22px; text-align: right;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  .ctrl-val{
+    font-size: 12px; font-weight: 700; color: var(--bar); min-width: 26px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  select{
+    flex: 1; padding: 6px 8px; border: 1px solid var(--hair); border-radius: 8px;
+    font-size: 12.5px; background: #fff; color: var(--ink); min-height: 32px;
+  }
+  input[type="range"]{
+    flex: 1; height: 28px; -webkit-appearance: none; appearance: none;
+    background: transparent; touch-action: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height: 4px; background: var(--hair); border-radius: 2px; }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    margin-top: -9px; cursor: pointer;
+  }
+  input[type="range"]::-moz-range-track{ height: 4px; background: var(--hair); border-radius: 2px; border: none; }
+  input[type="range"]::-moz-range-thumb{
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
+  }
+  .toggle-row{ display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .seg-toggle{ display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
+  .seg-btn{
+    padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: #6B6459; border: none; transition: all 100ms; min-height: 32px;
+  }
+  .seg-btn.active{ background: var(--bar); color: #fff; }
+  .seg-btn + .seg-btn{ border-left: 1px solid var(--hair); }
+  .chart-wrap{
+    position: relative; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  canvas{
+    display: block; width: 100%; cursor: pointer;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  .formula-box{
+    margin-top: 6px; padding: 9px 12px; background: #FAFAF8; border-radius: 10px;
+    border: 1px solid var(--hair);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.8; color: var(--ink);
+  }
+  .formula-box .lbl{ color: #6B6459; }
+  .qtooltip{
+    position: absolute; z-index: 5; pointer-events: none;
+    background: #1F2937; color: #fff; border-radius: 10px;
+    padding: 9px 11px; box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.7; max-width: 300px;
+    opacity: 0; transition: opacity 180ms ease;
+  }
+  .qtooltip.visible{ opacity: 1; }
+  .qtooltip .lbl{ color: #C7CAD1; }
+  .qtooltip .val{ font-weight: 700; color: #fff; }
+  .qtooltip .amber{ font-weight: 700; color: #F0A671; }
+  .qtooltip .sage{ font-weight: 700; color: #7FBFA3; }
+  .qtooltip .violet{ font-weight: 700; color: #C4A6EA; }
+  .qtooltip .rline{
+    opacity: 0; transform: translateY(5px);
+    transition: opacity 450ms ease, transform 450ms ease;
+    min-height: 1.6em;
+  }
+  .qtooltip .rline.visible{ opacity: 1; transform: translateY(0); }
+  .qtooltip .tt-next-row{
+    display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.2);
+    pointer-events: auto;
+  }
+  .tt-next-btn{
+    padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+    background: var(--amber); color: #fff; border: none; border-radius: 6px; min-height: 26px;
+  }
+  .tt-next-btn:disabled{ opacity: 0.5; cursor: default; }
+  .tt-step{ font-size: 10.5px; color: #9CA3AF; }
+  .qq-hint{ margin-top: 8px; font-size: 12px; color: #6B6459; font-style: italic; }
+  .panel-title{ font-size: 12.5px; font-weight: 700; color: var(--bar); margin: 4px 0 6px; }
+  .panel-sub{ font-size: 12px; color: #6B6459; margin: 0 0 8px; line-height: 1.5; }
+  .twocol{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width: 620px){ .twocol{ grid-template-columns: 1fr; } }
+  footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
+  footer p{ margin-bottom: 10px; }
+  .byline{
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
+    font-size: 11.5px; color: #9C9485;
+  }
+  .byline a{ color: var(--sage); text-decoration: none; }
+  @media(max-width: 480px){
+    .controls{ grid-template-columns: 1fr; }
+    .ctrl-row.full{ grid-column: 1; }
+    .qtooltip{ font-size: 11px; max-width: 240px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 2 &middot; Singapore University of Technology and Design</p>
+  <h1>Quantile Meets Quantile</h1>
+  <p class="subtitle">Click any point, then step through how its coordinates were built.</p>
+
+  <div class="panel">
+    <p class="panel-title">Background: checking normality with a Q&ndash;Q plot</p>
+    <p class="panel-sub">
+      A Q&ndash;Q plot lines up each sample value against the normal quantile it &ldquo;should&rdquo; match if the data
+      were normal. For the sorted sample x<sub>1</sub> &le; &hellip; &le; x<sub>n</sub>, the i-th value is paired with
+      probability level p<sub>i</sub> = i/(n+1):
+    </p>
+    <div class="formula-box">
+      <div class="lbl">x-coordinate = &Phi;<sup>&minus;1</sup>(p<sub>i</sub>) &nbsp;&mdash;&nbsp; theoretical normal quantile</div>
+      <div class="lbl">y-coordinate = x<sub>i</sub> &nbsp;&mdash;&nbsp; i-th smallest sample value</div>
+    </div>
+    <p class="panel-sub" style="margin-top:8px;margin-bottom:0;">
+      Straight line &rArr; plausibly normal. Curved (e.g. S-shaped) &rArr; not normal. Click a point below to see how its coordinates are built, one step at a time.
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctrl-row full">
+        <span class="ctrl-label" style="min-width:auto;">Sample</span>
+        <select id="distSelect">
+          <option value="normal">Normal &mdash; expect a straight line</option>
+          <option value="exponential">Exponential &mdash; expect a curved (S-shaped) plot</option>
+          <option value="uniform">Uniform &mdash; expect a curved (flattened-S) plot</option>
+        </select>
+      </div>
+      <div class="ctrl-row full">
+        <span class="ctrl-label" style="min-width:auto;">n</span>
+        <input type="range" id="nSlider" min="10" max="150" step="5" value="40">
+        <span class="ctrl-val" id="nVal">40</span>
+        <button class="seg-btn" id="resampleBtn" style="margin-left:8px;">Resample</button>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="qqWrap">
+      <canvas id="qqChart"></canvas>
+      <div class="qtooltip" id="qqTooltip">
+        <div class="rline" id="lineY"></div>
+        <div class="rline" id="lineI"></div>
+        <div class="rline" id="lineP"></div>
+        <div class="rline" id="lineX"></div>
+        <div class="tt-next-row">
+          <button class="tt-next-btn" id="nextBtn">Next step &rarr;</button>
+          <span class="tt-step" id="stepCounter"></span>
+        </div>
+      </div>
+    </div>
+    <p class="qq-hint" id="qqPlaceholder">Click or tap a point to see its rank, coordinates, and probability level &mdash; one step at a time.</p>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Where both coordinates come from</p>
+    <p class="panel-sub">Both panels share the same probability level p<sub>i</sub> = i/(n+1) &mdash; the <span style="color:var(--sage);font-weight:600;">sage</span> horizontal line. On the <strong>left</strong>, that level meets the sample&rsquo;s own empirical cdf and drops to the <span style="color:var(--amber);font-weight:600;">sample y-coordinate</span>. On the <strong>right</strong>, the same level meets the standard normal cdf &Phi;(z) and drops to the <span style="color:var(--violet);font-weight:600;">theoretical x-coordinate</span>.</p>
+    <div class="twocol">
+      <div>
+        <p class="panel-title" style="font-size:11.5px;text-align:center;">Empirical cdf of the sample</p>
+        <div class="chart-wrap" id="ecdfWrap"><canvas id="ecdfChart"></canvas></div>
+      </div>
+      <div>
+        <p class="panel-title" style="font-size:11.5px;text-align:center;">Standard normal cdf &Phi;(z)</p>
+        <div class="chart-wrap" id="normWrap"><canvas id="normChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      Each point plots <strong>(theoretical normal quantile, sample quantile)</strong>. A straight line indicates
+      the sample plausibly came from a normal distribution. Switch the sample dropdown to compare a normal sample
+      (straight) against exponential or uniform samples (curved).
+    </p>
+    <p>
+      <strong>X-axis:</strong> theoretical quantile of the standard normal, &Phi;<sup>&minus;1</sup>(i/(n+1)).
+      <strong>Y-axis:</strong> sample quantile &mdash; the i-th smallest value in the sorted sample, x<sub>i</sub>.
+      The dashed grey line is a visual guide through the data&rsquo;s own range, not a fitted regression.
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ── Math ── */
+  function erf(x) {
+    var sign = x < 0 ? -1 : 1; x = Math.abs(x);
+    var a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+    var t = 1 / (1 + p * x);
+    var y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+    return sign * y;
+  }
+  function normalCdf(z) { return 0.5*(1+erf(z/Math.SQRT2)); }
+  function inverseNormalCdf(p) {
+    if (p < 0.5) return -inverseNormalCdf(1 - p);
+    if (p > 0.9999999) return 6;
+    if (p < 1e-12) return -6;
+    var t = Math.sqrt(-2 * Math.log(1 - p));
+    var c0=2.515517, c1=0.802853, c2=0.010328;
+    var d1=1.432788, d2=0.189269, d3=0.001308;
+    return t - (c0 + c1*t + c2*t*t) / (1 + d1*t + d2*t*t + d3*t*t*t);
+  }
+  function niceTicks(maxVal, targetCount) {
+    if (!isFinite(maxVal) || maxVal <= 0) return [0, 1];
+    var roughStep = maxVal / Math.max(1, targetCount - 1);
+    var mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    var norm = roughStep / mag;
+    var niceNorm = norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10;
+    var step = niceNorm * mag;
+    var count = Math.ceil((maxVal * 1.0001) / step);
+    var ticks = [];
+    for (var k = 0; k <= count; k++) ticks.push(Math.round(k * step * 1e8) / 1e8);
+    return ticks;
+  }
+
+  var COL_P = '#3F6F5E', COL_Z = '#8E5DC9', COL_Y = '#E0793F';
+
+  /* ── DOM ── */
+  var distSelect = document.getElementById('distSelect');
+  var nSlider = document.getElementById('nSlider');
+  var nVal = document.getElementById('nVal');
+  var resampleBtn = document.getElementById('resampleBtn');
+  var qqCanvas = document.getElementById('qqChart'), qctx = qqCanvas.getContext('2d');
+  var qqWrap = document.getElementById('qqWrap');
+  var normCanvas = document.getElementById('normChart'), nctx = normCanvas.getContext('2d');
+  var normWrap = document.getElementById('normWrap');
+  var ecdfCanvas = document.getElementById('ecdfChart'), ectx = ecdfCanvas.getContext('2d');
+  var ecdfWrap = document.getElementById('ecdfWrap');
+  var qqTooltip = document.getElementById('qqTooltip');
+  var dpr = window.devicePixelRatio || 1;
+
+  var sampleVals = [], theoVals = [], pointPx = [], selectedIdx = -1;
+  var revealStage = 0;
+  var qqPlaceholder = document.getElementById('qqPlaceholder');
+  var lineY = document.getElementById('lineY');
+  var lineI = document.getElementById('lineI');
+  var lineP = document.getElementById('lineP');
+  var lineX = document.getElementById('lineX');
+  var qcw, qch, ncw, nch, ecw, ech;
+
+  function resize() {
+    var w1 = qqWrap.clientWidth;
+    var h1 = Math.min(Math.max(w1 * 0.58, 260), 420);
+    qqCanvas.style.height = h1 + 'px'; qcw = w1; qch = h1;
+    qqCanvas.width = w1 * dpr; qqCanvas.height = h1 * dpr;
+    qctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var w2 = normWrap.clientWidth;
+    var h2 = Math.min(Math.max(w2 * 0.8, 200), 300);
+    normCanvas.style.height = h2 + 'px'; ncw = w2; nch = h2;
+    normCanvas.width = w2 * dpr; normCanvas.height = h2 * dpr;
+    nctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var w3 = ecdfWrap.clientWidth;
+    var h3 = Math.min(Math.max(w3 * 0.8, 200), 300);
+    ecdfCanvas.style.height = h3 + 'px'; ecw = w3; ech = h3;
+    ecdfCanvas.width = w3 * dpr; ecdfCanvas.height = h3 * dpr;
+    ectx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    drawAll();
+  }
+
+  function generateSamples() {
+    var n = parseInt(nSlider.value);
+    var dist = distSelect.value;
+    var data = [];
+    if (dist === 'normal') {
+      for (var i=0;i<n;i++) {
+        var u1 = Math.random(), u2 = Math.random();
+        data.push(Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2));
+      }
+    } else if (dist === 'exponential') {
+      for (i=0;i<n;i++) data.push(-Math.log(1 - Math.random()));
+    } else {
+      for (i=0;i<n;i++) data.push(Math.random());
+    }
+    data.sort(function(a,b){return a-b;});
+    sampleVals = data;
+    theoVals = [];
+    for (i=0;i<n;i++) theoVals.push(inverseNormalCdf((i+1)/(n+1)));
+    selectedIdx = -1;
+    revealStage = 0;
+    drawAll();
+    updateNextButton();
+  }
+
+  function drawQQ() {
+    var n = sampleVals.length;
+    var compact = qcw < 420;
+    qctx.clearRect(0,0,qcw,qch);
+
+    var PAD = { left: compact?42:56, right:16, top:16, bottom:compact?38:44 };
+    var plotW = qcw-PAD.left-PAD.right, plotH = qch-PAD.top-PAD.bottom;
+    var baseline = qch-PAD.bottom;
+
+    var minY = Math.min.apply(null, sampleVals), maxY = Math.max.apply(null, sampleVals);
+    var minX = Math.min.apply(null, theoVals), maxX = Math.max.apply(null, theoVals);
+    var rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+
+    qctx.strokeStyle = '#DDD6C7'; qctx.lineWidth = 1;
+    qctx.beginPath(); qctx.moveTo(PAD.left,PAD.top); qctx.lineTo(PAD.left,baseline); qctx.lineTo(qcw-PAD.right,baseline); qctx.stroke();
+
+    var yTicks = niceTicks(rangeY, 5), xTicks = niceTicks(rangeX, 5);
+    qctx.font = (compact?'9px':'10.5px')+' ui-monospace,monospace'; qctx.fillStyle = '#9C9485';
+    qctx.textAlign='right'; qctx.textBaseline='middle';
+    yTicks.forEach(function(t){
+      var val = minY + t, py = baseline - (t/yTicks[yTicks.length-1])*plotH;
+      qctx.fillText(val.toFixed(2), PAD.left-6, py);
+      qctx.strokeStyle='#EEEAE0'; qctx.lineWidth=1;
+      qctx.beginPath(); qctx.moveTo(PAD.left,py); qctx.lineTo(qcw-PAD.right,py); qctx.stroke();
+    });
+    qctx.textAlign='center'; qctx.textBaseline='top';
+    xTicks.forEach(function(t){
+      var val = minX + t, px = PAD.left + (t/xTicks[xTicks.length-1])*plotW;
+      qctx.fillText(val.toFixed(2), px, baseline+6);
+    });
+
+    var px1 = PAD.left, py1 = baseline;
+    var px2 = PAD.left + plotW, py2 = baseline - plotH;
+    qctx.strokeStyle = 'rgba(156,148,133,0.65)'; qctx.lineWidth = 1.2; qctx.setLineDash([5,4]);
+    qctx.beginPath(); qctx.moveTo(px1,py1); qctx.lineTo(px2,py2); qctx.stroke();
+    qctx.setLineDash([]);
+
+    pointPx = [];
+    var r = compact?4:5;
+    for (var i=0;i<n;i++) {
+      var px = PAD.left + ((theoVals[i]-minX)/rangeX)*plotW;
+      var py = baseline - ((sampleVals[i]-minY)/rangeY)*plotH;
+      pointPx.push({x:px, y:py});
+      var isSel = (i===selectedIdx) && revealStage >= 1;
+      qctx.fillStyle = isSel ? '#1F2937' : 'rgba(224,121,63,0.78)';
+      qctx.beginPath(); qctx.arc(px,py, isSel? r+2 : r, 0, 2*Math.PI); qctx.fill();
+      if (isSel) { qctx.strokeStyle = '#1F2937'; qctx.lineWidth = 1.6; qctx.stroke(); }
+    }
+
+    if (selectedIdx >= 0 && revealStage >= 1) {
+      var sp = pointPx[selectedIdx];
+      qctx.lineWidth = 1.6; qctx.setLineDash([5,4]);
+      qctx.strokeStyle = COL_Y;
+      qctx.beginPath(); qctx.moveTo(PAD.left, sp.y); qctx.lineTo(sp.x, sp.y); qctx.stroke();
+      if (revealStage >= 4) {
+        qctx.strokeStyle = COL_Z;
+        qctx.beginPath(); qctx.moveTo(sp.x, baseline); qctx.lineTo(sp.x, sp.y); qctx.stroke();
+      }
+      qctx.setLineDash([]);
+    }
+  }
+
+  function drawNormCdf() {
+    var n = sampleVals.length;
+    var compact = ncw < 420;
+    nctx.clearRect(0,0,ncw,nch);
+
+    var PAD = { left: compact?38:48, right:12, top:14, bottom:compact?40:46 };
+    var plotW = ncw-PAD.left-PAD.right, plotH = nch-PAD.top-PAD.bottom;
+    var zLo=-3.2, zHi=3.2, baseline = nch-PAD.bottom;
+
+    function zPx(z) { return PAD.left + ((z-zLo)/(zHi-zLo))*plotW; }
+    function pPy(p) { return baseline - p*plotH; }
+
+    nctx.strokeStyle = '#DDD6C7'; nctx.lineWidth = 1;
+    nctx.beginPath(); nctx.moveTo(PAD.left,PAD.top); nctx.lineTo(PAD.left,baseline); nctx.lineTo(ncw-PAD.right,baseline); nctx.stroke();
+
+    var pTicks = [0,0.25,0.5,0.75,1];
+    nctx.font = (compact?'10px':'11px')+' ui-monospace,monospace'; nctx.fillStyle = '#9C9485';
+    pTicks.forEach(function(t){
+      var py = pPy(t);
+      nctx.strokeStyle = '#EEEAE0'; nctx.lineWidth=1;
+      nctx.beginPath(); nctx.moveTo(PAD.left,py); nctx.lineTo(ncw-PAD.right,py); nctx.stroke();
+      nctx.textAlign='right'; nctx.textBaseline='middle';
+      nctx.fillText(t.toFixed(2), PAD.left-5, py);
+    });
+    var zTicks = [-3,-2,-1,0,1,2,3];
+    nctx.textAlign='center'; nctx.textBaseline='top';
+    zTicks.forEach(function(t){ nctx.fillText(t, zPx(t), baseline+5); });
+
+    nctx.fillStyle = COL_Z; nctx.font=(compact?'10px':'11px')+' sans-serif';
+    nctx.textAlign='center'; nctx.textBaseline='top';
+    nctx.fillText('z', ncw/2, baseline + (compact?16:18));
+
+    nctx.strokeStyle = '#2E4374'; nctx.lineWidth = 2;
+    nctx.beginPath();
+    var first = true;
+    for (var z=zLo; z<=zHi; z+=0.03) {
+      var px = zPx(z), py = pPy(normalCdf(z));
+      if (first) { nctx.moveTo(px,py); first=false; } else nctx.lineTo(px,py);
+    }
+    nctx.stroke();
+
+    for (var i=0;i<n;i++) {
+      if (i===selectedIdx) continue;
+      var pi = (i+1)/(n+1);
+      nctx.fillStyle = 'rgba(46,67,116,0.4)';
+      nctx.beginPath(); nctx.arc(zPx(theoVals[i]), pPy(pi), compact?5.5:6.5, 0, 2*Math.PI); nctx.fill();
+    }
+
+    if (selectedIdx >= 0 && revealStage >= 3) {
+      var pi2 = (selectedIdx+1)/(n+1), zi2 = theoVals[selectedIdx];
+      nctx.lineWidth = 1.6; nctx.setLineDash([5,4]);
+      nctx.strokeStyle = COL_P;
+      nctx.beginPath(); nctx.moveTo(PAD.left, pPy(pi2)); nctx.lineTo(zPx(zi2), pPy(pi2)); nctx.stroke();
+      nctx.setLineDash([]);
+      nctx.fillStyle = COL_P; nctx.font='bold '+(compact?'13px':'14.5px')+' ui-monospace,monospace';
+      nctx.textAlign='left'; nctx.textBaseline='bottom';
+      nctx.fillText('p='+pi2.toFixed(3), PAD.left+4, pPy(pi2)-5);
+
+      if (revealStage >= 4) {
+        nctx.strokeStyle = COL_Z; nctx.lineWidth = 1.6; nctx.setLineDash([5,4]);
+        nctx.beginPath(); nctx.moveTo(zPx(zi2), pPy(pi2)); nctx.lineTo(zPx(zi2), baseline); nctx.stroke();
+        nctx.setLineDash([]);
+
+        nctx.fillStyle = '#1F2937';
+        nctx.beginPath(); nctx.arc(zPx(zi2), pPy(pi2), compact?10:11.5, 0, 2*Math.PI); nctx.fill();
+        nctx.strokeStyle = '#1F2937'; nctx.lineWidth = 1.4; nctx.stroke();
+
+        var zLx = zPx(zi2);
+        var zFlip = zLx > ncw - PAD.right - 62;
+        nctx.fillStyle = COL_Z; nctx.font='bold '+(compact?'13px':'14.5px')+' ui-monospace,monospace';
+        nctx.textAlign = zFlip ? 'right' : 'left';
+        nctx.textBaseline = 'bottom';
+        nctx.fillText('z='+zi2.toFixed(3), zLx + (zFlip?-7:7), baseline-5);
+      }
+    }
+  }
+
+  function drawEcdf() {
+    var n = sampleVals.length;
+    var compact = ecw < 420;
+    ectx.clearRect(0,0,ecw,ech);
+
+    var PAD = { left: compact?34:44, right:12, top:14, bottom:compact?40:46 };
+    var plotW = ecw-PAD.left-PAD.right, plotH = ech-PAD.top-PAD.bottom;
+    var baseline = ech-PAD.bottom;
+
+    var minV = Math.min.apply(null, sampleVals), maxV = Math.max.apply(null, sampleVals);
+    var rangeV = (maxV-minV)||1, pad = rangeV*0.06;
+    var vLo = minV-pad, vHi = maxV+pad;
+
+    function vPx(v) { return PAD.left + ((v-vLo)/(vHi-vLo))*plotW; }
+    function pPy(p) { return baseline - p*plotH; }
+
+    ectx.strokeStyle = '#DDD6C7'; ectx.lineWidth = 1;
+    ectx.beginPath(); ectx.moveTo(PAD.left,PAD.top); ectx.lineTo(PAD.left,baseline); ectx.lineTo(ecw-PAD.right,baseline); ectx.stroke();
+
+    var pTicks = [0,0.25,0.5,0.75,1];
+    ectx.font = (compact?'10px':'11px')+' ui-monospace,monospace'; ectx.fillStyle = '#9C9485';
+    pTicks.forEach(function(t){
+      var py = pPy(t);
+      ectx.strokeStyle = '#EEEAE0'; ectx.lineWidth=1;
+      ectx.beginPath(); ectx.moveTo(PAD.left,py); ectx.lineTo(ecw-PAD.right,py); ectx.stroke();
+      ectx.textAlign='right'; ectx.textBaseline='middle';
+      ectx.fillText(t.toFixed(2), PAD.left-5, py);
+    });
+    var vTicks = niceTicks(rangeV, 4);
+    ectx.textAlign='center'; ectx.textBaseline='top';
+    vTicks.forEach(function(t){ ectx.fillText((minV+t).toFixed(1), vPx(minV+t), baseline+5); });
+
+    ectx.fillStyle = COL_Y; ectx.font=(compact?'10px':'11px')+' sans-serif';
+    ectx.textAlign='center'; ectx.textBaseline='top';
+    ectx.fillText('sample value', ecw/2, baseline + (compact?16:18));
+
+    ectx.strokeStyle = '#2E4374'; ectx.lineWidth = 2;
+    ectx.beginPath();
+    ectx.moveTo(vPx(vLo), pPy(0));
+    var prevP = 0;
+    for (var i=0;i<n;i++) {
+      var pi = (i+1)/(n+1);
+      ectx.lineTo(vPx(sampleVals[i]), pPy(prevP));
+      ectx.lineTo(vPx(sampleVals[i]), pPy(pi));
+      prevP = pi;
+    }
+    ectx.lineTo(vPx(vHi), pPy(prevP));
+    ectx.stroke();
+
+    for (i=0;i<n;i++) {
+      if (i===selectedIdx) continue;
+      var pii = (i+1)/(n+1);
+      ectx.fillStyle = 'rgba(46,67,116,0.4)';
+      ectx.beginPath(); ectx.arc(vPx(sampleVals[i]), pPy(pii), compact?5.5:6.5, 0, 2*Math.PI); ectx.fill();
+    }
+
+    if (selectedIdx >= 0 && revealStage >= 1) {
+      var pi2 = (selectedIdx+1)/(n+1), xi2 = sampleVals[selectedIdx];
+      ectx.lineWidth = 1.6; ectx.setLineDash([5,4]);
+      ectx.strokeStyle = COL_Y;
+      ectx.beginPath(); ectx.moveTo(vPx(xi2), pPy(pi2)); ectx.lineTo(vPx(xi2), baseline); ectx.stroke();
+      ectx.setLineDash([]);
+
+      ectx.fillStyle = '#1F2937';
+      ectx.beginPath(); ectx.arc(vPx(xi2), pPy(pi2), compact?10:11.5, 0, 2*Math.PI); ectx.fill();
+      ectx.strokeStyle = '#1F2937'; ectx.lineWidth = 1.4; ectx.stroke();
+
+      var xLx = vPx(xi2);
+      var xFlip = xLx > ecw - PAD.right - 62;
+      ectx.fillStyle = COL_Y; ectx.font='bold '+(compact?'13px':'14.5px')+' ui-monospace,monospace';
+      ectx.textAlign = xFlip ? 'right' : 'left';
+      ectx.textBaseline = 'bottom';
+      ectx.fillText('x='+xi2.toFixed(3), xLx + (xFlip?-7:7), baseline-5);
+
+      if (revealStage >= 3) {
+        ectx.strokeStyle = COL_P; ectx.lineWidth = 1.6; ectx.setLineDash([5,4]);
+        ectx.beginPath(); ectx.moveTo(PAD.left, pPy(pi2)); ectx.lineTo(vPx(xi2), pPy(pi2)); ectx.stroke();
+        ectx.setLineDash([]);
+        ectx.fillStyle = COL_P; ectx.font='bold '+(compact?'13px':'14.5px')+' ui-monospace,monospace';
+        ectx.textAlign='left'; ectx.textBaseline='bottom';
+        ectx.fillText('p='+pi2.toFixed(3), PAD.left+4, pPy(pi2)-5);
+      }
+    }
+  }
+
+  function updateReadout() {
+    if (selectedIdx < 0) {
+      qqPlaceholder.style.display = '';
+      qqTooltip.classList.remove('visible');
+      [lineY, lineI, lineP, lineX].forEach(function(el){ el.classList.remove('visible'); el.innerHTML = ''; });
+      return;
+    }
+    qqPlaceholder.style.display = 'none';
+    var n = sampleVals.length, i1 = selectedIdx+1;
+    var pi = i1/(n+1), z = theoVals[selectedIdx], x = sampleVals[selectedIdx];
+
+    lineY.innerHTML = '<span class="lbl">y (sample value) = x<sub>i</sub> = <span class="amber">' + x.toFixed(3) + '</span></span>';
+    lineI.innerHTML = '<span class="lbl">&rarr; that is the <span class="val">' + i1 + '</span>-th smallest of ' + n + ' values, so rank i = <span class="val">' + i1 + '</span></span>';
+    lineP.innerHTML = '<span class="lbl">&rarr; p<sub>i</sub> = i/(n+1) = <span class="sage">' + pi.toFixed(3) + '</span></span>';
+    lineX.innerHTML = '<span class="lbl">&rarr; x (theoretical) = &Phi;<sup>&minus;1</sup>(p<sub>i</sub>) = <span class="violet">' + z.toFixed(3) + '</span></span>';
+
+    lineY.classList.toggle('visible', revealStage >= 1);
+    lineI.classList.toggle('visible', revealStage >= 2);
+    lineP.classList.toggle('visible', revealStage >= 3);
+    lineX.classList.toggle('visible', revealStage >= 4);
+
+    qqTooltip.classList.add('visible');
+    positionTooltip(selectedIdx);
+  }
+
+  function positionTooltip(idx) {
+    if (idx < 0 || !pointPx[idx]) return;
+    var p = pointPx[idx];
+    var cw = qqCanvas.clientWidth, ch = qqCanvas.clientHeight;
+    var ttW = qqTooltip.offsetWidth, ttH = qqTooltip.offsetHeight;
+    var left = p.x - ttW/2;
+    var top = p.y - ttH - 14;
+    if (left < 4) left = 4;
+    if (left + ttW > cw - 4) left = cw - 4 - ttW;
+    if (top < 4) top = p.y + 14;
+    if (top + ttH > ch - 4) top = Math.max(4, ch - 4 - ttH);
+    qqTooltip.style.left = left + 'px';
+    qqTooltip.style.top = top + 'px';
+  }
+
+  var nextBtn = document.getElementById('nextBtn');
+  var stepCounter = document.getElementById('stepCounter');
+
+  function updateNextButton() {
+    if (selectedIdx < 0) return;
+    if (revealStage >= 4) {
+      nextBtn.textContent = 'Done';
+      nextBtn.disabled = true;
+    } else {
+      var labels = ['Reveal y \u2192', 'Reveal i \u2192', 'Reveal p\u1d62 \u2192', 'Reveal x \u2192'];
+      nextBtn.textContent = labels[revealStage];
+      nextBtn.disabled = false;
+    }
+    stepCounter.textContent = 'step ' + Math.min(revealStage,4) + ' of 4';
+  }
+
+  function startReveal() {
+    revealStage = 1;
+    drawAll();
+    updateNextButton();
+  }
+
+  function advanceReveal() {
+    if (revealStage >= 4) return;
+    revealStage += 1;
+    drawAll();
+    updateNextButton();
+  }
+
+  nextBtn.addEventListener('click', advanceReveal);
+
+  function drawAll() {
+    drawQQ();
+    drawNormCdf();
+    drawEcdf();
+    updateReadout();
+  }
+
+  function findNearestPoint(mx, my) {
+    var best = -1, bestD = Infinity;
+    for (var i=0;i<pointPx.length;i++) {
+      var dx = pointPx[i].x - mx, dy = pointPx[i].y - my;
+      var d = dx*dx + dy*dy;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    var threshold = 20*20;
+    return (bestD <= threshold) ? best : -1;
+  }
+
+  function handlePointer(evt) {
+    var rect = qqCanvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var mx = clientX - rect.left, my = clientY - rect.top;
+    var idx = findNearestPoint(mx, my);
+    selectedIdx = idx;
+    if (idx >= 0) startReveal();
+    else { revealStage = 0; drawAll(); updateNextButton(); }
+  }
+
+  qqCanvas.addEventListener('click', handlePointer);
+  qqCanvas.addEventListener('touchstart', function(e){ e.preventDefault(); handlePointer(e); }, {passive:false});
+
+  nSlider.addEventListener('input', function(){ nVal.textContent = this.value; generateSamples(); });
+  distSelect.addEventListener('change', generateSamples);
+  resampleBtn.addEventListener('click', generateSamples);
+  window.addEventListener('resize', resize);
+
+  generateSamples();
+  resize();
+})();
+</script>
+</body>
+</html>
