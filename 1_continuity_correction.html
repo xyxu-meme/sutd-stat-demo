@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Continuity Correction — 10.022 Interactive Demo</title>
+<style>
+  :root{
+    --paper: #FAF7F0; --ink: #1F2937; --bar: #2E4374;
+    --amber: #E0793F; --sage: #3F6F5E; --hair: #DDD6C7; --hair-2: #C9C0AC;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  body{
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex; justify-content: center;
+    padding: 28px 10px 40px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .page{ width: 100%; max-width: 860px; }
+  .eyebrow{
+    margin: 0 0 4px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600;
+  }
+  h1{
+    margin: 0 0 4px;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600; font-size: clamp(22px, 5vw, 30px); letter-spacing: -0.01em;
+  }
+  .subtitle{ margin: 0 0 14px; font-size: 13.5px; color: #6B6459; }
+  .panel{
+    background: #fff; border: 1px solid var(--hair); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 14px 12px 10px; margin-bottom: 12px;
+  }
+  .controls{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-bottom: 10px; }
+  .ctrl-row{ display: flex; align-items: center; gap: 6px; }
+  .ctrl-row.full{ grid-column: 1 / -1; }
+  .ctrl-label{
+    font-size: 12px; font-weight: 600; color: #6B6459; min-width: 22px; text-align: right;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  .ctrl-val{
+    font-size: 12px; font-weight: 700; color: var(--bar); min-width: 30px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  input[type="range"]{
+    flex: 1; height: 28px; -webkit-appearance: none; appearance: none;
+    background: transparent; touch-action: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height: 4px; background: var(--hair); border-radius: 2px; }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    margin-top: -9px; cursor: pointer;
+  }
+  input[type="range"]::-moz-range-track{ height: 4px; background: var(--hair); border-radius: 2px; border: none; }
+  input[type="range"]::-moz-range-thumb{
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bar); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
+  }
+  .toggle-row{ display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .seg-toggle{ display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
+  .seg-btn{
+    padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: #6B6459; border: none; transition: all 100ms; min-height: 32px;
+  }
+  .seg-btn.active{ background: var(--bar); color: #fff; }
+  .seg-btn + .seg-btn{ border-left: 1px solid var(--hair); }
+  .chart-wrap{
+    position: relative; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  canvas{
+    display: block; width: 100%;
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
+  }
+  .readout{
+    margin-top: 8px; padding: 10px 12px; background: #FAFAF8; border-radius: 10px;
+    border: 1px solid var(--hair);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.8; color: var(--ink); overflow-x: auto;
+  }
+  .readout .lbl{ color: #6B6459; }
+  .readout .val{ font-weight: 700; color: var(--bar); }
+  .readout .amber{ font-weight: 700; color: var(--amber); }
+  .readout .sage{ font-weight: 700; color: var(--sage); }
+  .panel-title{
+    font-size: 12.5px; font-weight: 700; color: var(--bar); margin: 4px 0 6px;
+  }
+  .panel-sub{ font-size: 12px; color: #6B6459; margin: 0 0 8px; line-height: 1.5; }
+  footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
+  footer p{ margin-bottom: 10px; }
+  .byline{
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
+    font-size: 11.5px; color: #9C9485;
+  }
+  .byline a{ color: var(--sage); text-decoration: none; }
+  @media(max-width: 480px){
+    .controls{ grid-template-columns: 1fr; }
+    .ctrl-row.full{ grid-column: 1; }
+    .readout{ font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 2 &middot; Singapore University of Technology and Design</p>
+  <h1>The Continuity Correction: Why the 0.5?</h1>
+  <p class="subtitle">Where the &plusmn;0.5 in a normal-to-binomial approximation actually comes from.</p>
+
+  <div class="panel">
+    <p class="panel-title">Background: normal approximation to the binomial</p>
+    <p class="panel-sub">
+      Suppose X ~ binomial(n, p), where n is large. Recall E(X) = np and Var(X) = np(1&minus;p).
+      Let Y ~ N(np, np(1&minus;p)). Then X &asymp; Y, and the approximation is particularly accurate when p is close to 1/2.
+    </p>
+    <p class="panel-sub">
+      But X is <strong>discrete</strong> and Y is <strong>continuous</strong>. In the pmf of X, each bar is centred
+      at an integer and has width 1 &mdash; the bar at k covers the strip from k&minus;0.5 to k+0.5. When we replace
+      that bar with area under the smooth curve of Y, we should match the <em>same</em> strip, not just the point k.
+      That shift by 0.5 is the <strong>continuity correction</strong>. Written as a formula involving cdf&rsquo;s, for
+      any integer k between 0 and n:
+    </p>
+    <div class="readout" style="margin-top:0;">
+      <div class="lbl">P(X &le; k) &asymp; &Phi;<span style="white-space:nowrap;">( (k + 0.5 &minus; np) / &radic;(np(1&minus;p)) )</span></div>
+      <div class="lbl">P(X &ge; k) &asymp; 1 &minus; &Phi;<span style="white-space:nowrap;">( (k &minus; 0.5 &minus; np) / &radic;(np(1&minus;p)) )</span></div>
+    </div>
+    <p class="panel-sub" style="margin-top:8px;margin-bottom:0;">
+      The interactive panels below let you see exactly where that 0.5 comes from and switch between P(X &le; k) and P(X &ge; k).
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctrl-row">
+        <span class="ctrl-label">n</span>
+        <input type="range" id="nSlider" min="8" max="100" step="1" value="20">
+        <span class="ctrl-val" id="nVal">20</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">p</span>
+        <input type="range" id="pSlider" min="0.1" max="0.9" step="0.05" value="0.4">
+        <span class="ctrl-val" id="pVal">0.40</span>
+      </div>
+      <div class="ctrl-row full">
+        <span class="ctrl-label">k</span>
+        <input type="range" id="kSlider" min="0" max="20" step="1" value="8">
+        <span class="ctrl-val" id="kVal">8</span>
+      </div>
+      <div class="ctrl-row full">
+        <div class="toggle-row">
+          <div class="seg-toggle">
+            <button class="seg-btn active" data-ineq="le">P(X &le; k)</button>
+            <button class="seg-btn" data-ineq="ge">P(X &ge; k)</button>
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-row full">
+        <div class="toggle-row">
+          <div class="seg-toggle">
+            <button class="seg-btn" data-corr="off">No correction</button>
+            <button class="seg-btn active" data-corr="on">With correction</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="mainWrap">
+      <canvas id="mainChart"></canvas>
+    </div>
+
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Zoomed view: the bar at k vs. the curve</p>
+    <p class="panel-sub">This is the actual reason for the &plusmn;0.5: the rectangle for P(X = k) occupies the strip [k&minus;0.5, k+0.5]. Its area is approximated by the area under the bell curve over that <strong>same</strong> strip &mdash; not by the curve&rsquo;s height at the single point k.</p>
+    <div class="chart-wrap" id="zoomWrap">
+      <canvas id="zoomChart"></canvas>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      Set a cutoff k, and choose whether you want P(X &le; k) or P(X &ge; k). For P(X &le; k), we sum the area of
+      all the bars from 0 up to k; because the bar at k spans from k&minus;0.5 to k+0.5, that cumulative area really
+      ends at <strong>k+0.5</strong>, not at k. For P(X &ge; k), we sum the bars from k up to n; the bar at k begins
+      at k&minus;0.5, so the cumulative area really starts at <strong>k&minus;0.5</strong>. Toggle &ldquo;No correction&rdquo;
+      vs. &ldquo;With correction&rdquo; to see the shaded region &mdash; and the approximation error &mdash; change.
+    </p>
+    <p>
+      <strong>Amber bars</strong> = the bars being summed. <strong>Grey bars</strong> = excluded.
+      <strong>Sage shaded region</strong> = the normal-curve area being used as the approximation; the dashed boundary line marks its inner edge.
+      Watch the boundary line shift by 0.5 when you toggle correction on or off, and watch the error shrink correspondingly.
+    </p>
+    <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ── Math ── */
+  var MAXN = 300;
+  var logFact = new Float64Array(MAXN + 1);
+  for (var i = 1; i <= MAXN; i++) logFact[i] = logFact[i - 1] + Math.log(i);
+  function binomialPmf(n, p) {
+    var arr = new Float64Array(n + 1);
+    var logp = Math.log(p), log1p = Math.log(1 - p);
+    for (var k = 0; k <= n; k++) {
+      var logC = logFact[n] - logFact[k] - logFact[n - k];
+      arr[k] = Math.exp(logC + k * logp + (n - k) * log1p);
+    }
+    return arr;
+  }
+  function erf(x) {
+    var sign = x < 0 ? -1 : 1; x = Math.abs(x);
+    var a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+    var t = 1 / (1 + p * x);
+    var y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+    return sign * y;
+  }
+  function normalPdf(x, mu, sigma) { return sigma<=0?0: Math.exp(-((x-mu)*(x-mu))/(2*sigma*sigma)) / (sigma*Math.sqrt(2*Math.PI)); }
+  function normalCdf(x, mu, sigma) { return sigma<=0?(x<mu?0:1): 0.5*(1+erf((x-mu)/(sigma*Math.SQRT2))); }
+  function niceTicks(maxVal, targetCount) {
+    if (!isFinite(maxVal) || maxVal <= 0) return [0, 1];
+    var roughStep = maxVal / Math.max(1, targetCount - 1);
+    var mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    var norm = roughStep / mag;
+    var niceNorm = norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10;
+    var step = niceNorm * mag;
+    var count = Math.ceil((maxVal * 1.0001) / step);
+    var ticks = [];
+    for (var k = 0; k <= count; k++) ticks.push(Math.round(k * step * 1e8) / 1e8);
+    return ticks;
+  }
+
+  /* ── State ── */
+  var n = 20, p = 0.4, k = 8, useCorrection = true, ineqType = 'le';
+
+  /* ── DOM ── */
+  var mainCanvas = document.getElementById('mainChart');
+  var mctx = mainCanvas.getContext('2d');
+  var mainWrap = document.getElementById('mainWrap');
+  var zoomCanvas = document.getElementById('zoomChart');
+  var zctx = zoomCanvas.getContext('2d');
+  var zoomWrap = document.getElementById('zoomWrap');
+  var nSlider = document.getElementById('nSlider');
+  var pSlider = document.getElementById('pSlider');
+  var kSlider = document.getElementById('kSlider');
+  var nVal = document.getElementById('nVal');
+  var pVal = document.getElementById('pVal');
+  var kVal = document.getElementById('kVal');
+  var corrBtns = document.querySelectorAll('.seg-btn[data-corr]');
+  var ineqBtns = document.querySelectorAll('.seg-btn[data-ineq]');
+  var readoutEl = document.getElementById('readout');
+  var dpr = window.devicePixelRatio || 1;
+
+  var mcw, mch, zcw, zch;
+
+  function resize() {
+    var w1 = mainWrap.clientWidth;
+    var h1 = Math.min(Math.max(w1 * 0.5, 240), 380);
+    mainCanvas.style.height = h1 + 'px';
+    mcw = w1; mch = h1;
+    mainCanvas.width = w1 * dpr; mainCanvas.height = h1 * dpr;
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var w2 = zoomWrap.clientWidth;
+    var h2 = Math.min(Math.max(w2 * 0.42, 200), 300);
+    zoomCanvas.style.height = h2 + 'px';
+    zcw = w2; zch = h2;
+    zoomCanvas.width = w2 * dpr; zoomCanvas.height = h2 * dpr;
+    zctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    draw();
+  }
+
+  function syncKRange() {
+    kSlider.max = n;
+    if (k > n) { k = n; kSlider.value = k; kVal.textContent = k; }
+  }
+
+  function getBoundary() {
+    if (ineqType === 'le') return useCorrection ? k+0.5 : k;
+    return useCorrection ? k-0.5 : k;
+  }
+
+  function drawMain() {
+    syncKRange();
+    var pmf = binomialPmf(n, p);
+    var mean = n*p, sd = Math.sqrt(n*p*(1-p));
+    var boundary = getBoundary();
+    var compact = mcw < 420;
+
+    mctx.clearRect(0,0,mcw,mch);
+
+    var PAD = { left: compact?38:52, right:14, top:18, bottom:compact?32:38 };
+    var plotW = mcw-PAD.left-PAD.right, plotH = mch-PAD.top-PAD.bottom;
+    var baseline = mch-PAD.bottom;
+    var yMax;
+
+    function xPx(x) { return PAD.left + ((x+0.5)/(n+1))*plotW; }
+    function yPx(d) { return baseline - (d/yMax)*plotH; }
+
+    var maxPmf = 0; for (var kk=0;kk<=n;kk++) if (pmf[kk]>maxPmf) maxPmf = pmf[kk];
+    var yTicks = niceTicks(maxPmf, 5); yMax = yTicks[yTicks.length-1];
+
+    mctx.strokeStyle = '#DDD6C7'; mctx.lineWidth = 1;
+    mctx.beginPath(); mctx.moveTo(PAD.left,PAD.top); mctx.lineTo(PAD.left,baseline); mctx.lineTo(mcw-PAD.right,baseline); mctx.stroke();
+
+    yTicks.forEach(function(t){
+      var py = yPx(t);
+      mctx.strokeStyle = '#EEEAE0'; mctx.lineWidth=1;
+      mctx.beginPath(); mctx.moveTo(PAD.left,py); mctx.lineTo(mcw-PAD.right,py); mctx.stroke();
+      mctx.fillStyle='#9C9485'; mctx.font=(compact?'9px':'10.5px')+' ui-monospace,monospace'; mctx.textAlign='right'; mctx.textBaseline='middle';
+      mctx.fillText(t.toFixed(3), PAD.left-6, py);
+    });
+
+    var xStep = Math.max(1, Math.round(n/8));
+    mctx.fillStyle='#9C9485'; mctx.font=(compact?'9px':'10.5px')+' ui-monospace,monospace'; mctx.textAlign='center'; mctx.textBaseline='top';
+    for (var xt=0; xt<=n; xt+=xStep) mctx.fillText(xt, xPx(xt), baseline+6);
+
+    // shaded curve area: for 'le' shade [0, boundary]; for 'ge' shade [boundary, n]
+    var shadeLo = ineqType === 'le' ? 0 : boundary;
+    var shadeHi = ineqType === 'le' ? boundary : n;
+    var edgeLo = ineqType === 'le' ? (xPx(0)-((plotW/(n+1))*0.5)) : xPx(shadeLo);
+    var edgeHi = ineqType === 'le' ? xPx(shadeHi) : (xPx(n)+((plotW/(n+1))*0.5));
+    mctx.beginPath();
+    mctx.moveTo(edgeLo, baseline);
+    var step = (n+2)/300;
+    for (var x=shadeLo; x<=shadeHi; x+=step) mctx.lineTo(xPx(x), yPx(normalPdf(x, mean, sd)));
+    mctx.lineTo(edgeHi, yPx(normalPdf(shadeHi, mean, sd)));
+    mctx.lineTo(edgeHi, baseline);
+    mctx.closePath();
+    mctx.fillStyle = 'rgba(63,111,94,0.28)';
+    mctx.fill();
+
+    var barWidth = (plotW/(n+1))*0.78;
+    for (kk=0;kk<=n;kk++) {
+      var included = ineqType === 'le' ? (kk<=k) : (kk>=k);
+      mctx.fillStyle = included ? 'rgba(224,121,63,0.75)' : 'rgba(156,148,133,0.30)';
+      var px = xPx(kk), py = yPx(pmf[kk]);
+      mctx.fillRect(px-barWidth/2, py, barWidth, baseline-py);
+    }
+
+    mctx.strokeStyle = '#2E4374'; mctx.lineWidth = 2.2;
+    mctx.beginPath();
+    var first = true;
+    for (x=0; x<=n; x+=step) {
+      var px2 = xPx(x), py2 = yPx(normalPdf(x, mean, sd));
+      if (first) { mctx.moveTo(px2,py2); first=false; } else mctx.lineTo(px2,py2);
+    }
+    mctx.stroke();
+
+    mctx.strokeStyle = '#1F2937'; mctx.lineWidth = 1.6; mctx.setLineDash([5,4]);
+    mctx.beginPath(); mctx.moveTo(xPx(boundary), PAD.top); mctx.lineTo(xPx(boundary), baseline); mctx.stroke();
+    mctx.setLineDash([]);
+
+    mctx.fillStyle = '#1F2937'; mctx.font = 'bold ' + (compact?'10px':'11.5px') + ' ui-monospace,monospace';
+    mctx.textAlign = 'center'; mctx.textBaseline = 'bottom';
+    mctx.fillText('boundary = ' + boundary.toFixed(1), xPx(boundary), PAD.top+13);
+  }
+
+  function drawZoom() {
+    var pmf = binomialPmf(n, p);
+    var mean = n*p, sd = Math.sqrt(n*p*(1-p));
+    var lo = Math.max(0, k-2.5), hi = Math.min(n, k+2.5);
+    var compact = zcw < 420;
+
+    zctx.clearRect(0,0,zcw,zch);
+
+    var PAD = { left: compact?38:52, right:14, top:22, bottom:compact?32:38 };
+    var plotW = zcw-PAD.left-PAD.right, plotH = zch-PAD.top-PAD.bottom;
+    var baseline = zch-PAD.bottom;
+    var yMax;
+
+    function xPx(x) { return PAD.left + ((x-lo)/(hi-lo))*plotW; }
+    function yPx(d) { return baseline - (d/yMax)*plotH; }
+
+    var maxPmf = Math.max(pmf[Math.max(0,k-2)]||0, pmf[k]||0, pmf[Math.min(n,k+2)]||0, normalPdf(mean,mean,sd));
+    var yTicks = niceTicks(maxPmf*1.15, 4); yMax = yTicks[yTicks.length-1];
+
+    zctx.strokeStyle = '#DDD6C7'; zctx.lineWidth = 1;
+    zctx.beginPath(); zctx.moveTo(PAD.left,PAD.top); zctx.lineTo(PAD.left,baseline); zctx.lineTo(zcw-PAD.right,baseline); zctx.stroke();
+
+    yTicks.forEach(function(t){
+      var py = yPx(t);
+      zctx.strokeStyle = '#EEEAE0'; zctx.lineWidth=1;
+      zctx.beginPath(); zctx.moveTo(PAD.left,py); zctx.lineTo(zcw-PAD.right,py); zctx.stroke();
+      zctx.fillStyle='#9C9485'; zctx.font=(compact?'9px':'10.5px')+' ui-monospace,monospace'; zctx.textAlign='right'; zctx.textBaseline='middle';
+      zctx.fillText(t.toFixed(3), PAD.left-6, py);
+    });
+
+    zctx.beginPath();
+    zctx.moveTo(xPx(k-0.5), baseline);
+    var step = (hi-lo)/200;
+    for (var x=k-0.5; x<=k+0.5; x+=step) zctx.lineTo(xPx(x), yPx(normalPdf(x, mean, sd)));
+    zctx.lineTo(xPx(k+0.5), yPx(normalPdf(k+0.5, mean, sd)));
+    zctx.lineTo(xPx(k+0.5), baseline);
+    zctx.closePath();
+    zctx.fillStyle = 'rgba(63,111,94,0.32)';
+    zctx.fill();
+
+    var barWidth = (plotW/(hi-lo))*0.85;
+    for (var kk=Math.ceil(lo); kk<=Math.floor(hi); kk++) {
+      if (kk<0 || kk>n) continue;
+      var isK = kk===k;
+      zctx.fillStyle = isK ? 'rgba(224,121,63,0.85)' : 'rgba(156,148,133,0.40)';
+      var px = xPx(kk), py = yPx(pmf[kk]);
+      zctx.fillRect(px-barWidth/2, py, barWidth, baseline-py);
+    }
+
+    zctx.strokeStyle = '#2E4374'; zctx.lineWidth = 2.2;
+    zctx.beginPath();
+    var first = true;
+    for (x=lo; x<=hi; x+=step) {
+      var px2 = xPx(x), py2 = yPx(normalPdf(x, mean, sd));
+      if (first) { zctx.moveTo(px2,py2); first=false; } else zctx.lineTo(px2,py2);
+    }
+    zctx.stroke();
+
+    [k-0.5, k, k+0.5].forEach(function(xv, idx){
+      zctx.strokeStyle = idx===1 ? '#9C9485' : '#1F2937';
+      zctx.lineWidth = idx===1 ? 1 : 1.6;
+      zctx.setLineDash(idx===1 ? [2,3] : [5,4]);
+      zctx.beginPath(); zctx.moveTo(xPx(xv), PAD.top); zctx.lineTo(xPx(xv), baseline); zctx.stroke();
+      zctx.setLineDash([]);
+    });
+
+    zctx.fillStyle = '#1F2937'; zctx.font = (compact?'9px':'10.5px')+' ui-monospace,monospace';
+    zctx.textAlign='center'; zctx.textBaseline='top';
+    zctx.fillText('k\u22120.5', xPx(k-0.5), baseline+6);
+    zctx.fillText('k', xPx(k), baseline+6);
+    zctx.fillText('k+0.5', xPx(k+0.5), baseline+6);
+
+    zctx.fillStyle = '#3F6F5E'; zctx.font = 'bold ' + (compact?'10px':'11.5px') + ' sans-serif';
+    zctx.textAlign='left'; zctx.textBaseline='top';
+    zctx.fillText('shaded area \u2248 P(X = ' + k + ')', PAD.left+4, PAD.top-16);
+  }
+
+  function updateReadout() {
+    var pmf = binomialPmf(n, p);
+    var mean = n*p, sd = Math.sqrt(n*p*(1-p));
+    var boundary = getBoundary();
+    var exact, approx, exactLabel, approxLabel;
+    if (ineqType === 'le') {
+      exact = 0; for (var kk=0;kk<=k;kk++) exact += pmf[kk];
+      approx = normalCdf(boundary, mean, sd);
+      exactLabel = 'P(X &le; ' + k + ')';
+      approxLabel = 'Normal approx' + (useCorrection ? ' with correction (\u03A6 at k+0.5)' : ' without correction (\u03A6 at k)');
+    } else {
+      exact = 0; for (kk=k;kk<=n;kk++) exact += pmf[kk];
+      approx = 1 - normalCdf(boundary, mean, sd);
+      exactLabel = 'P(X &ge; ' + k + ')';
+      approxLabel = 'Normal approx' + (useCorrection ? ' with correction (1&minus;\u03A6 at k&minus;0.5)' : ' without correction (1&minus;\u03A6 at k)');
+    }
+    var err = Math.abs(exact-approx);
+    var html = '';
+    html += '<div class="lbl">Exact: ' + exactLabel + ' = <span class="val">' + exact.toFixed(4) + '</span></div>';
+    html += '<div class="lbl">' + approxLabel + ' = <span class="amber">' + approx.toFixed(4) + '</span></div>';
+    html += '<div class="lbl">Absolute error = <span class="sage">' + err.toFixed(4) + '</span></div>';
+    readoutEl.innerHTML = html;
+  }
+
+  function draw() {
+    drawMain();
+    drawZoom();
+    updateReadout();
+  }
+
+  nSlider.addEventListener('input', function(){ n = parseInt(this.value); nVal.textContent = n; draw(); });
+  pSlider.addEventListener('input', function(){ p = parseFloat(this.value); pVal.textContent = p.toFixed(2); draw(); });
+  kSlider.addEventListener('input', function(){ k = parseInt(this.value); kVal.textContent = k; draw(); });
+  corrBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      corrBtns.forEach(function(b){ b.classList.remove('active'); });
+      this.classList.add('active');
+      useCorrection = this.getAttribute('data-corr') === 'on';
+      draw();
+    });
+  });
+  ineqBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      ineqBtns.forEach(function(b){ b.classList.remove('active'); });
+      this.classList.add('active');
+      ineqType = this.getAttribute('data-ineq');
+      draw();
+    });
+  });
+
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
+</body>
+</html>
