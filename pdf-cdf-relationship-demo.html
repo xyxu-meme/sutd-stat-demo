@@ -98,7 +98,7 @@
 
   .interval-inputs{ display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
   .interval-input{
-    width: 70px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    width: 86px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
     font-size: 13.5px; text-align: center; padding: 5px 4px; border: 1px solid var(--hair-2);
     border-radius: 6px; background: #fff; color: var(--ink); -moz-appearance: textfield;
   }
@@ -137,7 +137,7 @@
   <header>
     <p class="eyebrow">10.022 Modelling Uncertainty · Week 6, Class 1</p>
     <h1>pdf ↔ cdf: Area Becomes Height</h1>
-    <p class="lede">Drag <span class="mono">x</span> and watch one number show up two ways: as <strong>area</strong> under f(x), and as <strong>height</strong> on F(x). They're always equal — that's the whole definition of a cdf.</p>
+    <p class="lede">Drag <span class="mono">x</span> and watch one number show up two ways: as <strong>area</strong> under <span class="mono">f(x)</span>, and as <strong>height</strong> on <span class="mono">F(x)</span>. They're always equal — that's the whole definition of a cdf.</p>
   </header>
 
   <div class="panel">
@@ -171,34 +171,34 @@
     <p class="mode-caption" id="modeCaption"></p>
     <p class="dist-note mono" id="distNote"></p>
 
-    <div class="panel-label"><span class="name">pdf — f(x)</span><span id="pdfAxisNote">height = density, area = probability</span></div>
+    <div class="panel-label"><span class="name">pdf — <span class="mono">f(x)</span></span><span id="pdfAxisNote">height = density, area = probability</span></div>
     <div class="chart-wrap"><canvas id="pdfChart"></canvas></div>
 
-    <div class="panel-label"><span class="name">cdf — F(x)</span><span id="cdfAxisNote">height = probability, directly</span></div>
+    <div class="panel-label"><span class="name">cdf — <span class="mono">F(x)</span></span><span id="cdfAxisNote">height = probability, directly</span></div>
     <div class="chart-wrap"><canvas id="cdfChart"></canvas></div>
 
     <div class="readout">
       <div class="readout-row" id="pointInputsRow">
         <span class="readout-label">x =</span>
         <span class="interval-inputs">
-          <input type="number" id="xInput" class="interval-input mono" step="0.01" aria-label="x value">
+          <input type="number" id="xInput" class="interval-input mono" step="0.001" aria-label="x value">
         </span>
       </div>
       <div class="readout-row" id="intervalInputsRow" hidden>
         <span class="readout-label">a, b =</span>
         <span class="interval-inputs">
-          <input type="number" id="aInput" class="interval-input mono" step="0.01" aria-label="Lower bound a">
+          <input type="number" id="aInput" class="interval-input mono" step="0.001" aria-label="Lower bound a">
           <span class="mono">to</span>
-          <input type="number" id="bInput" class="interval-input mono" step="0.01" aria-label="Upper bound b">
+          <input type="number" id="bInput" class="interval-input mono" step="0.001" aria-label="Upper bound b">
         </span>
       </div>
 
       <div class="readout-row highlight" id="pointReadoutRow">
-        <span class="readout-label">f(x)  &nbsp;|&nbsp;  F(x) = P(X ≤ x)</span>
+        <span class="readout-label"><span class="mono">f(x)</span>  &nbsp;|&nbsp;  <span class="mono">F(x) = P(X ≤ x)</span></span>
         <span class="mono" id="pointReadoutVal">—</span>
       </div>
       <div class="readout-row highlight" id="intervalReadoutRow" hidden>
-        <span class="readout-label">P(a &lt; X ≤ b) = F(b) − F(a)</span>
+        <span class="readout-label"><span class="mono">P(a &lt; X ≤ b) = F(b) − F(a)</span></span>
         <span class="mono" id="intervalReadoutVal">—</span>
       </div>
 
@@ -209,7 +209,7 @@
   </div>
 
   <footer>
-    The shaded region under <strong>f(x)</strong> from the left edge up to x is, by definition, <strong>F(x)</strong> — that's what <span class="mono">F(x) = ∫f(t)dt</span> means. Turn on <strong>Show slope</strong> to see the reverse direction: the steepness of F at x always matches the height of f at x, since <span class="mono">F′(x) = f(x)</span>.
+    The shaded region under <strong class="mono">f(x)</strong> from the left edge up to x is, by definition, <strong class="mono">F(x)</strong> — that's what <span class="mono">F(x) = ∫f(t)dt</span> means. Turn on <strong>Show slope</strong> to see the reverse direction: the steepness of F at x always matches the height of f at x, since <span class="mono">F′(x) = f(x)</span>.
   </footer>
 
 </div>
@@ -257,6 +257,7 @@
 
   function lerp(a, b, t) { return a + (b - a) * t; }
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function snapX(x) { return Math.round(x * 1000) / 1000; } // snap to the same 3-decimal grid we display
 
   // ---------- state ----------
   var distIdx = 0;
@@ -588,18 +589,18 @@
     var f = curDist().f, F = curDist().F;
     distNote.textContent = curDist().note;
 
-    if (document.activeElement !== xInput) xInput.value = xPoint.toFixed(2);
-    if (document.activeElement !== aInput) aInput.value = Math.min(aPoint, bPoint).toFixed(2);
-    if (document.activeElement !== bInput) bInput.value = Math.max(aPoint, bPoint).toFixed(2);
+    if (document.activeElement !== xInput) xInput.value = xPoint.toFixed(3);
+    if (document.activeElement !== aInput) aInput.value = Math.min(aPoint, bPoint).toFixed(3);
+    if (document.activeElement !== bInput) bInput.value = Math.max(aPoint, bPoint).toFixed(3);
 
     if (mode === 'point') {
-      pointReadoutVal.textContent = 'f(' + xPoint.toFixed(2) + ') = ' + fmt(f(xPoint)) + '   F(' + xPoint.toFixed(2) + ') = ' + fmt(F(xPoint));
-      exampleLine.textContent = 'The shaded area under f, from ' + curDist().domain[0].toFixed(2) + ' to ' + xPoint.toFixed(2) + ', equals ' + fmt(F(xPoint)) + ' \u2014 the same value as the bar\u2019s height on the cdf below. Tap "Trace it" to watch it move.';
+      pointReadoutVal.textContent = 'f(' + xPoint.toFixed(3) + ') = ' + fmt(f(xPoint)) + '   F(' + xPoint.toFixed(3) + ') = ' + fmt(F(xPoint));
+      exampleLine.textContent = 'The shaded area under f, from ' + curDist().domain[0].toFixed(3) + ' to ' + xPoint.toFixed(3) + ', equals ' + fmt(F(xPoint)) + ' \u2014 the same value as the bar\u2019s height on the cdf below. Tap "Trace it" to watch it move.';
     } else {
       var lo = Math.min(aPoint, bPoint), hi = Math.max(aPoint, bPoint);
       var p = F(hi) - F(lo);
       intervalReadoutVal.textContent = fmt(p);
-      exampleLine.textContent = 'F(' + hi.toFixed(2) + ') \u2212 F(' + lo.toFixed(2) + ') = ' + fmt(F(hi)) + ' \u2212 ' + fmt(F(lo)) + ' = ' + fmt(p) + ' \u2014 the floating bar on the cdf has exactly this height, over the same width as the shaded band.';
+      exampleLine.textContent = 'F(' + hi.toFixed(3) + ') \u2212 F(' + lo.toFixed(3) + ') = ' + fmt(F(hi)) + ' \u2212 ' + fmt(F(lo)) + ' = ' + fmt(p) + ' \u2014 the floating bar on the cdf has exactly this height, over the same width as the shaded band.';
     }
   }
 
@@ -731,15 +732,15 @@
   // ---------- keyboard input ----------
   function applyXInput() {
     var v = parseFloat(xInput.value);
-    if (isNaN(v)) { xInput.value = xPoint.toFixed(2); return; }
-    xPoint = clamp(v, curDist().domain[0], curDist().domain[1]);
+    if (isNaN(v)) { xInput.value = xPoint.toFixed(3); return; }
+    xPoint = snapX(clamp(v, curDist().domain[0], curDist().domain[1]));
     draw();
   }
   function applyABInput() {
     var av = parseFloat(aInput.value), bv = parseFloat(bInput.value);
     if (isNaN(av) || isNaN(bv)) { return; }
     var d = curDist().domain;
-    av = clamp(av, d[0], d[1]); bv = clamp(bv, d[0], d[1]);
+    av = snapX(clamp(av, d[0], d[1])); bv = snapX(clamp(bv, d[0], d[1]));
     aPoint = Math.min(av, bv); bPoint = Math.max(av, bv);
     draw();
   }
@@ -775,14 +776,14 @@
     var px = getCanvasX(evt, canvas);
     if (mode === 'point') {
       dragWhich = 'x';
-      xPoint = clamp(pxToData(px, cw), curDist().domain[0], curDist().domain[1]);
+      xPoint = snapX(clamp(pxToData(px, cw), curDist().domain[0], curDist().domain[1]));
     } else {
       var hit = hitTestBand(px, cw);
       if (hit === 'band') {
         dragWhich = 'band';
         bandAnchorPx = px; bandAnchorA = aPoint; bandAnchorB = bPoint;
       } else if (hit === 'new') {
-        var x = clamp(pxToData(px, cw), curDist().domain[0], curDist().domain[1]);
+        var x = snapX(clamp(pxToData(px, cw), curDist().domain[0], curDist().domain[1]));
         aPoint = x; bPoint = x;
         dragWhich = 'b';
       } else {
@@ -797,11 +798,11 @@
     var px = getCanvasX(evt, canvas);
     var d = curDist().domain;
     if (dragWhich === 'x') {
-      xPoint = clamp(pxToData(px, cw), d[0], d[1]);
+      xPoint = snapX(clamp(pxToData(px, cw), d[0], d[1]));
     } else if (dragWhich === 'a') {
-      aPoint = clamp(Math.min(pxToData(px, cw), bPoint), d[0], d[1]);
+      aPoint = snapX(clamp(Math.min(pxToData(px, cw), bPoint), d[0], d[1]));
     } else if (dragWhich === 'b') {
-      bPoint = clamp(Math.max(pxToData(px, cw), aPoint), d[0], d[1]);
+      bPoint = snapX(clamp(Math.max(pxToData(px, cw), aPoint), d[0], d[1]));
     } else if (dragWhich === 'band') {
       var plotWidthPx = cw - PAD.left - PAD.right;
       var span = bandAnchorB - bandAnchorA;
@@ -809,7 +810,7 @@
       var newA = bandAnchorA + delta, newB = bandAnchorB + delta;
       if (newA < d[0]) { newB += (d[0] - newA); newA = d[0]; }
       if (newB > d[1]) { newA -= (newB - d[1]); newB = d[1]; }
-      aPoint = newA; bPoint = newB;
+      aPoint = snapX(newA); bPoint = snapX(newB);
     }
     draw();
   }
