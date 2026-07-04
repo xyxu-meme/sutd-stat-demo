@@ -128,7 +128,7 @@
     font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
   }
   .val-input{
-    width:64px; padding:4px 6px; font-size:13px; font-weight:600;
+    width:82px; padding:4px 6px; font-size:13px; font-weight:600;
     font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
     color:var(--bar); background:#fff; border:1.5px solid var(--hair); border-radius:7px;
     text-align:center; outline:none; -moz-appearance:textfield;
@@ -139,6 +139,10 @@
 
   footer{ margin-top:14px; font-size:13px; line-height:1.6; color:#6B6459; }
   footer p{ margin-bottom:10px; }
+  .m{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); font-weight: 600;
+  }
   .byline{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--hair); font-size:11.5px; color:#9C9485; }
   .byline a{ color:var(--sage); text-decoration:none; }
   @media(max-width:520px){ .readout{ font-size:12px; } .bridge-formula{ border-right:none; } }
@@ -157,21 +161,21 @@
     </div>
     <div class="input-row" id="pointInputs">
       <span class="input-label">z =</span>
-      <input type="number" class="val-input" id="zInput" value="0.50" step="0.05">
+      <input type="number" class="val-input" id="zInput" value="0.500" step="0.001">
       <div class="input-sep"></div>
       <span class="input-label">x =</span>
-      <input type="number" class="val-input" id="xInput" value="4.00" step="0.1">
+      <input type="number" class="val-input" id="xInput" value="4.000" step="0.001">
     </div>
     <div class="input-row" id="intervalInputs" style="display:none;">
       <span class="input-label">a =</span>
-      <input type="number" class="val-input" id="aInput" value="-1.00" step="0.05">
+      <input type="number" class="val-input" id="aInput" value="-1.000" step="0.001">
       <span class="input-label">b =</span>
-      <input type="number" class="val-input" id="bInput" value="1.00" step="0.05">
+      <input type="number" class="val-input" id="bInput" value="1.000" step="0.001">
       <div class="input-sep"></div>
       <span class="input-label">x&#8321; =</span>
-      <input type="number" class="val-input" id="x1Input" value="1.00" step="0.1">
+      <input type="number" class="val-input" id="x1Input" value="1.000" step="0.001">
       <span class="input-label">x&#8322; =</span>
-      <input type="number" class="val-input" id="x2Input" value="5.00" step="0.1">
+      <input type="number" class="val-input" id="x2Input" value="5.000" step="0.001">
     </div>
   </div>
 
@@ -189,12 +193,12 @@
     <div class="sliders-area">
       <div class="ctrl-row">
         <span class="ctrl-label">&mu;</span>
-        <input type="range" id="muSlider" min="-4" max="6" step="0.1" value="3">
+        <input type="range" id="muSlider" min="-3" max="3" step="0.1" value="3">
         <span class="ctrl-val" id="muVal">3.0</span>
       </div>
       <div class="ctrl-row">
         <span class="ctrl-label">&sigma;</span>
-        <input type="range" id="sigmaSlider" min="0.3" max="3" step="0.05" value="2">
+        <input type="range" id="sigmaSlider" min="0.1" max="2" step="0.05" value="2">
         <span class="ctrl-val" id="sigmaVal">2.00</span>
       </div>
       <button class="anim-btn" id="animBtn">&#x25B6; Standardize</button>
@@ -212,7 +216,7 @@
   <footer>
     <p>
       Both panels share the <strong>same x-axis and y-axis</strong>, so you can directly compare where z sits vs.
-      where x = &sigma;z + &mu; sits on the same number line.
+      where <span class="m">x = &sigma;z + &mu;</span> sits on the same number line.
       The standard normal (top) is always a unit bell at 0. The general normal (bottom) shifts with &mu; and widens or
       narrows with &sigma;, changing its peak height too &mdash; but because width and height trade off (1/&sigma;),
       the total area stays 1, and equal-probability regions stay equal.
@@ -263,13 +267,10 @@
   /* FIXED_VIEW: computed ONCE from the full slider range, used identically by
      BOTH panels forever. Neither panel's axis ever changes — only the curve
      drawn in the right panel moves/reshapes as mu and sigma change. */
-  var MU_MIN=-4, MU_MAX=6, SIGMA_MIN=0.3, SIGMA_MAX=3;
+  var MU_MIN=-3, MU_MAX=3, SIGMA_MIN=0.1, SIGMA_MAX=2;
   var FIXED_VIEW = (function(){
-    var spanMax = 4.5*SIGMA_MAX;
-    var lo = Math.min(-4.5, MU_MIN-spanMax);
-    var hi = Math.max(4.5, MU_MAX+spanMax);
-    var maxPdf = 0.5; /* fixed y-axis range 0–0.5 for both panels */
-    return { lo:lo, hi:hi, maxPdf:maxPdf };
+    /* Explicit fixed view per instructor request. */
+    return { lo:-10, hi:10, maxPdf:0.5 };
   })();
   function getView(){ return FIXED_VIEW; } // same call for both panels
 
@@ -339,7 +340,8 @@
   function dToPx(x,sv,cw){ return PAD.left+((x-sv.lo)/(sv.hi-sv.lo))*(cw-PAD.left-PAD.right); }
   function pxToD(px,sv,cw){ return sv.lo+((px-PAD.left)/(cw-PAD.left-PAD.right))*(sv.hi-sv.lo); }
   function vToPy(v,sv,ch){ return PAD.top+(1-v/sv.maxPdf)*(ch-PAD.top-PAD.bottom); }
-  function clampSV(x,sv){ return Math.max(sv.lo+0.02,Math.min(sv.hi-0.02,x)); }
+  function clampSV(x,sv){ var b=Math.max(sv.lo+0.02,Math.min(sv.hi-0.02,x)); return snapZ(b); }
+  function snapZ(z){ return Math.round(z*1000)/1000; } // snap to the same 3-decimal grid we display
 
   function niceTicksY(maxV, targetCount){
     if(maxV<=0) return [0];
@@ -489,15 +491,15 @@
       drawHandle(ctx,zPx,plotB,compact?7:8,'#E0793F');
       var shadeMid=(Math.max(PAD.left,dToPx(sv.lo,sv,cw))+Math.min(zPx,cw-PAD.right))/2;
       drawBigProb(ctx,prob,shadeMid,sv,ch,cw,'\u03A6(z)');
-      drawChip(ctx,zPx,'z='+selZ.toFixed(2),sv,cw,'#E0793F',0);
+      drawChip(ctx,zPx,'z='+selZ.toFixed(3),sv,cw,'#E0793F',0);
     } else {
       var aPx=dToPx(selAz,sv,cw), bPx=dToPx(selBz,sv,cw);
       var prob2=Phi(selBz)-Phi(selAz), mid2=(aPx+bPx)/2;
       drawVLine(ctx,selAz,sv,cw,ch,'rgba(224,121,63,0.7)'); drawVLine(ctx,selBz,sv,cw,ch,'rgba(224,121,63,0.7)');
       drawHandle(ctx,aPx,plotB,compact?7:8,'#E0793F'); drawHandle(ctx,bPx,plotB,compact?7:8,'#E0793F');
       drawBigProb(ctx,prob2,mid2,sv,ch,cw,'P');
-      drawChip(ctx,aPx,'a='+selAz.toFixed(2),sv,cw,'#E0793F',0);
-      drawChip(ctx,bPx,'b='+selBz.toFixed(2),sv,cw,'#E0793F',1);
+      drawChip(ctx,aPx,'a='+selAz.toFixed(3),sv,cw,'#E0793F',0);
+      drawChip(ctx,bPx,'b='+selBz.toFixed(3),sv,cw,'#E0793F',1);
     }
   }
 
@@ -537,15 +539,15 @@
       drawHandle(ctx,xPx,plotB,compact?7:8,'#E0793F');
       var shadeMid=(Math.max(PAD.left,dToPx(sv.lo,sv,cw))+Math.min(xPx,cw-PAD.right))/2;
       drawBigProb(ctx,prob,shadeMid,sv,ch,cw,'F(x)');
-      drawChip(ctx,xPx,'x='+selXe.toFixed(2),sv,cw,'#E0793F',0);
+      drawChip(ctx,xPx,'x='+selXe.toFixed(3),sv,cw,'#E0793F',0);
     } else {
       var axPx=dToPx(selAxe,sv,cw), bxPx=dToPx(selBxe,sv,cw);
       var prob2=Phi(selBz)-Phi(selAz), mid2=(axPx+bxPx)/2;
       drawVLine(ctx,selAxe,sv,cw,ch,'rgba(224,121,63,0.7)'); drawVLine(ctx,selBxe,sv,cw,ch,'rgba(224,121,63,0.7)');
       drawHandle(ctx,axPx,plotB,compact?7:8,'#E0793F'); drawHandle(ctx,bxPx,plotB,compact?7:8,'#E0793F');
       drawBigProb(ctx,prob2,mid2,sv,ch,cw,'P');
-      drawChip(ctx,axPx,'x\u2081='+selAxe.toFixed(2),sv,cw,'#E0793F',0);
-      drawChip(ctx,bxPx,'x\u2082='+selBxe.toFixed(2),sv,cw,'#E0793F',1);
+      drawChip(ctx,axPx,'x\u2081='+selAxe.toFixed(3),sv,cw,'#E0793F',0);
+      drawChip(ctx,bxPx,'x\u2082='+selBxe.toFixed(3),sv,cw,'#E0793F',1);
     }
 
     /* Animation phase label */
@@ -577,13 +579,13 @@
      overwrite a box the user is actively typing in. */
   function syncValueInputs(){
     if(mode==='point'){
-      if(document.activeElement!==zInput) zInput.value=selZ.toFixed(2);
-      if(document.activeElement!==xInput) xInput.value=zToX(selZ).toFixed(2);
+      if(document.activeElement!==zInput) zInput.value=selZ.toFixed(3);
+      if(document.activeElement!==xInput) xInput.value=zToX(selZ).toFixed(3);
     } else {
-      if(document.activeElement!==aInput) aInput.value=selAz.toFixed(2);
-      if(document.activeElement!==bInput) bInput.value=selBz.toFixed(2);
-      if(document.activeElement!==x1Input) x1Input.value=zToX(selAz).toFixed(2);
-      if(document.activeElement!==x2Input) x2Input.value=zToX(selBz).toFixed(2);
+      if(document.activeElement!==aInput) aInput.value=selAz.toFixed(3);
+      if(document.activeElement!==bInput) bInput.value=selBz.toFixed(3);
+      if(document.activeElement!==x1Input) x1Input.value=zToX(selAz).toFixed(3);
+      if(document.activeElement!==x2Input) x2Input.value=zToX(selBz).toFixed(3);
     }
   }
 
@@ -603,19 +605,19 @@
     var html='';
     if(mode==='point'){
       var prob=Phi(selZ);
-      html+='<div><span class="lbl">Forward:  </span>z = <span class="val">'+selZ.toFixed(2)+'</span>';
-      html+=' \u2192 x = \u03C3z + \u03BC = '+sigma.toFixed(2)+'\u00D7'+selZ.toFixed(2)+' + '+mu.toFixed(1)+' = <span class="val">'+selX.toFixed(3)+'</span></div>';
+      html+='<div><span class="lbl">Forward:  </span>z = <span class="val">'+selZ.toFixed(3)+'</span>';
+      html+=' \u2192 x = \u03C3z + \u03BC = '+sigma.toFixed(2)+'\u00D7'+selZ.toFixed(3)+' + '+mu.toFixed(1)+' = <span class="val">'+selX.toFixed(3)+'</span></div>';
       html+='<div><span class="lbl">Backward: </span>x = <span class="val">'+selX.toFixed(3)+'</span>';
       html+=' \u2192 z = (x\u2212\u03BC)/\u03C3 = ('+selX.toFixed(3)+'\u2212'+mu.toFixed(1)+')/'+sigma.toFixed(2)+' = <span class="val">'+selZ.toFixed(3)+'</span></div>';
       html+='<div class="eq-row">\u03A6(z) = <span class="amber">'+prob.toFixed(4)+'</span>';
       html+=' &nbsp;=&nbsp; F(x) = \u03A6((x\u2212\u03BC)/\u03C3) = <span class="amber">'+prob.toFixed(4)+'</span> &nbsp;\u2713 same probability</div>';
     } else {
       var prob=Phi(selBz)-Phi(selAz);
-      html+='<div><span class="lbl">z-interval: </span>[<span class="val">'+selAz.toFixed(2)+'</span>, <span class="val">'+selBz.toFixed(2)+'</span>]';
+      html+='<div><span class="lbl">z-interval: </span>[<span class="val">'+selAz.toFixed(3)+'</span>, <span class="val">'+selBz.toFixed(3)+'</span>]';
       html+=' \u2192 x-interval: [<span class="val">'+selAx.toFixed(3)+'</span>, <span class="val">'+selBx.toFixed(3)+'</span>]</div>';
       html+='<div><span class="lbl">Transform: </span>';
-      html+='x\u2081 = '+sigma.toFixed(2)+'\u00D7('+selAz.toFixed(2)+') + '+mu.toFixed(1)+' = <span class="val">'+selAx.toFixed(3)+'</span>';
-      html+=',&nbsp; x\u2082 = '+sigma.toFixed(2)+'\u00D7('+selBz.toFixed(2)+') + '+mu.toFixed(1)+' = <span class="val">'+selBx.toFixed(3)+'</span></div>';
+      html+='x\u2081 = '+sigma.toFixed(2)+'\u00D7('+selAz.toFixed(3)+') + '+mu.toFixed(1)+' = <span class="val">'+selAx.toFixed(3)+'</span>';
+      html+=',&nbsp; x\u2082 = '+sigma.toFixed(2)+'\u00D7('+selBz.toFixed(3)+') + '+mu.toFixed(1)+' = <span class="val">'+selBx.toFixed(3)+'</span></div>';
       html+='<div class="eq-row">P(a\u2264Z\u2264b) = <span class="amber">'+prob.toFixed(4)+'</span>';
       html+=' &nbsp;=&nbsp; P(x\u2081\u2264X\u2264x\u2082) = <span class="amber">'+prob.toFixed(4)+'</span> &nbsp;\u2713 same probability</div>';
     }
@@ -646,12 +648,12 @@
     if(mode==='point'){
       dragging={panel:'R',handle:'pt'};
       selZ=xToZ(pxToD(px,sv,cwR));
-      selZ=Math.max(-4.15,Math.min(4.15,selZ));
+      selZ=snapZ(Math.max(-4.15,Math.min(4.15,selZ)));
     } else {
       var selAx=zToX(selAz),selBx=zToX(selBz);
       var pxA=dToPx(selAx,sv,cwR),pxB=dToPx(selBx,sv,cwR); var hit=hitInterval(px,pxA,pxB);
       dragging={panel:'R',handle:hit}; dragStartPx=px; dragAzStart=selAz; dragBzStart=selBz;
-      if(hit==='new'){var xv=pxToD(px,sv,cwR); selAz=selBz=Math.max(-4.15,Math.min(4.15,xToZ(xv))); dragging.handle='right';}
+      if(hit==='new'){var xv=pxToD(px,sv,cwR); selAz=selBz=snapZ(Math.max(-4.15,Math.min(4.15,xToZ(xv)))); dragging.handle='right';}
     }
     draw();
   }
@@ -662,7 +664,7 @@
     var cw=panel==='L'?cwL:cwR;
     var rawVal=pxToD(px,sv,cw);
     var z=panel==='L'?rawVal:xToZ(rawVal);
-    z=Math.max(-4.15,Math.min(4.15,z));
+    z=snapZ(Math.max(-4.15,Math.min(4.15,z)));
     if(dragging.handle==='pt'){ selZ=z; }
     else if(dragging.handle==='left'){
       selAz=z; if(selAz>selBz){var t=selAz;selAz=selBz;selBz=t;dragging.handle='right';}
@@ -674,7 +676,7 @@
       var dz=z-refZ, w=dragBzStart-dragAzStart;
       var nA=dragAzStart+dz,nB=dragBzStart+dz;
       if(nA<-4.15){nA=-4.15;nB=nA+w;} if(nB>4.15){nB=4.15;nA=nB-w;}
-      selAz=nA; selBz=nB;
+      selAz=snapZ(nA); selBz=snapZ(nB);
     }
   }
 
@@ -723,7 +725,7 @@
   });
 
   /* ── Point-mode value inputs ── */
-  function clampZ(z){ return Math.max(-4.15,Math.min(4.15,z)); }
+  function clampZ(z){ return snapZ(Math.max(-4.15,Math.min(4.15,z))); }
   zInput.addEventListener('input',function(){
     var v=parseFloat(this.value);
     if(!isNaN(v)){ selZ=clampZ(v); draw(); }
