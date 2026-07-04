@@ -96,6 +96,10 @@
   .readout .sage{ font-weight: 700; color: var(--sage); }
   footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
   footer p{ margin-bottom: 10px; }
+  .m{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); font-weight: 600;
+  }
   .byline{
     margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
     font-size: 11.5px; color: #9C9485;
@@ -179,13 +183,13 @@
   <footer>
     <p>
       To compute probabilities with <strong>any</strong> normal distribution, <strong>standardize</strong> first:
-      convert X-values to Z = (X &minus; &mu;) / &sigma;, then look up &Phi;(z).
-      The readout below shows every step. Drag the handles to set an interval P(a &le; X &le; b),
-      or switch to Point mode to see the cdf P(X &le; x) = &Phi;(z) directly.
+      convert X-values to <span class="m">Z = (X &minus; &mu;) / &sigma;</span>, then look up <span class="m">&Phi;(z)</span>.
+      The readout below shows every step. Drag the handles to set an interval <span class="m">P(a &le; X &le; b)</span>,
+      or switch to Point mode to see the cdf <span class="m">P(X &le; x) = &Phi;(z)</span> directly.
     </p>
     <p>
-      The <strong>68-95-99.7 rule</strong> says roughly 68.3% of the probability lies within &plusmn;1&sigma; of the mean,
-      95.5% within &plusmn;2&sigma;, and 99.7% within &plusmn;3&sigma;.
+      The <strong>68-95-99.7 rule</strong> says roughly 68.3% of the probability lies within <span class="m">&plusmn;1&sigma;</span> of the mean,
+      95.5% within <span class="m">&plusmn;2&sigma;</span>, and 99.7% within <span class="m">&plusmn;3&sigma;</span>.
       These percentages are universal &mdash; they don&rsquo;t change when you adjust &mu; or &sigma;.
     </p>
     <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
@@ -497,7 +501,7 @@
       var phiNegK = normalCdf(mu - kVal*sigma, mu, sigma); // = Phi(-k)
       var prob = 1 - 2*phiNegK;
       html += '<div class="step">P(&mu; \u2212 k&sigma; \u2264 X \u2264 &mu; + k&sigma;) with k = <span class="val">' + kVal.toFixed(2) + '</span></div>';
-      html += '<div><span class="amber">P(' + selA.toFixed(2) + ' \u2264 X \u2264 ' + selB.toFixed(2) + ')</span></div>';
+      html += '<div><span class="amber">P(' + selA.toFixed(3) + ' \u2264 X \u2264 ' + selB.toFixed(3) + ')</span></div>';
       html += '<div>= P(\u2212' + kVal.toFixed(2) + ' \u2264 Z \u2264 ' + kVal.toFixed(2) + ')</div>';
       html += '<div>= \u03A6(' + kVal.toFixed(2) + ') \u2212 \u03A6(\u2212' + kVal.toFixed(2) + ') = 1 \u2212 2\u03A6(\u2212' + kVal.toFixed(2) + ')</div>';
       html += '<div>= 1 \u2212 2(' + phiNegK.toFixed(4) + ') = <span class="amber">' + prob.toFixed(4) + '</span></div>';
@@ -506,15 +510,15 @@
       var phiA = normalCdf(selA, mu, sigma), phiB = normalCdf(selB, mu, sigma);
       var prob = phiB - phiA;
       html += '<div class="step">Standardize: z = (x \u2212 ' + mu.toFixed(1) + ') / ' + sigma.toFixed(2) + '</div>';
-      html += '<div><span class="amber">P(' + selA.toFixed(2) + ' \u2264 X \u2264 ' + selB.toFixed(2) + ')</span></div>';
+      html += '<div><span class="amber">P(' + selA.toFixed(3) + ' \u2264 X \u2264 ' + selB.toFixed(3) + ')</span></div>';
       html += '<div>= P(<span class="val">' + zA.toFixed(3) + '</span> \u2264 Z \u2264 <span class="val">' + zB.toFixed(3) + '</span>)</div>';
       html += '<div>= \u03A6(' + zB.toFixed(3) + ') \u2212 \u03A6(' + zA.toFixed(3) + ')</div>';
       html += '<div>= ' + phiB.toFixed(4) + ' \u2212 ' + phiA.toFixed(4) + ' = <span class="amber">' + prob.toFixed(4) + '</span></div>';
     } else {
       var z = (selX - mu) / sigma;
       var cdfV = normalCdf(selX, mu, sigma);
-      html += '<div class="step">Standardize: z = (' + selX.toFixed(2) + ' \u2212 ' + mu.toFixed(1) + ') / ' + sigma.toFixed(2) + ' = <span class="val">' + z.toFixed(3) + '</span></div>';
-      html += '<div><span class="amber">P(X \u2264 ' + selX.toFixed(2) + ')</span> = \u03A6(' + z.toFixed(3) + ') = <span class="amber">' + cdfV.toFixed(4) + '</span></div>';
+      html += '<div class="step">Standardize: z = (' + selX.toFixed(3) + ' \u2212 ' + mu.toFixed(1) + ') / ' + sigma.toFixed(2) + ' = <span class="val">' + z.toFixed(3) + '</span></div>';
+      html += '<div><span class="amber">P(X \u2264 ' + selX.toFixed(3) + ')</span> = \u03A6(' + z.toFixed(3) + ') = <span class="amber">' + cdfV.toFixed(4) + '</span></div>';
       html += '<div class="step" style="margin-top:4px">\u03A6(\u2212z) = 1 \u2212 \u03A6(z)  \u2192  \u03A6(' + (-z).toFixed(3) + ') = <span class="sage">' + (1-cdfV).toFixed(4) + '</span></div>';
     }
     readoutEl.innerHTML = html;
@@ -536,7 +540,10 @@
     var rect = canvas.getBoundingClientRect();
     return (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
   }
-  function clamp(x) { return Math.max(viewLo + 0.01, Math.min(viewHi - 0.01, x)); }
+  function clamp(x) {
+    var bounded = Math.max(viewLo + 0.01, Math.min(viewHi - 0.01, x));
+    return Math.round(bounded * 1000) / 1000; // snap to the same 3-decimal grid we display
+  }
 
   /* Keep selA/selB locked to mu - k*sigma and mu + k*sigma whenever the
      ksigma sub-mode is active and mu/sigma/k change. */
@@ -566,6 +573,7 @@
     var z = pxToData(px);
     var k = Math.abs(z - mu) / sigma;
     k = Math.max(0.1, Math.min(4, k));
+    k = Math.round(k * 100) / 100; // snap to the same 2-decimal grid k is displayed at
     kVal = k;
     kSlider.value = k;
     kValEl.textContent = k.toFixed(2);
@@ -584,7 +592,7 @@
       var nA = dragSelAStart + dx, nB = dragSelBStart + dx, w = nB - nA;
       if (nA < viewLo) { nA = viewLo; nB = nA + w; }
       if (nB > viewHi) { nB = viewHi; nA = nB - w; }
-      selA = nA; selB = nB;
+      selA = Math.round(nA * 1000) / 1000; selB = Math.round(nB * 1000) / 1000;
     }
     draw();
   }
