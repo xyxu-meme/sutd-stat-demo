@@ -101,7 +101,7 @@
 
   .interval-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .interval-input{
-    width: 64px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    width: 72px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
     font-size: 13.5px; text-align: center; padding: 7px 4px; border: 1px solid var(--hair-2);
     border-radius: 6px; background: #fff; color: var(--ink); -moz-appearance: textfield;
   }
@@ -189,15 +189,15 @@
       <div class="control-group full" id="pointInputsRow">
         <label>x</label>
         <div class="interval-row">
-          <input type="number" id="xInput" class="interval-input mono" step="0.01" aria-label="x value">
+          <input type="number" id="xInput" class="interval-input mono" step="0.001" aria-label="x value">
         </div>
       </div>
       <div class="control-group full" id="intervalInputsRow" hidden>
         <label>Interval</label>
         <div class="interval-row">
-          <input type="number" id="aInput" class="interval-input mono" step="0.01" aria-label="Lower bound a">
+          <input type="number" id="aInput" class="interval-input mono" step="0.001" aria-label="Lower bound a">
           <span class="mono">≤ X/n ≤</span>
-          <input type="number" id="bInput" class="interval-input mono" step="0.01" aria-label="Upper bound b">
+          <input type="number" id="bInput" class="interval-input mono" step="0.001" aria-label="Upper bound b">
         </div>
       </div>
     </div>
@@ -247,7 +247,7 @@
   </div>
 
   <footer>
-    The curve isn't drawn from the histogram — it's a separate object, the <strong>Normal(p, p(1\u2212p)/n)</strong> distribution, with its own pdf and its own integral (via the standard erf-based normal cdf). Where amber and sage overlap you'll see a blended tone; where they disagree, one color pokes past the other. At small n that mismatch is visible; by n \u2248 100\u2013200 it mostly vanishes \u2014 the <strong>De Moivre\u2013Laplace</strong> approximation (the historical root of the Central Limit Theorem) closing the gap between a sum and an integral.
+    The curve isn't drawn from the histogram — it's a separate object, the <strong class="mono">Normal(p, p(1&minus;p)/n)</strong> distribution, with its own pdf and its own integral (via the standard erf-based normal cdf). Where amber and sage overlap you'll see a blended tone; where they disagree, one color pokes past the other. At small n that mismatch is visible; by n &asymp; 100&ndash;200 it mostly vanishes — the <strong>De Moivre&ndash;Laplace</strong> approximation (the historical root of the Central Limit Theorem) closing the gap between a sum and an integral.
   </footer>
 
 </div>
@@ -291,6 +291,7 @@
   }
 
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+  function snap01(x) { return Math.round(clamp01(x) * 1000) / 1000; } // snap to the same 3-decimal grid we display
   function lerp(a, b, t) { return a + (b - a) * t; }
 
   function niceTicks(maxVal, targetCount) {
@@ -605,10 +606,10 @@
     diffRow.classList.toggle('close', diff < 0.001);
 
     if (mode === 'point') {
-      if (document.activeElement !== xInput) xInput.value = xPoint.toFixed(2);
+      if (document.activeElement !== xInput) xInput.value = xPoint.toFixed(3);
     } else {
-      if (document.activeElement !== aInput) aInput.value = lo.toFixed(2);
-      if (document.activeElement !== bInput) bInput.value = hi.toFixed(2);
+      if (document.activeElement !== aInput) aInput.value = lo.toFixed(3);
+      if (document.activeElement !== bInput) bInput.value = hi.toFixed(3);
     }
 
     updateZoomUI();
@@ -665,8 +666,8 @@
 
   function applyXInput() {
     var v = parseFloat(xInput.value);
-    if (isNaN(v)) { xInput.value = xPoint.toFixed(2); return; }
-    xPoint = clamp01(v);
+    if (isNaN(v)) { xInput.value = xPoint.toFixed(3); return; }
+    xPoint = snap01(v);
     draw();
   }
   xInput.addEventListener('change', applyXInput);
@@ -675,7 +676,7 @@
   function applyIntervalInputs() {
     var a = parseFloat(aInput.value), b = parseFloat(bInput.value);
     if (isNaN(a) || isNaN(b)) return;
-    a = clamp01(a); b = clamp01(b);
+    a = snap01(a); b = snap01(b);
     selA = Math.min(a, b); selB = Math.max(a, b);
     draw();
   }
@@ -702,7 +703,7 @@
     var px = getCanvasX(evt);
     if (mode === 'point') {
       dragTarget = 'x';
-      xPoint = clamp01(pxToData(px, cw));
+      xPoint = snap01(pxToData(px, cw));
       draw();
       return;
     }
@@ -712,7 +713,7 @@
       dragAnchorData = pxToData(px, cw);
       dragAnchorA = selA; dragAnchorB = selB;
     } else if (dragTarget === 'new') {
-      var x = clamp01(pxToData(px, cw));
+      var x = snap01(pxToData(px, cw));
       selA = x; selB = x;
       dragAnchorData = x;
     }
@@ -721,7 +722,7 @@
   function moveDrag(evt) {
     if (!dragging) return;
     var cw = cssSize().w;
-    var x = clamp01(pxToData(getCanvasX(evt), cw));
+    var x = snap01(pxToData(getCanvasX(evt), cw));
     if (dragTarget === 'x') {
       xPoint = x;
     } else if (dragTarget === 'left') {
@@ -734,7 +735,7 @@
       var newA = dragAnchorA + delta, newB = dragAnchorB + delta;
       if (newA < 0) { newA = 0; newB = width; }
       if (newB > 1) { newB = 1; newA = 1 - width; }
-      selA = newA; selB = newB;
+      selA = snap01(newA); selB = snap01(newB);
     } else if (dragTarget === 'new') {
       selA = Math.min(dragAnchorData, x);
       selB = Math.max(dragAnchorData, x);
