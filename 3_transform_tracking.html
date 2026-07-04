@@ -47,6 +47,14 @@
     font-size: 12px; font-weight: 700; color: var(--bar); min-width: 34px;
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
+  .play-btn{
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+    background: var(--bar); color: #fff; border: none; border-radius: 7px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  .play-btn:hover{ background: #24345c; }
+  .play-btn.playing{ background: var(--amber); }
   input[type="range"]{
     flex: 1; height: 28px; -webkit-appearance: none; appearance: none;
     background: transparent; touch-action: none;
@@ -103,6 +111,10 @@
     font-size: 11.5px; color: #9C9485;
   }
   .byline a{ color: var(--sage); text-decoration: none; }
+  .m{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); font-weight: 600;
+  }
   @media(max-width: 480px){
     .readout{ font-size: 11.5px; }
   }
@@ -112,14 +124,14 @@
 <div class="page">
   <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 2 &middot; Singapore University of Technology and Design</p>
   <h1>The Cdf Is the Bridge</h1>
-  <p class="subtitle">Slide 21&ndash;22: X ~ Uniform(0,1), Y = &minus;ln(1&minus;X) ~ Exponential(1)</p>
+  <p class="subtitle">Slide 21&ndash;22: <span class="m">X ~ Uniform(0,1), Y = &minus;ln(1&minus;X) ~ Exponential(1)</span></p>
 
   <div class="panel">
     <p class="panel-title">Background: transforming a random variable</p>
     <p class="panel-sub">
       Given X with a known cdf, and Y = g(X) for some function g, we can find Y&rsquo;s cdf directly:
-      F<sub>Y</sub>(y) = P(Y &le; y) = P(g(X) &le; y), which is rewritten in terms of F<sub>X</sub> by solving the
-      inequality for X. For the increasing transform g(x) = &minus;ln(1&minus;x) used here, this gives:
+      <span class="m" style="white-space:nowrap;">F<sub>Y</sub>(y) = P(Y &le; y) = P(g(X) &le; y)</span>, which is rewritten in terms of F<sub>X</sub> by solving the
+      inequality for X. For the increasing transform <span class="m" style="white-space:nowrap;">g(x) = &minus;ln(1&minus;x)</span> used here, this gives:
     </p>
     <div class="formula-box">
       <div class="lbl">F<sub>Y</sub>(y) = F<sub>X</sub>(x) &nbsp;&mdash;&nbsp; whenever y = g(x)</div>
@@ -135,22 +147,23 @@
     <div class="controls">
       <div class="ctrl-row">
         <span class="ctrl-label">x</span>
-        <input type="range" id="xSlider" min="0.01" max="0.97" step="0.01" value="0.50">
-        <span class="ctrl-val" id="xVal">0.50</span>
+        <input type="range" id="xSlider" min="0.01" max="0.99" step="0.001" value="0.500">
+        <span class="ctrl-val" id="xVal">0.500</span>
+        <button class="play-btn" id="playBtn" type="button">&#9654; Play</button>
       </div>
     </div>
 
     <div class="threecol">
       <div>
-        <p class="chart-title">cdf of X — F<sub>X</sub>(x) = x on [0,1]</p>
+        <p class="chart-title">cdf of X — <span class="m">F<sub>X</sub>(x) = x</span> on [0,1]</p>
         <div class="chart-wrap" id="xWrap"><canvas id="xChart"></canvas></div>
       </div>
       <div>
-        <p class="chart-title">transform Y = g(X) = &minus;ln(1&minus;X)</p>
+        <p class="chart-title">transform <span class="m">Y = g(X) = &minus;ln(1&minus;X)</span></p>
         <div class="chart-wrap" id="gWrap"><canvas id="gChart"></canvas></div>
       </div>
       <div>
-        <p class="chart-title">cdf of Y — F<sub>Y</sub>(y) = 1&minus;e<sup>&minus;y</sup></p>
+        <p class="chart-title">cdf of Y — <span class="m">F<sub>Y</sub>(y) = 1&minus;e<sup>&minus;y</sup></span></p>
         <div class="chart-wrap" id="yWrap"><canvas id="yChart"></canvas></div>
       </div>
     </div>
@@ -162,16 +175,16 @@
     <p>
       Drag the slider to move x across [0,1). Two linked quantities run across all three panels, each picked out
       in its own colour: the <strong style="color:var(--sage);">sage probability level</strong> in panel 1
-      (F<sub>X</sub>(x)) is the exact same number as the sage level in panel 3 (F<sub>Y</sub>(y)) &mdash; both panels
+      (<span class="m">F<sub>X</sub>(x)</span>) is the exact same number as the sage level in panel 3 (<span class="m">F<sub>Y</sub>(y)</span>) &mdash; both panels
       share an identical probability axis, so it sits at the same height in both. Separately, the
       <strong style="color:var(--violet);">violet value y</strong> that comes <em>out</em> of the middle panel (its
       vertical axis) is the exact same number that goes <em>into</em> panel 3 (its horizontal axis) &mdash; panel 2&rsquo;s
       output is panel 3&rsquo;s input.
     </p>
     <p>
-      Because g is monotonic increasing, the events {X &le; x} and {Y &le; y} are literally the same event &mdash; so
-      P(X &le; x) = P(Y &le; y), i.e. F<sub>X</sub>(x) = F<sub>Y</sub>(y) for every value x. This identity is exactly the
-      inverse-transform method: draw x as a realisation of Uniform(0,1); since F<sub>X</sub>(x) = x already <em>is</em>
+      Because g is monotonic increasing, the events <span class="m">{X &le; x}</span> and <span class="m">{Y &le; y}</span> are literally the same event &mdash; so
+      <span class="m">P(X &le; x) = P(Y &le; y)</span>, i.e. <span class="m">F<sub>X</sub>(x) = F<sub>Y</sub>(y)</span> for every value x. This identity is exactly the
+      inverse-transform method: draw x as a realisation of Uniform(0,1); since <span class="m">F<sub>X</sub>(x) = x</span> already <em>is</em>
       the target probability, y = g(x) lands precisely where F<sub>Y</sub> reaches that same probability.
     </p>
     <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
@@ -256,14 +269,14 @@
 
     xctx.fillStyle = COL_MARK; xctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
     xctx.textAlign='center'; xctx.textBaseline='top';
-    xctx.fillText('x='+x0.toFixed(2), xPx(x0), baseline+16);
+    xctx.fillText('x='+x0.toFixed(3), xPx(x0), baseline+16);
 
     xctx.fillStyle = COL_MARK;
     xctx.beginPath(); xctx.arc(xPx(x0), pPy(p0), compact?4.5:5.5, 0, 2*Math.PI); xctx.fill();
 
     xctx.fillStyle = COL_P; xctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
     xctx.textAlign='left'; xctx.textBaseline='bottom';
-    xctx.fillText('F_X='+p0.toFixed(2), PAD.left+4, pPy(p0)-5);
+    xctx.fillText('F_X='+p0.toFixed(3), PAD.left+4, pPy(p0)-5);
 
     xctx.fillStyle='#6B6459'; xctx.font=(compact?'9px':'10px')+' sans-serif';
     xctx.textAlign='center'; xctx.textBaseline='top';
@@ -275,7 +288,7 @@
     gctx.clearRect(0,0,gcw,gch);
     var PAD = { left: compact?32:38, right:10, top:14, bottom:compact?42:46 };
     var plotW = gcw-PAD.left-PAD.right, plotH = gch-PAD.top-PAD.bottom;
-    var xLo=0, xHi=0.97, yLo=0, yHi=4.0, baseline = gch-PAD.bottom;
+    var xLo=0, xHi=0.99, yLo=0, yHi=5.0, baseline = gch-PAD.bottom;
 
     function xPx(x){ return PAD.left + ((x-xLo)/(xHi-xLo))*plotW; }
     function yPy(y){ return baseline - ((y-yLo)/(yHi-yLo))*plotH; }
@@ -283,7 +296,7 @@
     gctx.strokeStyle='#DDD6C7'; gctx.lineWidth=1;
     gctx.beginPath(); gctx.moveTo(PAD.left,PAD.top); gctx.lineTo(PAD.left,baseline); gctx.lineTo(gcw-PAD.right,baseline); gctx.stroke();
 
-    var yTicks=[0,1,2,3,4];
+    var yTicks=[0,1,2,3,4,5];
     gctx.font=(compact?'8.5px':'9.5px')+' ui-monospace,monospace'; gctx.fillStyle='#9C9485';
     yTicks.forEach(function(t){
       var py=yPy(t);
@@ -319,11 +332,11 @@
 
     gctx.fillStyle=COL_VAL; gctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
     gctx.textAlign='left'; gctx.textBaseline='bottom';
-    gctx.fillText('y='+y0.toFixed(2), xPx(x0)+6, yPy(y0)-4);
+    gctx.fillText('y='+y0.toFixed(3), xPx(x0)+6, yPy(y0)-4);
 
     gctx.fillStyle=COL_MARK; gctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
     gctx.textAlign='center'; gctx.textBaseline='top';
-    gctx.fillText('x='+x0.toFixed(2), xPx(x0), baseline+16);
+    gctx.fillText('x='+x0.toFixed(3), xPx(x0), baseline+16);
 
     gctx.fillStyle='#6B6459'; gctx.font=(compact?'9px':'10px')+' sans-serif';
     gctx.textAlign='center'; gctx.textBaseline='top';
@@ -337,7 +350,7 @@
     yctx.clearRect(0,0,ycw,ych);
     var PAD = { left: compact?32:38, right:10, top:14, bottom:compact?42:46 };
     var plotW = ycw-PAD.left-PAD.right, plotH = ych-PAD.top-PAD.bottom;
-    var yLo=0, yHi=4.0, baseline = ych-PAD.bottom;
+    var yLo=0, yHi=5.0, baseline = ych-PAD.bottom;
 
     function yPx(y){ return PAD.left + ((y-yLo)/(yHi-yLo))*plotW; }
     function pPy(p){ return baseline - p*plotH; }
@@ -355,15 +368,27 @@
       yctx.fillText(t.toFixed(2), PAD.left-5, py);
     });
     yctx.textAlign='center'; yctx.textBaseline='top';
-    [0,1,2,3,4].forEach(function(t){ yctx.fillText(t, yPx(t), baseline+5); });
+    [0,1,2,3,4,5].forEach(function(t){ yctx.fillText(t, yPx(t), baseline+5); });
 
     yctx.strokeStyle='#2E4374'; yctx.lineWidth=2;
+    if (!curveRevealed) yctx.setLineDash([6,5]);
     yctx.beginPath();
     var first=true;
     for (var y=0;y<=yHi;y+=0.02) {
       var px=yPx(y), py=pPy(FY(y));
       if (first) { yctx.moveTo(px,py); first=false; } else yctx.lineTo(px,py);
     }
+    yctx.stroke();
+    yctx.setLineDash([]);
+
+    yctx.strokeStyle = COL_MARK; yctx.lineWidth = 3.5;
+    yctx.beginPath();
+    var firstT = true;
+    for (var yt=0; yt<=y0; yt+=0.02) {
+      var ptx=yPx(yt), pty=pPy(FY(yt));
+      if (firstT) { yctx.moveTo(ptx,pty); firstT=false; } else yctx.lineTo(ptx,pty);
+    }
+    yctx.lineTo(yPx(y0), pPy(FY(y0)));
     yctx.stroke();
 
     yctx.strokeStyle = COL_P; yctx.lineWidth = 1.6; yctx.setLineDash([5,4]);
@@ -379,11 +404,11 @@
 
     yctx.fillStyle = COL_P; yctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
     yctx.textAlign='right'; yctx.textBaseline='bottom';
-    yctx.fillText('F_Y='+p0.toFixed(2), ycw-PAD.right-4, pPy(p0)-5);
+    yctx.fillText('F_Y='+p0.toFixed(3), ycw-PAD.right-4, pPy(p0)-5);
 
     yctx.fillStyle = COL_VAL; yctx.font='bold '+(compact?'9px':'10px')+' ui-monospace,monospace';
     yctx.textAlign='center'; yctx.textBaseline='bottom';
-    yctx.fillText('y='+y0.toFixed(2), yPx(y0), PAD.top+12);
+    yctx.fillText('y='+y0.toFixed(3), yPx(y0), PAD.top+12);
 
     yctx.fillStyle='#6B6459'; yctx.font=(compact?'9px':'10px')+' sans-serif';
     yctx.textAlign='center'; yctx.textBaseline='top';
@@ -407,8 +432,49 @@
     updateReadout(x0, y0, cdfX, cdfY);
   }
 
+  var playBtn = document.getElementById('playBtn');
+  var playing = false, playStart = null, playFromX = null, curveRevealed = false;
+  var PLAY_LO = 0.01, PLAY_HI = 0.99, PLAY_MS = 4500;
+
+  function setSliderX(x0) {
+    xSlider.value = x0;
+    xValEl.textContent = x0.toFixed(3);
+  }
+
+  function playStep(ts) {
+    if (!playing) return;
+    if (playStart === null) playStart = ts;
+    var t = Math.min(1, (ts - playStart) / PLAY_MS);
+    var x0 = playFromX + (PLAY_HI - playFromX) * t;
+    setSliderX(x0);
+    draw();
+    if (t >= 1) { curveRevealed = true; draw(); stopPlay(); return; }
+    requestAnimationFrame(playStep);
+  }
+
+  function startPlay() {
+    playFromX = PLAY_LO;
+    playing = true;
+    playStart = null;
+    playBtn.textContent = '\u23F8 Pause';
+    playBtn.classList.add('playing');
+    draw();
+    requestAnimationFrame(playStep);
+  }
+
+  function stopPlay() {
+    playing = false;
+    playBtn.textContent = '\u25B6 Play';
+    playBtn.classList.remove('playing');
+  }
+
+  playBtn.addEventListener('click', function(){
+    if (playing) stopPlay(); else startPlay();
+  });
+
   xSlider.addEventListener('input', function(){
-    xValEl.textContent = parseFloat(this.value).toFixed(2);
+    if (playing) stopPlay();
+    xValEl.textContent = parseFloat(this.value).toFixed(3);
     draw();
   });
   window.addEventListener('resize', resize);
