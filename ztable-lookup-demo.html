@@ -158,6 +158,10 @@
   /* footer */
   footer{ margin-top:14px; font-size:13px; line-height:1.6; color:#6B6459; }
   footer p{ margin-bottom:10px; }
+  .m{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); font-weight: 600;
+  }
   .byline{
     margin-top:10px; padding-top:10px; border-top:1px dashed var(--hair);
     font-size:11.5px; color:#9C9485;
@@ -173,7 +177,7 @@
 <div class="page">
   <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 1 &middot; Singapore University of Technology and Design</p>
   <h1>Z-Table Lookup</h1>
-  <p class="subtitle">How to read off &Phi;(z) = P(Z &le; z) from the standard normal table.</p>
+  <p class="subtitle">How to read off <span class="m">&Phi;(z) = P(Z &le; z)</span> from the standard normal table.</p>
 
   <!-- Input + Bell curve -->
   <div class="card">
@@ -204,7 +208,7 @@
   <div class="table-card">
     <div class="table-header">
       <span class="table-title-text">Standard Normal Table &nbsp;&mdash;&nbsp; &Phi;(z) for z &le; 0</span>
-      <span class="table-note">For z &gt; 0: use &Phi;(z) = 1 &minus; &Phi;(&minus;z)</span>
+      <span class="table-note">For z &gt; 0: use <span class="m">&Phi;(z) = 1 &minus; &Phi;(&minus;z)</span></span>
     </div>
     <div class="table-scroll" id="tableScroll">
       <table class="ztable" id="ztable"></table>
@@ -213,13 +217,13 @@
 
   <footer>
     <p>
-      The Z-table lists &Phi;(z) = P(Z &le; z) for negative z-values.
+      The Z-table lists <span class="m">&Phi;(z) = P(Z &le; z)</span> for negative z-values.
       Each <strong>row</strong> gives the first two significant digits of z (e.g. &minus;1.2),
       and each <strong>column</strong> gives the last decimal digit (e.g. .03).
       Together they identify a unique z = &minus;1.23.
     </p>
     <p>
-      For <strong>positive z</strong>, use the symmetry property: &Phi;(z) = 1 &minus; &Phi;(&minus;z).
+      For <strong>positive z</strong>, use the symmetry property: <span class="m">&Phi;(z) = 1 &minus; &Phi;(&minus;z)</span>.
       Look up &minus;z in the table, then subtract from 1.
     </p>
     <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
@@ -328,14 +332,6 @@
         cell.classList.add('hl-cell');
       }
     });
-    if(targets.length){
-      var firstCell=document.getElementById('cell_'+targets[0].r+'_'+targets[0].c);
-      if(firstCell){
-        setTimeout(function(){
-          firstCell.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
-        },50);
-      }
-    }
   }
 
   /* ── Draw bell curve ── */
