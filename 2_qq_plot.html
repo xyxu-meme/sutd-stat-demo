@@ -91,12 +91,17 @@
   }
   .formula-box .lbl{ color: #6B6459; }
   .qtooltip{
-    position: absolute; z-index: 5; pointer-events: none;
+    position: absolute; z-index: 5; pointer-events: auto; cursor: move; user-select: none;
     background: #1F2937; color: #fff; border-radius: 10px;
     padding: 9px 11px; box-shadow: 0 4px 14px rgba(0,0,0,0.28);
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
     font-size: 12px; line-height: 1.7; max-width: 300px;
     opacity: 0; transition: opacity 180ms ease;
+  }
+  .qtooltip.dragging{ transition: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .qtooltip .tt-drag-handle{
+    width: 30px; height: 4px; background: rgba(255,255,255,0.28); border-radius: 2px;
+    margin: -2px auto 7px;
   }
   .qtooltip.visible{ opacity: 1; }
   .qtooltip .lbl{ color: #C7CAD1; }
@@ -113,7 +118,6 @@
   .qtooltip .tt-next-row{
     display: flex; align-items: center; gap: 8px; margin-top: 6px;
     padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.2);
-    pointer-events: auto;
   }
   .tt-next-btn{
     padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
@@ -128,6 +132,10 @@
   @media(max-width: 620px){ .twocol{ grid-template-columns: 1fr; } }
   footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
   footer p{ margin-bottom: 10px; }
+  .m{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); font-weight: 600;
+  }
   .byline{
     margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
     font-size: 11.5px; color: #9C9485;
@@ -150,8 +158,8 @@
     <p class="panel-title">Background: checking normality with a Q&ndash;Q plot</p>
     <p class="panel-sub">
       A Q&ndash;Q plot lines up each sample value against the normal quantile it &ldquo;should&rdquo; match if the data
-      were normal. For the sorted sample x<sub>1</sub> &le; &hellip; &le; x<sub>n</sub>, the i-th value is paired with
-      probability level p<sub>i</sub> = i/(n+1):
+      were normal. For the sorted sample <span class="m">x<sub>1</sub> &le; &hellip; &le; x<sub>n</sub></span>, the i-th value is paired with
+      probability level <span class="m">p<sub>i</sub> = i/(n+1)</span>:
     </p>
     <div class="formula-box">
       <div class="lbl">x-coordinate = &Phi;<sup>&minus;1</sup>(p<sub>i</sub>) &nbsp;&mdash;&nbsp; theoretical normal quantile</div>
@@ -183,6 +191,7 @@
     <div class="chart-wrap" id="qqWrap">
       <canvas id="qqChart"></canvas>
       <div class="qtooltip" id="qqTooltip">
+        <div class="tt-drag-handle" aria-hidden="true"></div>
         <div class="rline" id="lineY"></div>
         <div class="rline" id="lineI"></div>
         <div class="rline" id="lineP"></div>
@@ -198,14 +207,14 @@
 
   <div class="panel">
     <p class="panel-title">Where both coordinates come from</p>
-    <p class="panel-sub">Both panels share the same probability level p<sub>i</sub> = i/(n+1) &mdash; the <span style="color:var(--sage);font-weight:600;">sage</span> horizontal line. On the <strong>left</strong>, that level meets the sample&rsquo;s own empirical cdf and drops to the <span style="color:var(--amber);font-weight:600;">sample y-coordinate</span>. On the <strong>right</strong>, the same level meets the standard normal cdf &Phi;(z) and drops to the <span style="color:var(--violet);font-weight:600;">theoretical x-coordinate</span>.</p>
+    <p class="panel-sub">Both panels share the same probability level <span class="m">p<sub>i</sub> = i/(n+1)</span> &mdash; the <span style="color:var(--sage);font-weight:600;">sage</span> horizontal line. On the <strong>left</strong>, that level meets the sample&rsquo;s own empirical cdf and drops to the <span style="color:var(--amber);font-weight:600;">sample y-coordinate</span>. On the <strong>right</strong>, the same level meets the standard normal cdf <span class="m">&Phi;(z)</span> and drops to the <span style="color:var(--violet);font-weight:600;">theoretical x-coordinate</span>.</p>
     <div class="twocol">
       <div>
         <p class="panel-title" style="font-size:11.5px;text-align:center;">Empirical cdf of the sample</p>
         <div class="chart-wrap" id="ecdfWrap"><canvas id="ecdfChart"></canvas></div>
       </div>
       <div>
-        <p class="panel-title" style="font-size:11.5px;text-align:center;">Standard normal cdf &Phi;(z)</p>
+        <p class="panel-title" style="font-size:11.5px;text-align:center;">Standard normal cdf <span class="m">&Phi;(z)</span></p>
         <div class="chart-wrap" id="normWrap"><canvas id="normChart"></canvas></div>
       </div>
     </div>
@@ -218,8 +227,8 @@
       (straight) against exponential or uniform samples (curved).
     </p>
     <p>
-      <strong>X-axis:</strong> theoretical quantile of the standard normal, &Phi;<sup>&minus;1</sup>(i/(n+1)).
-      <strong>Y-axis:</strong> sample quantile &mdash; the i-th smallest value in the sorted sample, x<sub>i</sub>.
+      <strong>X-axis:</strong> theoretical quantile of the standard normal, <span class="m">&Phi;<sup>&minus;1</sup>(i/(n+1))</span>.
+      <strong>Y-axis:</strong> sample quantile &mdash; the i-th smallest value in the sorted sample, <span class="m">x<sub>i</sub></span>.
       The dashed grey line is a visual guide through the data&rsquo;s own range, not a fitted regression.
     </p>
     <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
@@ -273,6 +282,7 @@
   var ecdfCanvas = document.getElementById('ecdfChart'), ectx = ecdfCanvas.getContext('2d');
   var ecdfWrap = document.getElementById('ecdfWrap');
   var qqTooltip = document.getElementById('qqTooltip');
+  var tooltipUserPositioned = false, tooltipDragging = false, dragOffX = 0, dragOffY = 0;
   var dpr = window.devicePixelRatio || 1;
 
   var sampleVals = [], theoVals = [], pointPx = [], selectedIdx = -1;
@@ -326,6 +336,7 @@
     for (i=0;i<n;i++) theoVals.push(inverseNormalCdf((i+1)/(n+1)));
     selectedIdx = -1;
     revealStage = 0;
+    tooltipUserPositioned = false;
     drawAll();
     updateNextButton();
   }
@@ -384,11 +395,24 @@
       qctx.lineWidth = 1.6; qctx.setLineDash([5,4]);
       qctx.strokeStyle = COL_Y;
       qctx.beginPath(); qctx.moveTo(PAD.left, sp.y); qctx.lineTo(sp.x, sp.y); qctx.stroke();
+      qctx.setLineDash([]);
+
+      qctx.fillStyle = COL_Y; qctx.font = 'bold ' + (compact?'13px':'14.5px') + ' ui-monospace,monospace';
+      qctx.textAlign = 'left'; qctx.textBaseline = 'bottom';
+      qctx.fillText('y=' + sampleVals[selectedIdx].toFixed(3), PAD.left + 4, sp.y - 5);
+
       if (revealStage >= 4) {
+        qctx.setLineDash([5,4]);
         qctx.strokeStyle = COL_Z;
         qctx.beginPath(); qctx.moveTo(sp.x, baseline); qctx.lineTo(sp.x, sp.y); qctx.stroke();
+        qctx.setLineDash([]);
+
+        var qxFlip = sp.x > qcw - PAD.right - 62;
+        qctx.fillStyle = COL_Z; qctx.font = 'bold ' + (compact?'13px':'14.5px') + ' ui-monospace,monospace';
+        qctx.textAlign = qxFlip ? 'right' : 'left';
+        qctx.textBaseline = 'bottom';
+        qctx.fillText('x=' + theoVals[selectedIdx].toFixed(3), sp.x + (qxFlip?-7:7), baseline - 5);
       }
-      qctx.setLineDash([]);
     }
   }
 
@@ -565,7 +589,7 @@
     var n = sampleVals.length, i1 = selectedIdx+1;
     var pi = i1/(n+1), z = theoVals[selectedIdx], x = sampleVals[selectedIdx];
 
-    lineY.innerHTML = '<span class="lbl">y (sample value) = x<sub>i</sub> = <span class="amber">' + x.toFixed(3) + '</span></span>';
+    lineY.innerHTML = '<span class="lbl">y = x<sub>i</sub> (sample value) = <span class="amber">' + x.toFixed(3) + '</span></span>';
     lineI.innerHTML = '<span class="lbl">&rarr; that is the <span class="val">' + i1 + '</span>-th smallest of ' + n + ' values, so rank i = <span class="val">' + i1 + '</span></span>';
     lineP.innerHTML = '<span class="lbl">&rarr; p<sub>i</sub> = i/(n+1) = <span class="sage">' + pi.toFixed(3) + '</span></span>';
     lineX.innerHTML = '<span class="lbl">&rarr; x (theoretical) = &Phi;<sup>&minus;1</sup>(p<sub>i</sub>) = <span class="violet">' + z.toFixed(3) + '</span></span>';
@@ -581,6 +605,7 @@
 
   function positionTooltip(idx) {
     if (idx < 0 || !pointPx[idx]) return;
+    if (tooltipUserPositioned) return;
     var p = pointPx[idx];
     var cw = qqCanvas.clientWidth, ch = qqCanvas.clientHeight;
     var ttW = qqTooltip.offsetWidth, ttH = qqTooltip.offsetHeight;
@@ -593,6 +618,43 @@
     qqTooltip.style.left = left + 'px';
     qqTooltip.style.top = top + 'px';
   }
+
+  function tooltipDragStart(e) {
+    if (e.target.closest('.tt-next-btn')) return;
+    e.preventDefault();
+    var rect = qqTooltip.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragOffX = clientX - rect.left;
+    dragOffY = clientY - rect.top;
+    tooltipDragging = true;
+    qqTooltip.classList.add('dragging');
+  }
+  function tooltipDragMove(e) {
+    if (!tooltipDragging) return;
+    e.preventDefault();
+    var wrapRect = qqWrap.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    var ttW = qqTooltip.offsetWidth, ttH = qqTooltip.offsetHeight;
+    var left = clientX - wrapRect.left - dragOffX;
+    var top = clientY - wrapRect.top - dragOffY;
+    left = Math.max(4, Math.min(wrapRect.width - ttW - 4, left));
+    top = Math.max(4, Math.min(wrapRect.height - ttH - 4, top));
+    qqTooltip.style.left = left + 'px';
+    qqTooltip.style.top = top + 'px';
+    tooltipUserPositioned = true;
+  }
+  function tooltipDragEnd() {
+    tooltipDragging = false;
+    qqTooltip.classList.remove('dragging');
+  }
+  qqTooltip.addEventListener('mousedown', tooltipDragStart);
+  qqTooltip.addEventListener('touchstart', tooltipDragStart, {passive:false});
+  window.addEventListener('mousemove', tooltipDragMove);
+  window.addEventListener('touchmove', tooltipDragMove, {passive:false});
+  window.addEventListener('mouseup', tooltipDragEnd);
+  window.addEventListener('touchend', tooltipDragEnd);
 
   var nextBtn = document.getElementById('nextBtn');
   var stepCounter = document.getElementById('stepCounter');
