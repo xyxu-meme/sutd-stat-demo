@@ -56,7 +56,7 @@
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
   .val-input{
-    width: 68px; padding: 4px 6px; font-size: 13px; font-weight: 600;
+    width: 84px; padding: 4px 6px; font-size: 13px; font-weight: 600;
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
     color: var(--bar); background: #fff; border: 1.5px solid var(--hair); border-radius: 7px;
     text-align: center; outline: none; -moz-appearance: textfield;
@@ -73,6 +73,7 @@
     touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
     cursor: ew-resize;
   }
+  .phi-glyph{ font-family: "Cambria Math", "STIX Two Text", "Latin Modern Math", serif; }
   .readout{
     margin-top: 8px; padding: 10px 12px; background: #FAFAF8; border-radius: 10px;
     border: 1px solid var(--hair);
@@ -86,6 +87,10 @@
   .readout .sym-row{ margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--hair); }
   footer{ margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6B6459; }
   footer p{ margin-bottom: 10px; }
+  footer .m{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color: var(--bar); font-weight: 600;
+  }
   .byline{
     margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--hair);
     font-size: 11.5px; color: #9C9485;
@@ -97,7 +102,7 @@
 <body>
 <div class="page">
   <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 8, Class 1 &middot; Singapore University of Technology and Design</p>
-  <h1>Meet &phi; and &Phi;</h1>
+  <h1>Meet <span class="phi-glyph">ϕ</span> and &Phi;</h1>
   <p class="subtitle">The standard normal&rsquo;s pdf and cdf.</p>
 
   <div class="panel">
@@ -109,13 +114,13 @@
       <button class="sym-btn" id="symToggle">Symmetry</button>
       <div class="input-row" id="pointInputs">
         <span class="input-label">x =</span>
-        <input type="number" class="val-input" id="xInput" value="1.00" step="0.1" min="-4.1" max="4.1">
+        <input type="number" class="val-input" id="xInput" value="1.000" step="0.001" min="-4.1" max="4.1">
       </div>
       <div class="input-row" id="intervalInputs" style="display:none;">
         <span class="input-label">a =</span>
-        <input type="number" class="val-input" id="aInput" value="-1.00" step="0.1" min="-4.1" max="4.1">
+        <input type="number" class="val-input" id="aInput" value="-1.000" step="0.001" min="-4.1" max="4.1">
         <span class="input-label">b =</span>
-        <input type="number" class="val-input" id="bInput" value="1.00" step="0.1" min="-4.1" max="4.1">
+        <input type="number" class="val-input" id="bInput" value="1.000" step="0.001" min="-4.1" max="4.1">
       </div>
     </div>
 
@@ -127,14 +132,14 @@
 
   <footer>
     <p>
-      For the <strong>standard normal</strong> Z &sim; N(0, 1), we use special notation:
-      <strong>&phi;</strong> (lowercase phi) is the pdf &mdash; the <em>height</em> of the bell curve.
-      <strong>&Phi;</strong> (uppercase Phi) is the cdf &mdash; the <em>area</em> from &minus;&infin; to x, equal to P(Z &le; x).
+      For the <strong>standard normal</strong> <span class="m">Z &sim; N(0, 1)</span>, we use special notation:
+      <strong class="phi-glyph">ϕ</strong> (lowercase phi) is the pdf &mdash; the <em>height</em> of the bell curve.
+      <strong>&Phi;</strong> (uppercase Phi) is the cdf &mdash; the <em>area</em> from &minus;&infin; to x, equal to <span class="m">P(Z &le; x)</span>.
     </p>
     <p>
-      In <strong>Point</strong> mode, drag or type x to see &Phi;(x).
-      In <strong>Interval</strong> mode, drag two handles to see P(a &le; Z &le; b) = &Phi;(b) &minus; &Phi;(a).
-      Toggle <strong>Symmetry</strong> (point mode only) to see &Phi;(&minus;x) = 1 &minus; &Phi;(x).
+      In <strong>Point</strong> mode, drag or type x to see <span class="m">&Phi;(x)</span>.
+      In <strong>Interval</strong> mode, drag two handles to see <span class="m">P(a &le; Z &le; b) = &Phi;(b) &minus; &Phi;(a)</span>.
+      Toggle <strong>Symmetry</strong> (point mode only) to see <span class="m">&Phi;(&minus;x) = 1 &minus; &Phi;(x)</span>.
     </p>
     <p class="byline">XU, Ying &middot; <a href="mailto:xu_ying@sutd.edu.sg">xu_ying@sutd.edu.sg</a> &middot; 10.022 Modelling Uncertainty</p>
   </footer>
@@ -197,7 +202,40 @@
   function pxToData(px) { return VIEW_LO + ((px - PAD.left) / (cw - PAD.left - PAD.right)) * (VIEW_HI - VIEW_LO); }
   var MAX_PDF = phi(0) * 1.18;
   function valToPy(v) { return PAD.top + (1 - v / MAX_PDF) * (ch - PAD.top - PAD.bottom); }
-  function clamp(x) { return Math.max(VIEW_LO + 0.02, Math.min(VIEW_HI - 0.02, x)); }
+  function clamp(x) {
+    var bounded = Math.max(VIEW_LO + 0.02, Math.min(VIEW_HI - 0.02, x));
+    return Math.round(bounded * 1000) / 1000; // snap to the same 3-decimal grid we display
+  }
+
+  var MATH_FONT_STACK = '"Cambria Math","STIX Two Text","Latin Modern Math",serif';
+  function fillTextWithPhi(ctx, text, x, y) {
+    var idx = text.indexOf('\u03D5');
+    if (idx < 0) { ctx.fillText(text, x, y); return; }
+    var before = text.slice(0, idx), after = text.slice(idx + 1);
+    var mainFont = ctx.font;
+    var weightBold = /\bbold\b/.test(mainFont);
+    var sizeMatch = mainFont.match(/(\d+(?:\.\d+)?px)/);
+    var phiFont = (weightBold ? 'bold ' : '') + (sizeMatch ? sizeMatch[1] : '13px') + ' ' + MATH_FONT_STACK;
+
+    ctx.font = mainFont;
+    var beforeW = ctx.measureText(before).width;
+    var afterW = ctx.measureText(after).width;
+    ctx.font = phiFont;
+    var phiW = ctx.measureText('\u03D5').width;
+    var totalW = beforeW + phiW + afterW;
+
+    var origAlign = ctx.textAlign, startX;
+    if (origAlign === 'right') startX = x - totalW;
+    else if (origAlign === 'center') startX = x - totalW / 2;
+    else startX = x;
+
+    ctx.textAlign = 'left';
+    ctx.font = mainFont; ctx.fillText(before, startX, y);
+    ctx.font = phiFont; ctx.fillText('\u03D5', startX + beforeW, y);
+    ctx.font = mainFont; ctx.fillText(after, startX + beforeW + phiW, y);
+    ctx.textAlign = origAlign;
+    ctx.font = mainFont;
+  }
 
   /* ── Drawing ── */
   function draw() {
@@ -277,13 +315,13 @@
       var labelY = plotT + (plotB - plotT) * 0.58;
       ctx.font = (compact ? 'bold 16px ' : 'bold 19px ') + mono;
       ctx.fillStyle = 'rgba(224,121,63,0.85)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('\u03A6(' + selX.toFixed(1) + ') = ' + PhiX.toFixed(4), shadeMidX, labelY);
+      ctx.fillText('\u03A6(' + selX.toFixed(3) + ') = ' + PhiX.toFixed(4), shadeMidX, labelY);
 
       if (showSym) {
         var negPhiVal = Phi(-selX);
         var symMidX = (Math.max(plotL, dataToPx(VIEW_LO)) + Math.min(dataToPx(-selX), plotR)) / 2;
         ctx.fillStyle = 'rgba(63,111,94,0.85)';
-        ctx.fillText('\u03A6(' + (-selX).toFixed(1) + ') = ' + negPhiVal.toFixed(4), symMidX, labelY + (compact ? 20 : 24));
+        ctx.fillText('\u03A6(' + (-selX).toFixed(3) + ') = ' + negPhiVal.toFixed(4), symMidX, labelY + (compact ? 20 : 24));
       }
 
       // ϕ(x) label (blue, beside dot)
@@ -291,7 +329,7 @@
       ctx.fillStyle = '#2E4374'; ctx.textBaseline = 'bottom';
       var phiLX = selPx + 8; ctx.textAlign = 'left';
       if (phiLX + 100 > plotR) { ctx.textAlign = 'right'; phiLX = selPx - 8; }
-      ctx.fillText('\u03C6(' + selX.toFixed(1) + ') = ' + phi(selX).toFixed(4), phiLX, selPy - 8);
+      fillTextWithPhi(ctx, '\u03D5(' + selX.toFixed(3) + ') = ' + phi(selX).toFixed(4), phiLX, selPy - 8);
 
     } else {
       // ── Interval handles and lines ──
@@ -339,13 +377,13 @@
     for (var yli = 0; yli < yTicks.length; yli++) {
       var ylpx = valToPy(yTicks[yli]);
       if (ylpx > plotB - 5) continue;
-      ctx.fillText(yTicks[yli].toFixed(1), plotL - 5, ylpx);
+      ctx.fillText(yTicks[yli].toFixed(2), plotL - 5, ylpx);
     }
     ctx.save();
     ctx.translate(12, (plotT + plotB) / 2); ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = (compact ? '12px ' : '13px ') + '-apple-system, sans-serif';
-    ctx.fillStyle = '#635E55'; ctx.fillText('\u03C6(z)', 0, 0);
+    ctx.fillStyle = '#635E55'; fillTextWithPhi(ctx, '\u03D5(z)', 0, 0);
     ctx.restore();
 
     updateReadout();
@@ -380,20 +418,20 @@
     var html = '';
     if (mode === 'point') {
       var phiX = phi(selX), PhiX = Phi(selX);
-      html += '<div><span class="lbl">z = </span><span class="val">' + selX.toFixed(2) + '</span></div>';
-      html += '<div><span class="lbl">Height: </span>\u03C6(' + selX.toFixed(2) + ') = <span class="val">' + phiX.toFixed(4) + '</span></div>';
-      html += '<div><span class="lbl">Area:  </span>\u03A6(' + selX.toFixed(2) + ') = P(Z \u2264 ' + selX.toFixed(2) + ') = <span class="amber">' + PhiX.toFixed(4) + '</span></div>';
+      html += '<div><span class="lbl">z = </span><span class="val">' + selX.toFixed(3) + '</span></div>';
+      html += '<div><span class="lbl">Height: </span><span class="phi-glyph">\u03D5</span>(' + selX.toFixed(3) + ') = <span class="val">' + phiX.toFixed(4) + '</span></div>';
+      html += '<div><span class="lbl">Area:  </span>\u03A6(' + selX.toFixed(3) + ') = P(Z \u2264 ' + selX.toFixed(3) + ') = <span class="amber">' + PhiX.toFixed(4) + '</span></div>';
       if (showSym) {
         var PhiNeg = Phi(-selX);
         html += '<div class="sym-row">';
-        html += '<span class="lbl">Symmetry: </span>\u03A6(' + (-selX).toFixed(2) + ') = P(Z \u2264 ' + (-selX).toFixed(2) + ') = <span class="sage">' + PhiNeg.toFixed(4) + '</span>';
+        html += '<span class="lbl">Symmetry: </span>\u03A6(' + (-selX).toFixed(3) + ') = P(Z \u2264 ' + (-selX).toFixed(3) + ') = <span class="sage">' + PhiNeg.toFixed(4) + '</span>';
         html += '</div>';
-        html += '<div>\u03A6(' + selX.toFixed(2) + ') + \u03A6(' + (-selX).toFixed(2) + ') = ' + PhiX.toFixed(4) + ' + ' + PhiNeg.toFixed(4) + ' = <span class="val">1.0000</span></div>';
+        html += '<div>\u03A6(' + selX.toFixed(3) + ') + \u03A6(' + (-selX).toFixed(3) + ') = ' + PhiX.toFixed(4) + ' + ' + PhiNeg.toFixed(4) + ' = <span class="val">1.0000</span></div>';
       }
     } else {
       var PhiA = Phi(selA), PhiB = Phi(selB), prob = PhiB - PhiA;
-      html += '<div><span class="amber">P(' + selA.toFixed(2) + ' \u2264 Z \u2264 ' + selB.toFixed(2) + ')</span></div>';
-      html += '<div>= \u03A6(' + selB.toFixed(2) + ') \u2212 \u03A6(' + selA.toFixed(2) + ')</div>';
+      html += '<div><span class="amber">P(' + selA.toFixed(3) + ' \u2264 Z \u2264 ' + selB.toFixed(3) + ')</span></div>';
+      html += '<div>= \u03A6(' + selB.toFixed(3) + ') \u2212 \u03A6(' + selA.toFixed(3) + ')</div>';
       html += '<div>= ' + PhiB.toFixed(4) + ' \u2212 ' + PhiA.toFixed(4) + ' = <span class="amber">' + prob.toFixed(4) + '</span></div>';
     }
     readoutEl.innerHTML = html;
@@ -401,10 +439,10 @@
 
   function syncInputs() {
     if (mode === 'point') {
-      if (document.activeElement !== xInput) xInput.value = selX.toFixed(2);
+      if (document.activeElement !== xInput) xInput.value = selX.toFixed(3);
     } else {
-      if (document.activeElement !== aInput) aInput.value = selA.toFixed(2);
-      if (document.activeElement !== bInput) bInput.value = selB.toFixed(2);
+      if (document.activeElement !== aInput) aInput.value = selA.toFixed(3);
+      if (document.activeElement !== bInput) bInput.value = selB.toFixed(3);
     }
   }
 
@@ -453,7 +491,7 @@
       var nA = dragAStart + dx, nB = dragBStart + dx, w = nB - nA;
       if (nA < VIEW_LO) { nA = VIEW_LO; nB = nA + w; }
       if (nB > VIEW_HI) { nB = VIEW_HI; nA = nB - w; }
-      selA = nA; selB = nB;
+      selA = Math.round(nA * 1000) / 1000; selB = Math.round(nB * 1000) / 1000;
     }
     draw();
   }
@@ -476,7 +514,7 @@
     });
     el.addEventListener('change', function() {
       var v = parseFloat(this.value);
-      if (!isNaN(v)) { setter(v); this.value = clamp(v).toFixed(2); draw(); }
+      if (!isNaN(v)) { setter(v); this.value = clamp(v).toFixed(3); draw(); }
     });
   }
   onValInput(xInput, function(v) { selX = clamp(v); });
