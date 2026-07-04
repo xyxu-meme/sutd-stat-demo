@@ -430,7 +430,7 @@
     gap: 7px;
   }
   .interval-input{
-    width: 60px;
+    width: 72px;
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
     font-size: 13.5px;
     text-align: center;
@@ -554,18 +554,18 @@
         <div class="readout-row">
           <span class="readout-label">Selected interval</span>
           <span class="interval-inputs">
-            <input type="number" id="aInput" class="interval-input mono" min="0" max="1" step="0.01" value="0.30" aria-label="Lower bound a">
+            <input type="number" id="aInput" class="interval-input mono" min="0" max="1" step="0.001" value="0.300" aria-label="Lower bound a">
             <span class="mono">≤ X/n ≤</span>
-            <input type="number" id="bInput" class="interval-input mono" min="0" max="1" step="0.01" value="0.50" aria-label="Upper bound b">
+            <input type="number" id="bInput" class="interval-input mono" min="0" max="1" step="0.001" value="0.500" aria-label="Upper bound b">
           </span>
         </div>
         <div class="readout-row highlight">
-          <span class="readout-label">P(a ≤ X/n ≤ b)</span>
+          <span class="readout-label"><span class="mono">P(a ≤ X/n ≤ b)</span></span>
           <span class="mono" id="probVal">—</span>
         </div>
         <p class="hint">Drag an orange dot, drag the band to slide it, tap empty space to start fresh — or type exact bounds above and press Enter.</p>
       </div>
-      <p class="interval-hint" id="intervalHint">Turn on interval selection above to explore P(a ≤ X/n ≤ b).</p>
+      <p class="interval-hint" id="intervalHint">Turn on interval selection above to explore <span class="mono">P(a ≤ X/n ≤ b)</span>.</p>
     </div>
 
   </div>
@@ -1011,8 +1011,8 @@
       if (xk >= lo && xk <= hi) sum += probs[k];
     }
     probVal.textContent = sum.toFixed(4);
-    if (document.activeElement !== aInput) aInput.value = lo.toFixed(2);
-    if (document.activeElement !== bInput) bInput.value = hi.toFixed(2);
+    if (document.activeElement !== aInput) aInput.value = lo.toFixed(3);
+    if (document.activeElement !== bInput) bInput.value = hi.toFixed(3);
   }
 
   function syncLabels() {
@@ -1090,18 +1090,19 @@
   });
 
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+  function snap01(x) { return Math.round(clamp01(x) * 1000) / 1000; } // snap to the same 3-decimal grid we display
 
   // Keyboard input for exact bounds: type a value, press Enter or tab away.
   function applyIntervalInputs() {
     var a = parseFloat(aInput.value);
     var b = parseFloat(bInput.value);
     if (isNaN(a) || isNaN(b)) {
-      aInput.value = selA.toFixed(2);
-      bInput.value = selB.toFixed(2);
+      aInput.value = selA.toFixed(3);
+      bInput.value = selB.toFixed(3);
       return;
     }
-    a = clamp01(a);
-    b = clamp01(b);
+    a = snap01(a);
+    b = snap01(b);
     selA = Math.min(a, b);
     selB = Math.max(a, b);
     draw();
@@ -1153,7 +1154,7 @@
       dragAnchorA = selA;
       dragAnchorB = selB;
     } else if (dragTarget === 'new') {
-      var x = clamp01(pxToData(px, cw));
+      var x = snap01(pxToData(px, cw));
       selA = x; selB = x;
       dragAnchorData = x;
     }
@@ -1178,7 +1179,7 @@
       return;
     }
 
-    var x = clamp01(pxToData(getCanvasX(evt), cw));
+    var x = snap01(pxToData(getCanvasX(evt), cw));
 
     if (dragTarget === 'left') {
       selA = Math.min(x, selB);
@@ -1191,7 +1192,7 @@
       var newB = dragAnchorB + delta;
       if (newA < 0) { newA = 0; newB = width; }
       if (newB > 1) { newB = 1; newA = 1 - width; }
-      selA = newA; selB = newB;
+      selA = snap01(newA); selB = snap01(newB);
     } else if (dragTarget === 'new') {
       selA = Math.min(dragAnchorData, x);
       selB = Math.max(dragAnchorData, x);
