@@ -887,3 +887,892 @@
 </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sum Meets Integral</title>
+<style>
+  :root{
+    --paper:   #FAF7F0;
+    --ink:     #1F2937;
+    --bar:     #2E4374;
+    --amber:   #E0793F;
+    --sage:    #3F6F5E;
+    --hair:    #DDD6C7;
+    --hair-2:  #C9C0AC;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin: 0;
+    padding: 32px 16px 56px;
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; }
+  .page{ width: 100%; max-width: 860px; }
+
+  header{ margin-bottom: 22px; }
+  .eyebrow{
+    margin: 0 0 6px; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600;
+  }
+  h1{
+    margin: 0 0 10px; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 600; font-size: clamp(28px, 5vw, 38px); letter-spacing: -0.01em; color: var(--ink);
+  }
+  .lede{ margin: 0; max-width: 64ch; font-size: 15.5px; line-height: 1.55; color: #4B5159; }
+  .lede strong{ color: var(--ink); }
+
+  .panel{
+    background: #FFFFFF; border: 1px solid var(--hair); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.05);
+    padding: 22px clamp(16px, 4vw, 28px) 26px;
+  }
+
+  .controls{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; padding-bottom: 16px; margin-bottom: 14px; border-bottom: 1px dashed var(--hair); }
+  .control-group{ min-width: 0; }
+  .control-group.full{ grid-column: 1 / -1; }
+  .control-group label{ display: block; font-size: 13px; color: #4B5159; margin-bottom: 7px; }
+
+  .n-slider-near-chart{
+    background: #F7F3EA; border: 1px solid var(--hair); border-radius: 10px;
+    padding: 12px 14px 10px; margin-bottom: 12px;
+  }
+  .n-slider-near-chart label{ display: block; font-size: 13px; color: #4B5159; margin-bottom: 6px; }
+
+  input[type="range"]{
+    -webkit-appearance: none; appearance: none; width: 100%; height: 28px;
+    background: transparent; outline: none; margin: 0;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height: 4px; border-radius: 2px; background: var(--hair); }
+  input[type="range"]::-moz-range-track{ height: 4px; border-radius: 2px; background: var(--hair); }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px;
+    border-radius: 50%; background: var(--bar); border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--bar); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 22px; height: 22px; border-radius: 50%; background: var(--bar);
+    border: 2px solid #fff; box-shadow: 0 0 0 1px var(--bar); cursor: pointer;
+  }
+  input[type="range"]:focus-visible::-webkit-slider-thumb{ outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .segmented{ display: inline-flex; flex-wrap: wrap; background: #F2EEE3; border-radius: 999px; padding: 3px; gap: 2px; }
+  .seg-btn{
+    font-family: inherit; font-size: 12.5px; font-weight: 600; padding: 9px 14px; min-height: 36px;
+    border-radius: 999px; border: none; background: transparent; color: #6B6459; cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .seg-btn.active{ background: var(--ink); color: #fff; }
+  .seg-btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .buttons{ display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+  .btn{
+    font-family: inherit; font-size: 13px; font-weight: 600; padding: 10px 14px; min-height: 40px;
+    border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+  .btn-primary{ background: var(--sage); color: #fff; }
+  .btn-primary:hover{ background: #345d4f; }
+  .btn-ghost{ background: transparent; color: #4B5159; border-color: var(--hair-2); }
+  .btn-ghost:hover{ background: #F4F1E9; }
+
+  .interval-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .interval-input{
+    width: 72px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 13.5px; text-align: center; padding: 7px 4px; border: 1px solid var(--hair-2);
+    border-radius: 6px; background: #fff; color: var(--ink); -moz-appearance: textfield;
+  }
+  .interval-input::-webkit-outer-spin-button, .interval-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+  .interval-input:focus-visible{ outline: 2px solid var(--amber); outline-offset: 1px; border-color: var(--amber); }
+
+  .legend{ display: flex; gap: 18px; flex-wrap: wrap; margin: 2px 0 10px; font-size: 12.5px; color: #6B6459; }
+
+  .zoom-bar{ display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .zoom-buttons{ display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .zoom-btn{
+    font-family: inherit; font-size: 13px; font-weight: 600; color: #4B5159;
+    background: #F2EEE3; border: 1px solid var(--hair-2); border-radius: 7px;
+    width: 30px; height: 30px; line-height: 1; cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    transition: background-color 120ms ease, opacity 120ms ease;
+  }
+  .zoom-btn:hover{ background: #E9E3D4; }
+  .zoom-btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+  .zoom-btn:disabled{ opacity: 0.4; cursor: default; background: #F2EEE3; }
+  .zoom-btn.zoom-reset, .zoom-btn.zoom-tosel{ width: auto; padding: 0 12px; }
+  .zoom-btn.zoom-tosel{ background: #FCEEE2; border-color: var(--amber); color: #8A4B22; }
+  .zoom-btn.zoom-tosel:hover{ background: #F9E0CB; }
+  .zoom-range{ font-size: 12px; color: #8A8378; }
+  .legend span{ display: inline-flex; align-items: center; gap: 6px; }
+  .swatch{ width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .swatch.line{ width: 16px; height: 2px; border-radius: 0; background: var(--ink); }
+
+  .mode-caption{ margin: 0 0 10px; font-size: 13px; font-style: italic; color: #6B6459; min-height: 1.4em; }
+
+  .chart-wrap{ width: 100%; touch-action: none; }
+  canvas{ display: block; width: 100%; cursor: crosshair; touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+
+  .readout{ margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--hair); }
+  .readout-row{ display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; font-size: 14px; gap: 10px; flex-wrap: wrap; }
+  .readout-label{ color: #6B6459; }
+  .readout-row.hist{ background: #EDF0F7; border-radius: 8px; padding: 9px 12px; margin: 4px 0; }
+  .readout-row.hist .readout-label{ color: var(--bar); font-weight: 600; }
+  .readout-row.hist .mono{ color: var(--bar); font-weight: 700; font-size: 16px; }
+  .readout-row.curve{ background: #EAF0EC; border-radius: 8px; padding: 9px 12px; margin: 4px 0; }
+  .readout-row.curve .readout-label{ color: var(--sage); font-weight: 600; }
+  .readout-row.curve .mono{ color: var(--sage); font-weight: 700; font-size: 16px; }
+  .readout-row.diff .mono{ font-weight: 700; }
+  .readout-row.diff.close .mono{ color: var(--sage); }
+
+  .hint{ margin: 10px 0 0; font-size: 12.5px; color: #8A8378; }
+
+  footer{ margin-top: 18px; font-size: 13px; line-height: 1.55; color: #6B6459; max-width: 70ch; }
+  footer strong{ color: var(--ink); }
+
+  @media (max-width: 560px){
+    body{ padding: 18px 10px 36px; }
+    .panel{ padding: 18px 14px 20px; }
+    .controls{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty · Week 6, Class 1</p>
+    <h1>Sum Meets Integral</h1>
+    <p class="lede">Same chart, two areas overlaid: <strong>amber</strong> sums histogram bars to the exact binomial probability; <strong>sage</strong> integrates the Normal-approximation curve. Grow n and watch them fuse.</p>
+  </header>
+
+  <div class="panel">
+
+    <div class="controls">
+      <div class="control-group full">
+        <label for="pSlider">Chance of "Yes", <span class="mono">p</span> = <span id="pVal" class="mono">0.40</span></label>
+        <input type="range" id="pSlider" min="0.05" max="0.95" step="0.005" value="0.4">
+      </div>
+      <div class="control-group">
+        <label for="modeToggle">Mode</label>
+        <div class="segmented" id="modeToggle">
+          <button class="seg-btn active" data-mode="point" type="button">Point x</button>
+          <button class="seg-btn" data-mode="interval" type="button">Interval [a,b]</button>
+        </div>
+      </div>
+      <div class="control-group buttons">
+        <button id="growBtn" class="btn btn-primary" type="button">▶ Grow n automatically</button>
+        <button id="resetBtn" class="btn btn-ghost" type="button">Reset</button>
+      </div>
+      <div class="control-group full" id="pointInputsRow">
+        <label>x</label>
+        <div class="interval-row">
+          <input type="number" id="xInput" class="interval-input mono" step="0.001" aria-label="x value">
+        </div>
+      </div>
+      <div class="control-group full" id="intervalInputsRow" hidden>
+        <label>Interval</label>
+        <div class="interval-row">
+          <input type="number" id="aInput" class="interval-input mono" step="0.001" aria-label="Lower bound a">
+          <span class="mono">≤ X/n ≤</span>
+          <input type="number" id="bInput" class="interval-input mono" step="0.001" aria-label="Upper bound b">
+        </div>
+      </div>
+    </div>
+
+    <p class="mode-caption" id="modeCaption"></p>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--bar)"></span> bars (outside selection)</span>
+      <span><span class="swatch" style="background:var(--amber)"></span> histogram area (exact)</span>
+      <span><span class="swatch" style="background:var(--sage)"></span> curve area (Normal approx.)</span>
+      <span><span class="swatch line"></span> curve f(x)</span>
+    </div>
+
+    <div class="zoom-bar">
+      <div class="zoom-buttons">
+        <button id="zoomOutBtn" class="zoom-btn" type="button" aria-label="Zoom out">&minus;</button>
+        <button id="zoomInBtn" class="zoom-btn" type="button" aria-label="Zoom in">+</button>
+        <button id="zoomResetBtn" class="zoom-btn zoom-reset" type="button" disabled>Reset zoom</button>
+        <button id="zoomToSelBtn" class="zoom-btn zoom-tosel" type="button">Zoom to selection</button>
+      </div>
+      <span class="zoom-range mono" id="zoomRangeLabel"></span>
+    </div>
+
+    <div class="n-slider-near-chart">
+      <label for="nSlider">Respondents surveyed, <span class="mono">n</span> = <span id="nVal" class="mono">8</span></label>
+      <input type="range" id="nSlider" min="3" max="300" step="1" value="8">
+    </div>
+
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+
+    <div class="readout">
+      <div class="readout-row hist">
+        <span class="readout-label" id="histLabel">Histogram F(x) (discrete, exact)</span>
+        <span class="mono" id="histSumVal">—</span>
+      </div>
+      <div class="readout-row curve">
+        <span class="readout-label" id="curveLabel">Curve F(x) (continuous, Normal approx.)</span>
+        <span class="mono" id="curveIntVal">—</span>
+      </div>
+      <div class="readout-row diff" id="diffRow">
+        <span class="readout-label">Difference</span>
+        <span class="mono" id="diffVal">—</span>
+      </div>
+      <p class="hint" id="dragHint">Drag the orange dot, or type an exact x above. The view zooms automatically to fit the distribution.</p>
+    </div>
+
+  </div>
+
+  <footer>
+    The curve isn't drawn from the histogram — it's a separate object, the <strong class="mono">Normal(p, p(1&minus;p)/n)</strong> distribution, with its own pdf and its own integral (via the standard erf-based normal cdf). Where amber and sage overlap you'll see a blended tone; where they disagree, one color pokes past the other. At small n that mismatch is visible; by n &asymp; 100&ndash;200 it mostly vanishes — the <strong>De Moivre&ndash;Laplace</strong> approximation (the historical root of the Central Limit Theorem) closing the gap between a sum and an integral.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var MAXN = 300;
+  var logFact = new Float64Array(MAXN + 1);
+  for (var i = 1; i <= MAXN; i++) logFact[i] = logFact[i - 1] + Math.log(i);
+
+  function binomialPmf(n, p) {
+    var arr = new Float64Array(n + 1);
+    var logp = Math.log(p), log1p = Math.log(1 - p);
+    for (var k = 0; k <= n; k++) {
+      var logC = logFact[n] - logFact[k] - logFact[n - k];
+      arr[k] = Math.exp(logC + k * logp + (n - k) * log1p);
+    }
+    return arr;
+  }
+
+  // Abramowitz & Stegun 7.1.26 — accurate to ~1.5e-7.
+  function erf(x) {
+    var sign = x < 0 ? -1 : 1;
+    x = Math.abs(x);
+    var a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741,
+        a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    var t = 1 / (1 + p * x);
+    var y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    return sign * y;
+  }
+  function normalPdf(x, mu, sigma) {
+    if (sigma <= 0) return 0;
+    var z = (x - mu) / sigma;
+    return Math.exp(-z * z / 2) / (sigma * Math.sqrt(2 * Math.PI));
+  }
+  function normalCdf(x, mu, sigma) {
+    if (sigma <= 0) return x < mu ? 0 : 1;
+    return 0.5 * (1 + erf((x - mu) / (sigma * Math.SQRT2)));
+  }
+
+  function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+  function snap01(x) { return Math.round(clamp01(x) * 1000) / 1000; } // snap to the same 3-decimal grid we display
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function niceTicks(maxVal, targetCount) {
+    if (!isFinite(maxVal) || maxVal <= 0) return [0, 1];
+    var roughStep = maxVal / Math.max(1, targetCount - 1);
+    var mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    var norm = roughStep / mag;
+    var niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+    var step = niceNorm * mag;
+    var count = Math.ceil((maxVal * 1.0001) / step);
+    var ticks = [];
+    for (var k = 0; k <= count; k++) ticks.push(Math.round(k * step * 1e8) / 1e8);
+    return ticks;
+  }
+  function decimalsFor(step) {
+    if (step >= 1) return 0;
+    var s = step.toString();
+    var i = s.indexOf('.');
+    return i === -1 ? 0 : s.length - i - 1;
+  }
+
+  var canvas = document.getElementById('chart');
+  var ctx = canvas.getContext('2d');
+  var nSlider = document.getElementById('nSlider');
+  var pSlider = document.getElementById('pSlider');
+  var nVal = document.getElementById('nVal');
+  var pVal = document.getElementById('pVal');
+  var modeToggle = document.getElementById('modeToggle');
+  var growBtn = document.getElementById('growBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var pointInputsRow = document.getElementById('pointInputsRow');
+  var intervalInputsRow = document.getElementById('intervalInputsRow');
+  var xInput = document.getElementById('xInput');
+  var aInput = document.getElementById('aInput');
+  var bInput = document.getElementById('bInput');
+  var modeCaption = document.getElementById('modeCaption');
+  var histLabel = document.getElementById('histLabel');
+  var curveLabel = document.getElementById('curveLabel');
+  var histSumVal = document.getElementById('histSumVal');
+  var curveIntVal = document.getElementById('curveIntVal');
+  var diffVal = document.getElementById('diffVal');
+  var diffRow = document.getElementById('diffRow');
+  var dragHint = document.getElementById('dragHint');
+  var zoomInBtn = document.getElementById('zoomInBtn');
+  var zoomOutBtn = document.getElementById('zoomOutBtn');
+  var zoomResetBtn = document.getElementById('zoomResetBtn');
+  var zoomToSelBtn = document.getElementById('zoomToSelBtn');
+  var zoomRangeLabel = document.getElementById('zoomRangeLabel');
+
+  var n = 8, p = 0.4;
+  var mode = 'point';
+  var xPoint = 0.4;
+  var selA = 0.2, selB = 0.6;
+  var dragging = false, dragTarget = null;
+  var dragAnchorData = 0, dragAnchorA = 0, dragAnchorB = 0;
+  var growing = false, growTimer = null;
+  var zoomOverride = null; // null = auto-fit governs; otherwise [lo, hi] from manual zoom
+
+  var PAD = { left: 46, right: 16, top: 26, bottom: 30 };
+  var viewLo = 0, viewHi = 1;
+
+  var MODE_CAPTIONS = {
+    point: 'Drag x. Histogram F(x) sums bars from the left; curve F(x) integrates the Normal pdf the same way \u2014 same idea, two methods.',
+    interval: 'Drag either edge. The shaded band\u2019s area under each object \u2014 bars vs. curve \u2014 should converge as n grows.'
+  };
+
+  // Default view: wide enough to show the curve's full shape (~4.2 sigma
+  // either side of p), AND always wide enough to keep whatever's selected
+  // (point or interval) on screen, clipped to [0,1].
+  function autoFitDomain() {
+    var sigma = Math.sqrt(p * (1 - p) / n);
+    var K = 4.2;
+    var selLo, selHi;
+    if (mode === 'point') { selLo = xPoint; selHi = xPoint; }
+    else { selLo = Math.min(selA, selB); selHi = Math.max(selA, selB); }
+    var lo = Math.min(p - K * sigma, selLo);
+    var hi = Math.max(p + K * sigma, selHi);
+    var pad = Math.max((hi - lo) * 0.08, 0.008);
+    lo -= pad; hi += pad;
+    lo = Math.max(0, lo);
+    hi = Math.min(1, hi);
+    if (hi - lo < 0.02) {
+      var mid = (lo + hi) / 2;
+      lo = Math.max(0, mid - 0.01);
+      hi = Math.min(1, mid + 0.01);
+    }
+    return [lo, hi];
+  }
+
+  // The user can zoom in further (or out) beyond the auto-fit default;
+  // that manual choice persists until "Reset zoom" or the main Reset.
+  function updateViewDomain() {
+    var v = zoomOverride || autoFitDomain();
+    viewLo = v[0]; viewHi = v[1];
+  }
+
+  function zoomSpanMin() { return Math.max(0.004, 1.5 / n); }
+  function clampZoomRange(lo, hi) {
+    var minSpan = zoomSpanMin();
+    lo = Math.max(0, lo); hi = Math.min(1, hi);
+    if (hi - lo < minSpan) {
+      var mid = (lo + hi) / 2;
+      lo = mid - minSpan / 2; hi = mid + minSpan / 2;
+      if (lo < 0) { hi -= lo; lo = 0; }
+      if (hi > 1) { lo -= (hi - 1); hi = 1; }
+    }
+    return [Math.max(0, lo), Math.min(1, hi)];
+  }
+  function applyZoom(anchorData, factor) {
+    var span = viewHi - viewLo;
+    var newSpan = span * factor;
+    var frac = span > 0 ? (anchorData - viewLo) / span : 0.5;
+    var newLo = anchorData - frac * newSpan;
+    var newHi = newLo + newSpan;
+    zoomOverride = clampZoomRange(newLo, newHi);
+    draw();
+  }
+
+  function dataToPx(x, cw) { return PAD.left + ((x - viewLo) / (viewHi - viewLo)) * (cw - PAD.left - PAD.right); }
+  function pxToData(px, cw) { return viewLo + ((px - PAD.left) / (cw - PAD.left - PAD.right)) * (viewHi - viewLo); }
+  function valToPy(v, vMax, ch) { return (ch - PAD.bottom) - (v / vMax) * (ch - PAD.top - PAD.bottom); }
+
+  function cssSize() {
+    var dpr = window.devicePixelRatio || 1;
+    return { w: canvas.width / dpr, h: canvas.height / dpr };
+  }
+  function resizeCanvas() {
+    var wrap = canvas.parentElement;
+    var w = wrap.clientWidth;
+    var h = Math.min(440, Math.max(280, Math.round(w * 0.56)));
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function drawValueLabel(cw, px, text, compact, color, row) {
+    ctx.font = (compact ? 'bold 10.5px ' : 'bold 11.5px ') + 'ui-monospace, monospace';
+    var textW = ctx.measureText(text).width;
+    var padX = 6, boxH = 17;
+    var boxW = textW + padX * 2;
+    var leftBound = PAD.left + boxW / 2 + 4, rightBound = cw - PAD.right - boxW / 2 - 4;
+    var tx = Math.max(Math.min(leftBound, rightBound), Math.min(px, Math.max(leftBound, rightBound)));
+    var ty = PAD.top - 11 + row * 21;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(tx - boxW / 2, ty - boxH / 2, boxW, boxH);
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.6; ctx.lineWidth = 1;
+    ctx.strokeRect(tx - boxW / 2, ty - boxH / 2, boxW, boxH);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, tx, ty + 1);
+  }
+
+  function draw() {
+    updateViewDomain();
+    var size = cssSize(), cw = size.w, ch = size.h;
+    var compact = cw < 420;
+    PAD.left = compact ? 32 : 46;
+    PAD.right = compact ? 10 : 16;
+    PAD.bottom = compact ? 24 : 30;
+    PAD.top = compact ? 30 : 34;
+    ctx.clearRect(0, 0, cw, ch);
+
+    var lo, hi;
+    if (mode === 'point') { lo = viewLo; hi = xPoint; }
+    else { lo = Math.min(selA, selB); hi = Math.max(selA, selB); }
+
+    var probs = binomialPmf(n, p);
+    var maxDens = 0;
+    for (var k = 0; k <= n; k++) {
+      var xkv = k / n;
+      if (xkv < viewLo || xkv > viewHi) continue;
+      var dd = probs[k] * n; if (dd > maxDens) maxDens = dd;
+    }
+    if (maxDens === 0) { // selection so tight no bar center falls inside it
+      for (var k0 = 0; k0 <= n; k0++) { var dd0 = probs[k0] * n; if (dd0 > maxDens) maxDens = dd0; }
+    }
+    var sigma = Math.sqrt(p * (1 - p) / n);
+    var mu = p;
+    var muInView = Math.max(viewLo, Math.min(viewHi, mu));
+    var maxCurveDens = normalPdf(muInView, mu, sigma);
+    var ticks = niceTicks(Math.max(maxDens, maxCurveDens, 1e-9), 5);
+    var yMax = ticks[ticks.length - 1];
+    var dec = decimalsFor(ticks[1]);
+    var axisFont = compact ? '10px ui-monospace, monospace' : '11px ui-monospace, monospace';
+
+    // gridlines + y labels
+    ctx.strokeStyle = '#EAE4D6'; ctx.lineWidth = 1;
+    ctx.fillStyle = '#9C9485'; ctx.font = axisFont;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ticks.forEach(function (v) {
+      var py = valToPy(v, yMax, ch);
+      ctx.beginPath(); ctx.moveTo(PAD.left, py); ctx.lineTo(cw - PAD.right, py); ctx.stroke();
+      ctx.fillText(v.toFixed(dec), PAD.left - 8, py);
+    });
+
+    // x labels — span the auto-fit view, with adaptive precision
+    var xDec = (viewHi - viewLo) < 0.03 ? 4 : (viewHi - viewLo) < 0.2 ? 3 : 2;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (var i2 = 0; i2 <= 4; i2++) {
+      var xv = viewLo + (viewHi - viewLo) * i2 / 4;
+      var px = dataToPx(xv, cw);
+      ctx.fillText(xv.toFixed(xDec), px, ch - PAD.bottom + 8);
+    }
+
+    // ---------- curve area fill (drawn first, bars layer on top) ----------
+    var selPxA = dataToPx(Math.max(lo, viewLo), cw), selPxB = dataToPx(Math.min(hi, viewHi), cw);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(selPxA, PAD.top, Math.max(selPxB - selPxA, 0), ch - PAD.top - PAD.bottom);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.moveTo(dataToPx(viewLo, cw), ch - PAD.bottom);
+    var steps = 240;
+    for (var i3 = 0; i3 <= steps; i3++) {
+      var xv2 = lerp(viewLo, viewHi, i3 / steps);
+      ctx.lineTo(dataToPx(xv2, cw), valToPy(normalPdf(xv2, mu, sigma), yMax, ch));
+    }
+    ctx.lineTo(dataToPx(viewHi, cw), ch - PAD.bottom);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(63,111,94,0.42)';
+    ctx.fill();
+    ctx.restore();
+
+    // ---------- histogram sum: always over every k, never view-restricted ----------
+    // (Point mode needs the true cumulative sum from 0 to x regardless of
+    // what's currently visible — coupling this to the render-skip below
+    // would silently under-count F(x) when x sits far from p.)
+    var barW = 1 / n;
+    var histSum = 0;
+    for (var ks = 0; ks <= n; ks++) {
+      var xks = ks / n;
+      var inSelS = (mode === 'point') ? (xks <= hi) : (xks >= lo && xks <= hi);
+      if (inSelS) histSum += probs[ks];
+    }
+
+    // ---------- histogram bars (rendering only — off-screen bars skipped) ----------
+    for (var k2 = 0; k2 <= n; k2++) {
+      var xk = k2 / n;
+      if (xk < viewLo - barW || xk > viewHi + barW) continue;
+      var inSel = (mode === 'point') ? (xk <= hi) : (xk >= lo && xk <= hi);
+      var col = inSel ? 'rgba(224,121,63,0.62)' : 'rgba(46,67,116,0.85)';
+      var left = Math.max(xk - barW / 2, 0), right = Math.min(xk + barW / 2, 1);
+      var px0 = dataToPx(left, cw), px1 = dataToPx(right, cw);
+      var pyTop = valToPy(probs[k2] * n, yMax, ch);
+      var fillW = Math.max(px1 - px0, 0.6);
+      ctx.fillStyle = col;
+      ctx.fillRect(px0, pyTop, fillW, (ch - PAD.bottom) - pyTop);
+      ctx.strokeStyle = inSel ? 'rgba(138,75,34,0.5)' : 'rgba(31,41,55,0.15)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px0, pyTop, fillW, (ch - PAD.bottom) - pyTop);
+    }
+
+    // ---------- the curve line itself, crisp, on top of everything ----------
+    ctx.beginPath();
+    for (var i4 = 0; i4 <= steps; i4++) {
+      var xv3 = lerp(viewLo, viewHi, i4 / steps);
+      var px2 = dataToPx(xv3, cw), py2 = valToPy(normalPdf(xv3, mu, sigma), yMax, ch);
+      if (i4 === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+    }
+    ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // ---------- selection boundary line(s) + handle(s) ----------
+    ctx.strokeStyle = '#E0793F'; ctx.lineWidth = 2;
+    if (mode === 'point') {
+      var pxX = dataToPx(xPoint, cw);
+      ctx.beginPath(); ctx.moveTo(pxX, PAD.top); ctx.lineTo(pxX, ch - PAD.bottom); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(pxX, PAD.top, compact ? 6 : 7, 0, Math.PI * 2);
+      ctx.fillStyle = '#E0793F'; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+    } else {
+      [selPxA, selPxB].forEach(function (lx) {
+        ctx.beginPath(); ctx.moveTo(lx, PAD.top); ctx.lineTo(lx, ch - PAD.bottom); ctx.stroke();
+      });
+      [selPxA, selPxB].forEach(function (hx) {
+        ctx.beginPath();
+        ctx.arc(hx, PAD.top, compact ? 6 : 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#E0793F'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+      });
+    }
+
+    // ---------- baseline ----------
+    ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(PAD.left, ch - PAD.bottom); ctx.lineTo(cw - PAD.right, ch - PAD.bottom); ctx.stroke();
+
+    // ---------- values ----------
+    var curveVal;
+    if (mode === 'point') {
+      curveVal = normalCdf(xPoint, mu, sigma);
+    } else {
+      curveVal = normalCdf(hi, mu, sigma) - normalCdf(lo, mu, sigma);
+    }
+
+    // ---------- value labels, stacked so they never overlap ----------
+    var midPx = (selPxA + selPxB) / 2;
+    drawValueLabel(cw, midPx, 'hist = ' + histSum.toFixed(4), compact, '#8A4B22', 0);
+    drawValueLabel(cw, midPx, 'curve = ' + curveVal.toFixed(4), compact, '#2F5246', 1);
+
+    // ---------- readouts ----------
+    histSumVal.textContent = histSum.toFixed(4);
+    curveIntVal.textContent = curveVal.toFixed(4);
+    var diff = Math.abs(histSum - curveVal);
+    diffVal.textContent = diff.toFixed(4);
+    diffRow.classList.toggle('close', diff < 0.001);
+
+    if (mode === 'point') {
+      if (document.activeElement !== xInput) xInput.value = xPoint.toFixed(3);
+    } else {
+      if (document.activeElement !== aInput) aInput.value = lo.toFixed(3);
+      if (document.activeElement !== bInput) bInput.value = hi.toFixed(3);
+    }
+
+    updateZoomUI();
+  }
+
+  function updateZoomUI() {
+    zoomResetBtn.disabled = !zoomOverride;
+    var dec2 = (viewHi - viewLo) < 0.03 ? 3 : 2;
+    zoomRangeLabel.textContent = zoomOverride
+      ? 'Viewing [' + viewLo.toFixed(dec2) + ', ' + viewHi.toFixed(dec2) + ']'
+      : 'Auto-fit';
+  }
+
+  function syncLabels() {
+    nVal.textContent = n;
+    pVal.textContent = p.toFixed(2);
+  }
+
+  function updateModeUI() {
+    pointInputsRow.hidden = (mode !== 'point');
+    intervalInputsRow.hidden = (mode !== 'interval');
+    modeCaption.textContent = MODE_CAPTIONS[mode];
+    if (mode === 'point') {
+      histLabel.textContent = 'Histogram F(x) (discrete, exact)';
+      curveLabel.textContent = 'Curve F(x) (continuous, Normal approx.)';
+      dragHint.textContent = 'Drag the orange dot, or type an exact x above. Scroll, pinch, or use the zoom buttons to look closer.';
+    } else {
+      histLabel.textContent = 'Histogram sum (discrete, exact)';
+      curveLabel.textContent = 'Curve integral (continuous, Normal approx.)';
+      dragHint.textContent = 'Drag an orange dot, drag the band to slide it, or type exact bounds above. Scroll, pinch, or use the zoom buttons to look closer.';
+    }
+  }
+
+  modeToggle.addEventListener('click', function (e) {
+    var btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    stopGrow();
+    mode = btn.dataset.mode;
+    Array.prototype.forEach.call(modeToggle.children, function (b) { b.classList.toggle('active', b === btn); });
+    updateModeUI();
+    draw();
+  });
+
+  nSlider.addEventListener('input', function (e) {
+    n = parseInt(e.target.value, 10);
+    syncLabels();
+    draw();
+  });
+  pSlider.addEventListener('input', function (e) {
+    p = parseFloat(e.target.value);
+    syncLabels();
+    draw();
+  });
+
+  function applyXInput() {
+    var v = parseFloat(xInput.value);
+    if (isNaN(v)) { xInput.value = xPoint.toFixed(3); return; }
+    xPoint = snap01(v);
+    draw();
+  }
+  xInput.addEventListener('change', applyXInput);
+  xInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { applyXInput(); xInput.blur(); } });
+
+  function applyIntervalInputs() {
+    var a = parseFloat(aInput.value), b = parseFloat(bInput.value);
+    if (isNaN(a) || isNaN(b)) return;
+    a = snap01(a); b = snap01(b);
+    selA = Math.min(a, b); selB = Math.max(a, b);
+    draw();
+  }
+  [aInput, bInput].forEach(function (inp) {
+    inp.addEventListener('change', applyIntervalInputs);
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { applyIntervalInputs(); inp.blur(); } });
+  });
+
+  function getCanvasX(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    return clientX - rect.left;
+  }
+  function hitTest(px, cw, radius) {
+    var pxA = dataToPx(selA, cw), pxB = dataToPx(selB, cw);
+    var dA = Math.abs(px - pxA), dB = Math.abs(px - pxB);
+    if (dA <= radius || dB <= radius) return dA <= dB ? 'left' : 'right';
+    if (px > pxA && px < pxB) return 'move';
+    return 'new';
+  }
+  function beginDrag(evt, isTouch) {
+    dragging = true;
+    var cw = cssSize().w;
+    var px = getCanvasX(evt);
+    if (mode === 'point') {
+      dragTarget = 'x';
+      xPoint = snap01(pxToData(px, cw));
+      draw();
+      return;
+    }
+    var radius = isTouch ? 24 : 10;
+    dragTarget = hitTest(px, cw, radius);
+    if (dragTarget === 'move') {
+      dragAnchorData = pxToData(px, cw);
+      dragAnchorA = selA; dragAnchorB = selB;
+    } else if (dragTarget === 'new') {
+      var x = snap01(pxToData(px, cw));
+      selA = x; selB = x;
+      dragAnchorData = x;
+    }
+    draw();
+  }
+  function moveDrag(evt) {
+    if (!dragging) return;
+    var cw = cssSize().w;
+    var x = snap01(pxToData(getCanvasX(evt), cw));
+    if (dragTarget === 'x') {
+      xPoint = x;
+    } else if (dragTarget === 'left') {
+      selA = Math.min(x, selB);
+    } else if (dragTarget === 'right') {
+      selB = Math.max(x, selA);
+    } else if (dragTarget === 'move') {
+      var width = dragAnchorB - dragAnchorA;
+      var delta = x - dragAnchorData;
+      var newA = dragAnchorA + delta, newB = dragAnchorB + delta;
+      if (newA < 0) { newA = 0; newB = width; }
+      if (newB > 1) { newB = 1; newA = 1 - width; }
+      selA = snap01(newA); selB = snap01(newB);
+    } else if (dragTarget === 'new') {
+      selA = Math.min(dragAnchorData, x);
+      selB = Math.max(dragAnchorData, x);
+    }
+    draw();
+  }
+  function endDrag() { dragging = false; dragTarget = null; }
+
+  canvas.addEventListener('mousedown', function (e) { beginDrag(e, false); });
+  window.addEventListener('mousemove', moveDrag);
+  window.addEventListener('mouseup', endDrag);
+  canvas.addEventListener('mousemove', function (e) {
+    if (dragging) return;
+    if (mode === 'point') { canvas.style.cursor = 'ew-resize'; return; }
+    var t = hitTest(getCanvasX(e), cssSize().w, 10);
+    canvas.style.cursor = (t === 'left' || t === 'right') ? 'ew-resize' : (t === 'move' ? 'grab' : 'crosshair');
+  });
+
+  // Scroll / trackpad wheel zooms in or out, centered on the cursor.
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var cw = cssSize().w;
+    var anchorData = pxToData(getCanvasX(e), cw);
+    var factor = e.deltaY < 0 ? 0.82 : 1 / 0.82;
+    applyZoom(anchorData, factor);
+  }, { passive: false });
+
+  // Pinch-to-zoom: two fingers zoom around their midpoint; one finger keeps
+  // doing whatever beginDrag/moveDrag normally does (moving x or a/b).
+  var pinchActive = false, pinchStartDist = 0, pinchMidData = 0.5;
+  var pinchStartLo = 0, pinchStartHi = 1;
+  function touchDist(t0, t1) {
+    var dx = t0.clientX - t1.clientX, dy = t0.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  canvas.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      dragging = false;
+      pinchActive = true;
+      pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+      var rect = canvas.getBoundingClientRect();
+      var midPx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      pinchMidData = pxToData(midPx, cssSize().w);
+      pinchStartLo = viewLo; pinchStartHi = viewHi;
+      e.preventDefault();
+      return;
+    }
+    beginDrag(e, true);
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchmove', function (e) {
+    if (pinchActive && e.touches.length === 2) {
+      var dist = touchDist(e.touches[0], e.touches[1]);
+      var scale = dist / Math.max(1, pinchStartDist);
+      var startSpan = pinchStartHi - pinchStartLo;
+      var newSpan = startSpan / scale;
+      var frac = startSpan > 0 ? (pinchMidData - pinchStartLo) / startSpan : 0.5;
+      var newLo = pinchMidData - frac * newSpan;
+      var newHi = newLo + newSpan;
+      zoomOverride = clampZoomRange(newLo, newHi);
+      draw();
+      e.preventDefault();
+      return;
+    }
+    moveDrag(e);
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) pinchActive = false;
+    endDrag();
+  });
+  canvas.addEventListener('touchcancel', function () { pinchActive = false; endDrag(); });
+
+  zoomInBtn.addEventListener('click', function () { applyZoom((viewLo + viewHi) / 2, 0.65); });
+  zoomOutBtn.addEventListener('click', function () { applyZoom((viewLo + viewHi) / 2, 1 / 0.65); });
+  zoomResetBtn.addEventListener('click', function () { zoomOverride = null; draw(); });
+  zoomToSelBtn.addEventListener('click', function () {
+    var selLo, selHi;
+    if (mode === 'point') {
+      var pad = Math.max(0.02, (1 / n) * 3);
+      selLo = xPoint - pad; selHi = xPoint + pad;
+    } else {
+      selLo = Math.min(selA, selB); selHi = Math.max(selA, selB);
+      var pad2 = Math.max((selHi - selLo) * 0.15, 0.01);
+      selLo -= pad2; selHi += pad2;
+    }
+    zoomOverride = clampZoomRange(selLo, selHi);
+    draw();
+  });
+
+  function startGrow() {
+    growing = true;
+    zoomOverride = null;
+    growBtn.textContent = '\u23F8 Pause';
+    var cur = n;
+    var sigma0 = Math.sqrt(p * (1 - p) / Math.max(1, n));
+    // Keep whatever's selected at a constant distance-in-sigmas from p as n
+    // grows, so the comparison stays meaningful instead of trivially
+    // saturating (interval mode) or trivially hitting 0/1 (point mode)
+    // once the shrinking distribution leaves the fixed selection behind.
+    var pointZ = sigma0 > 0 ? (xPoint - p) / sigma0 : 0;
+    var center0 = (selA + selB) / 2;
+    var halfWidthInSigmas = sigma0 > 0 ? ((selB - selA) / 2) / sigma0 : 1.5;
+    function step() {
+      if (!growing) return;
+      cur += Math.max(2, Math.round(cur * 0.07));
+      if (cur >= MAXN) cur = MAXN;
+      n = cur;
+      nSlider.value = n;
+      var sigmaCur = Math.sqrt(p * (1 - p) / n);
+      if (mode === 'point') {
+        xPoint = clamp01(p + pointZ * sigmaCur);
+      } else {
+        var halfW = halfWidthInSigmas * sigmaCur;
+        selA = clamp01(center0 - halfW);
+        selB = clamp01(center0 + halfW);
+      }
+      syncLabels();
+      draw();
+      if (cur >= MAXN) {
+        growing = false;
+        growBtn.textContent = '\u25B6 Grow n automatically';
+        return;
+      }
+      growTimer = setTimeout(step, 110);
+    }
+    step();
+  }
+  function stopGrow() {
+    growing = false;
+    if (growTimer) clearTimeout(growTimer);
+    growBtn.textContent = '\u25B6 Grow n automatically';
+  }
+  growBtn.addEventListener('click', function () { growing ? stopGrow() : startGrow(); });
+
+  resetBtn.addEventListener('click', function () {
+    stopGrow();
+    zoomOverride = null;
+    n = 8; p = 0.4; xPoint = 0.4; selA = 0.2; selB = 0.6;
+    nSlider.value = 8; pSlider.value = 0.4;
+    syncLabels();
+    draw();
+  });
+
+  syncLabels();
+  updateModeUI();
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>
