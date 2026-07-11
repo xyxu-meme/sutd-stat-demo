@@ -1,0 +1,2593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+Stage 1 standalone interactive demo.
+Source PDF: Letcure notes/week9class1_solution.pdf, Week 9 Class 1, slides 17-20 and 32-35.
+Purpose: show probability as volume under a joint pdf over a selected region of integration.
+-->
+<title>Probability as Volume Under a Joint pdf</title>
+<style>
+  :root{
+    --paper:#FAF7F0;
+    --ink:#1F2937;
+    --bar:#2E4374;
+    --navy:var(--bar);
+    --amber:#E0793F;
+    --sage:#3F6F5E;
+    --hair:#DDD6C7;
+    --hair-2:#C9C0AC;
+    --muted:#8A8272;
+    --soft:#F2EEE3;
+    --white:#FFFFFF;
+    --grid:#E9E2D5;
+    --slice:#D99A00;
+    --slice-y:#2563EB;
+    --plot-gap:14px;
+    --side-plot-height:clamp(238px,27.5vh,292px);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    min-height:100vh;
+    margin:0;
+    padding:28px 14px 44px;
+    background-color:var(--paper);
+    background-image:radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size:18px 18px;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+  }
+  .page{ width:100%; max-width:1180px; }
+  .mono{ font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace; }
+  .math{ font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif; }
+  header{ margin:0 0 16px; }
+  .eyebrow{
+    margin:0 0 7px;
+    color:var(--sage);
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.075em;
+    text-transform:uppercase;
+  }
+  h1{
+    margin:0 0 8px;
+    color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    font-size:clamp(28px,4.2vw,40px);
+    line-height:1.12;
+    font-weight:650;
+  }
+  .lede{
+    margin:0;
+    color:#4B5159;
+    font-size:15.5px;
+    line-height:1.55;
+  }
+  .panel{
+    background:var(--white);
+    border:1px solid var(--hair);
+    border-radius:14px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.055);
+    padding:16px clamp(13px,2.6vw,24px) 20px;
+  }
+  .controls{
+    display:grid;
+    grid-template-columns:minmax(280px,1.15fr) minmax(220px,.85fr) minmax(220px,.85fr);
+    gap:12px 14px;
+    align-items:end;
+    padding-bottom:14px;
+    margin-bottom:14px;
+    border-bottom:1px dashed var(--hair);
+  }
+  .control-block{ min-width:0; }
+  .control-wide{ grid-column:1 / -1; }
+  .label{
+    display:block;
+    margin:0 0 7px;
+    color:#4B5159;
+    font-size:13px;
+    font-weight:650;
+  }
+  .segmented{
+    display:inline-flex;
+    flex-wrap:wrap;
+    gap:2px;
+    padding:3px;
+    border-radius:999px;
+    background:var(--soft);
+  }
+  button,input,select,textarea{ font-family:inherit; }
+  button{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .seg-btn{
+    appearance:none;
+    min-height:36px;
+    padding:8px 12px;
+    border:0;
+    border-radius:999px;
+    background:transparent;
+    color:#6B6459;
+    cursor:pointer;
+    font-size:12.5px;
+    font-weight:700;
+  }
+  .seg-btn.active{ background:var(--ink); color:#fff; }
+  .btn{
+    appearance:none;
+    min-height:38px;
+    padding:8px 12px;
+    border:1px solid var(--hair-2);
+    border-radius:8px;
+    background:#fff;
+    color:#4B5159;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:650;
+  }
+  .btn.primary{ background:var(--sage); border-color:var(--sage); color:#fff; }
+  .btn.active,.btn[aria-pressed="true"]{
+    background:#FCEEE2;
+    border-color:rgba(224,121,63,.68);
+    color:#8A4B22;
+  }
+  .btn:focus-visible,.seg-btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,canvas:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+  .slider-row{
+    display:grid;
+    grid-template-columns:minmax(130px,1fr) auto;
+    gap:10px;
+    align-items:center;
+  }
+  .slider-min{ display:none; }
+  input[type="range"]{ width:100%; accent-color:var(--amber); }
+  input[type="number"]{
+    width:82px;
+    min-height:34px;
+    border:1px solid var(--hair-2);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+    padding:6px 7px;
+    font-size:12.5px;
+  }
+  .value-pill{
+    min-width:74px;
+    width:86px;
+    padding:6px 8px;
+    border:1px solid var(--hair);
+    border-radius:8px;
+    background:#fffdf9;
+    color:#8A4B22;
+    text-align:center;
+    font-size:12.5px;
+    font-weight:750;
+  }
+  .value-editor{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:var(--bar);
+    font-weight:750;
+    white-space:nowrap;
+  }
+  input.value-pill{
+    appearance:textfield;
+  }
+  input.value-pill::-webkit-outer-spin-button,
+  input.value-pill::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  .rate-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .hidden{ display:none !important; }
+  .model-card{
+    margin:0 0 14px;
+    padding:12px 13px;
+    border:1px solid var(--hair);
+    border-left:4px solid var(--sage);
+    border-radius:12px;
+    background:rgba(255,253,249,.97);
+    box-shadow:0 1px 2px rgba(31,41,55,.04);
+  }
+  .model-card-title{
+    margin:0 0 10px;
+    color:var(--navy);
+    font-size:14px;
+    font-weight:850;
+    line-height:1.25;
+  }
+  .model-grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+  }
+  .model-block{
+    min-width:0;
+    padding:9px 10px;
+    border:1px solid rgba(201,192,172,.72);
+    border-radius:9px;
+    background:#fffaf2;
+  }
+  .model-heading{
+    margin:0 0 6px;
+    color:#6B6459;
+    font-size:12px;
+    font-weight:850;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .model-line{
+    margin:3px 0;
+    color:var(--ink);
+    font-size:13px;
+    line-height:1.42;
+  }
+  .model-interpretation{
+    margin-top:6px;
+    color:#4B5159;
+    font-size:12.5px;
+    line-height:1.42;
+  }
+  .views{
+    display:grid;
+    grid-template-columns:minmax(0,1.45fr) minmax(310px,.8fr);
+    gap:var(--plot-gap);
+    align-items:stretch;
+  }
+  .side-view{
+    display:grid;
+    grid-template-rows:auto auto;
+    gap:var(--plot-gap);
+  }
+  .canvas-card,.formula-card{
+    position:relative;
+    min-width:0;
+    border:1px solid var(--hair-2);
+    border-radius:12px;
+    background:linear-gradient(#fff,#fffdf9);
+    overflow:hidden;
+  }
+  .canvas-card.hero{ height:calc(var(--side-plot-height) * 2 + var(--plot-gap)); min-height:0; }
+  .canvas-card.small{ height:var(--side-plot-height); min-height:0; }
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+  #surfaceCanvas{ cursor:grab; }
+  #surfaceCanvas.dragging{ cursor:grabbing; }
+  #surfaceCanvas.panning{ cursor:move; }
+  .canvas-badge,.view-title{
+    position:absolute;
+    top:10px;
+    padding:5px 8px;
+    border-radius:8px;
+    font-size:12px;
+    font-weight:750;
+    pointer-events:none;
+  }
+  .canvas-badge{
+    left:12px;
+    border:1px solid rgba(46,67,116,.16);
+    background:rgba(255,255,255,.9);
+    color:var(--navy);
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
+  }
+  .canvas-badge[data-popover]{
+    pointer-events:auto;
+  }
+  .popover-trigger{
+    cursor:help;
+  }
+  .popover-trigger:focus-visible{
+    outline:2px solid rgba(224,121,63,.72);
+    outline-offset:2px;
+  }
+  .learning-popover{
+    position:fixed;
+    z-index:1500;
+    display:none;
+    max-width:260px;
+    padding:9px 10px;
+    border:1px solid rgba(201,192,172,.92);
+    border-left:4px solid var(--sage);
+    border-radius:10px;
+    background:rgba(255,253,249,.98);
+    color:var(--ink);
+    box-shadow:0 12px 28px rgba(31,41,55,.18);
+    font:600 12.5px/1.42 system-ui,-apple-system,Segoe UI,sans-serif;
+    pointer-events:none;
+  }
+  .learning-popover.show{
+    display:block;
+  }
+  .view-title{
+    right:12px;
+    background:rgba(242,238,227,.86);
+    color:var(--muted);
+    font-weight:700;
+  }
+  .plot-reset{
+    position:absolute;
+    right:12px;
+    bottom:12px;
+    z-index:3;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 1px 2px rgba(31,41,55,.08);
+  }
+  .plot-calc-toggle{
+    position:absolute;
+    right:12px;
+    top:12px;
+    z-index:7;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 1px 2px rgba(31,41,55,.08);
+  }
+  .formula-card{
+    min-height:0;
+    padding:14px;
+    display:grid;
+    gap:10px;
+    align-content:start;
+  }
+  .formula-card h2{
+    margin:0;
+    color:var(--navy);
+    font-size:16px;
+    line-height:1.25;
+  }
+  .message{
+    margin:0;
+    color:#4B5159;
+    font-size:13.5px;
+    line-height:1.45;
+  }
+  .probability{
+    padding:10px 11px;
+    border:1px solid rgba(224,121,63,.34);
+    border-radius:10px;
+    background:#FCEEE2;
+    color:#7C3F1A;
+    font-weight:800;
+    line-height:1.38;
+  }
+  .calculation{
+    display:none;
+    border:1px solid rgba(224,121,63,.32);
+    border-radius:10px;
+    background:#fffaf2;
+    padding:10px 11px;
+    color:#6F3A18;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .calculation.show{ display:block; }
+  .calculation p{ margin:0 0 7px; }
+  .calculation p:last-child{ margin-bottom:0; }
+  .floating-calculation{
+    position:absolute;
+    top:54px;
+    right:12px;
+    z-index:6;
+    width:min(390px,calc(100% - 24px));
+    max-height:calc(100% - 86px);
+    overflow:auto;
+    padding:0;
+    box-shadow:0 14px 32px rgba(31,41,55,.16);
+    background:rgba(255,250,242,.97);
+  }
+  .floating-calculation.dragging{
+    cursor:grabbing;
+  }
+  .floating-calc-handle{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:8px 11px;
+    border-bottom:1px solid rgba(224,121,63,.24);
+    background:rgba(252,238,226,.92);
+    color:#7C3F1A;
+    font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+    font-size:12.5px;
+    font-weight:850;
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+  }
+  .floating-calc-handle:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:-2px;
+  }
+  .floating-calc-handle::after{
+    content:"drag";
+    color:#9A6A47;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+  }
+  .floating-calc-body{
+    padding:10px 11px;
+  }
+  .tuning-panel{
+    display:none;
+    margin:14px 0 0;
+    padding:14px;
+    border:1px solid rgba(46,67,116,.18);
+    border-left:5px solid var(--sage);
+    border-radius:12px;
+    background:rgba(255,253,249,.97);
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 22px rgba(31,41,55,.045);
+  }
+  .tuning-panel.show{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:120;
+    display:block;
+    width:min(420px,calc(100vw - 28px));
+    max-height:calc(100vh - 28px);
+    overflow:auto;
+  }
+  .tuning-panel h2{
+    margin:0 0 8px;
+    color:var(--navy);
+    font-size:15px;
+    line-height:1.25;
+  }
+  .tune-note{
+    margin:0 0 12px;
+    color:#4B5159;
+    font-size:12.5px;
+    line-height:1.45;
+  }
+  .tune-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:9px 12px;
+  }
+  .tune-control{
+    display:grid;
+    grid-template-columns:minmax(78px,auto) minmax(90px,1fr) 54px;
+    gap:8px;
+    align-items:center;
+    min-width:0;
+    color:#4B5159;
+    font-size:12.5px;
+    font-weight:750;
+  }
+  .tune-control input[type="range"]{ min-width:0; }
+  .tune-value{
+    color:var(--bar);
+    text-align:right;
+    font-weight:800;
+  }
+  .tune-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    margin-top:12px;
+  }
+  .tune-output{
+    width:100%;
+    min-height:82px;
+    border:1px solid var(--hair);
+    border-radius:8px;
+    background:#fff;
+    padding:8px;
+    color:#374151;
+    font-size:12px;
+    line-height:1.35;
+    resize:vertical;
+  }
+  .tune-status{
+    min-height:18px;
+    color:#2F6F4E;
+    font-size:12.5px;
+    font-weight:750;
+  }
+  .formula-lines{
+    display:grid;
+    gap:5px;
+    overflow-x:auto;
+    padding-bottom:2px;
+  }
+  .formula-line{
+    white-space:nowrap;
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif;
+  }
+  .calc-step{
+    display:grid;
+    gap:6px;
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px dashed rgba(201,192,172,.82);
+  }
+  .calc-step:first-of-type{
+    margin-top:0;
+    padding-top:0;
+    border-top:0;
+  }
+  .calc-step h3{
+    margin:0;
+    color:#7C3F1A;
+    font-size:13.5px;
+    line-height:1.25;
+  }
+  .calc-step p{
+    margin:0;
+  }
+  .below{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(300px,.7fr);
+    gap:14px;
+    margin-top:14px;
+  }
+  .explain,.legend{
+    border:1px solid var(--hair);
+    border-radius:12px;
+    background:#fffdf9;
+    padding:11px 13px;
+  }
+  .explain h2{
+    margin:0 0 6px;
+    color:var(--navy);
+    font-size:16px;
+  }
+  .explain p{
+    margin:0 0 7px;
+    color:#4B5159;
+    font-size:14px;
+    line-height:1.52;
+  }
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 14px;
+    align-content:start;
+    color:#6B6459;
+    font-size:12.5px;
+  }
+  .key{ display:inline-flex; gap:6px; align-items:center; }
+  .swatch{
+    width:12px;
+    height:12px;
+    border-radius:3px;
+    border:1px solid rgba(31,41,55,.12);
+  }
+  .s-surface{ background:rgba(46,67,116,.32); }
+  .s-event{ background:rgba(224,121,63,.55); }
+  .s-slice{ background:var(--slice); }
+  .s-support{ background:#F4F1E8; }
+  footer{ margin-top:16px; padding:0 4px; }
+  .byline{
+    padding-top:10px;
+    border-top:1px dashed var(--hair-2);
+    font-size:12px;
+    color:var(--muted);
+  }
+  .sr-only{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    border:0;
+  }
+  #fbButton{
+    position:fixed;
+    right:22px;
+    bottom:18px;
+    z-index:72;
+    border:1px solid var(--hair);
+    border-radius:999px;
+    background:#fff;
+    color:var(--bar);
+    box-shadow:0 4px 14px rgba(31,41,55,.16);
+    padding:9px 14px;
+    font-size:12.5px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  #fbButton:hover,#fbButton:focus-visible{
+    background:#F3F0E7;
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+  #fbOverlay{
+    position:fixed;
+    inset:0;
+    z-index:105;
+    display:none;
+    background:rgba(17,19,24,.34);
+  }
+  #fbOverlay.show{ display:block; }
+  #fbPanel{
+    position:fixed;
+    right:16px;
+    bottom:76px;
+    z-index:106;
+    display:none;
+    width:min(420px, calc(100vw - 28px));
+    max-height:min(76vh, 620px);
+    overflow:auto;
+    background:#fff;
+    border:1px solid var(--hair);
+    border-radius:12px;
+    box-shadow:0 18px 56px rgba(31,41,55,.30);
+    padding:16px;
+  }
+  #fbPanel.show{ display:block; }
+  #fbPanel h3{ margin:0 34px 8px 0; font-size:18px; color:var(--ink); }
+  #fbClose{
+    position:absolute;
+    top:12px;
+    right:12px;
+    border:none;
+    background:transparent;
+    color:#7B7280;
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    padding:4px;
+  }
+  #fbPanel label{
+    display:block;
+    font-size:12px;
+    font-weight:800;
+    color:#4B5563;
+    margin:11px 0 5px;
+  }
+  #fbPanel .fb-intro{
+    margin:0 34px 12px 0;
+    font-size:13px;
+    line-height:1.45;
+    color:#4B5563;
+  }
+  #fbPanel select,#fbPanel textarea,#fbPanel input[type="text"]{
+    width:100%;
+    border:1px solid var(--hair-2);
+    border-radius:8px;
+    padding:8px 9px;
+    font-size:13px;
+    background:#fff;
+    color:var(--ink);
+  }
+  #fbPanel textarea{ min-height:74px; resize:vertical; line-height:1.45; }
+  #fbPanel .fb-context{
+    background:#FCFBF7;
+    border:1px solid var(--hair);
+    border-radius:8px;
+    padding:9px;
+    font-size:12px;
+    color:#4B5563;
+    line-height:1.45;
+    white-space:pre-line;
+  }
+  #fbPanel .fb-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:14px;
+  }
+  #fbPanel .fb-secondary,#fbPanel .fb-submit{
+    border-radius:8px;
+    padding:9px 13px;
+    font-size:12.5px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  #fbPanel .fb-secondary{ background:#fff; color:#5B6472; border:1px solid var(--hair); }
+  #fbPanel .fb-submit{ background:var(--bar); color:#fff; border:1px solid var(--bar); }
+  #fbStatus{ min-height:18px; font-size:12.5px; color:#9A3412; margin-top:8px; }
+  #fbStatus.ok{ color:#2F6F4E; }
+  #fbPreparedText{ display:none; margin-top:8px; }
+  #fbPreparedText.show{ display:block; }
+  #fbPreparedText input,#fbPreparedText textarea{
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    font-size:12px;
+  }
+  @media (max-width:980px){
+    .controls{ grid-template-columns:1fr 1fr; }
+    .control-wide{ grid-column:1 / -1; }
+    .views,.below{ grid-template-columns:1fr; }
+    .side-view{ grid-template-columns:1fr 1fr; grid-template-rows:auto; }
+    .canvas-card.hero{ height:470px; }
+    .formula-card{ min-height:0; }
+  }
+  @media (max-width:680px){
+    body{ padding:18px 10px 34px; }
+    .model-grid{ grid-template-columns:1fr; }
+    .tune-control{ grid-template-columns:78px minmax(80px,1fr) 50px; }
+    .panel{ padding:15px 12px 18px; border-radius:12px; }
+    .controls,.rate-grid,.side-view{ grid-template-columns:1fr; }
+    .canvas-card.hero{ height:430px; }
+    .canvas-card.small{ height:266px; }
+    .slider-row{ grid-template-columns:minmax(110px,1fr) auto; }
+    .slider-row .value-editor{ grid-column:1 / -1; width:max-content; }
+    .slider-row .value-pill{ width:max-content; }
+    #fbButton{ right:14px; bottom:14px; }
+    #fbPanel{ right:8px; left:8px; bottom:72px; width:auto; max-height:78vh; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{ scroll-behavior:auto !important; }
+  }
+</style>
+  <style>
+    .teacher-edit-label{
+      position:absolute;
+      top:6px;
+      left:6px;
+      z-index:80;
+      max-width:min(260px,calc(100% - 12px));
+      padding:3px 7px;
+      border:1px solid rgba(46,67,116,.38);
+      border-radius:999px;
+      background:rgba(250,247,240,.96);
+      color:#2E4374;
+      font:700 10.5px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      box-shadow:0 3px 10px rgba(31,41,55,.12);
+      cursor:pointer;
+      white-space:normal;
+      text-align:left;
+    }
+    .teacher-edit-label:hover,.teacher-edit-label:focus-visible{
+      background:#fff;
+      outline:2px solid rgba(224,121,63,.45);
+      outline-offset:2px;
+    }
+    .teacher-edit-label.teacher-edit-inline{
+      position:static;
+      display:inline-block;
+      margin:0 5px 4px 0;
+      vertical-align:middle;
+    }
+    .teacher-edit-anchor{ position:relative !important; }
+    .teacher-edit-indicator,.teacher-edit-toast{
+      position:fixed;
+      right:14px;
+      z-index:2000;
+      border:1px solid rgba(46,67,116,.32);
+      border-radius:999px;
+      background:rgba(31,41,55,.94);
+      color:#fff;
+      font:700 12px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;
+      box-shadow:0 10px 26px rgba(31,41,55,.22);
+    }
+    .teacher-edit-indicator{ bottom:14px; padding:8px 11px; }
+    .teacher-edit-toast{ bottom:54px; padding:7px 10px; opacity:0; transform:translateY(4px); transition:opacity .16s ease,transform .16s ease; }
+    .teacher-edit-toast.show{ opacity:1; transform:translateY(0); }
+    @media(max-width:640px){
+      .teacher-edit-label{ font-size:9.5px; top:4px; left:4px; max-width:calc(100% - 8px); }
+      .teacher-edit-indicator{ right:10px; bottom:10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty · Week 9, Class 1 · Singapore University of Technology and Design</p>
+    <h1>Probability as Volume Under a Joint pdf</h1>
+    <p class="lede">A probability is the volume under the joint pdf surface over a selected region. Different integration orders accumulate that same volume in different slice-by-slice ways.</p>
+  </header>
+
+  <main class="panel">
+    <section class="model-card" aria-labelledby="modelCardTitle" aria-live="polite">
+      <h2 class="model-card-title" id="modelCardTitle">Current joint pdf and selected event</h2>
+      <div class="model-grid">
+        <div class="model-block">
+          <div class="model-heading">Joint pdf</div>
+          <div class="math" id="modelPdf"></div>
+          <div class="math" id="modelSupport"></div>
+        </div>
+        <div class="model-block">
+          <div class="model-heading">Selected event</div>
+          <div class="math" id="modelEvent"></div>
+          <div class="math" id="modelParams"></div>
+          <div class="model-interpretation" id="modelInterpretation"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Demo controls">
+      <div class="control-block control-wide">
+        <span class="label popover-trigger" id="exampleLabel" tabindex="0" data-popover="Compare a flat joint pdf on a triangle with a curved exponential joint pdf. The same volume idea works for both.">Example</span>
+        <div class="segmented" role="tablist" aria-labelledby="exampleLabel">
+          <button class="seg-btn active" type="button" data-example="triangle" role="tab" aria-selected="true">Example 2 triangular joint pdf</button>
+          <button class="seg-btn" type="button" data-example="expo" role="tab" aria-selected="false">Example 3 exponential lifetimes</button>
+        </div>
+      </div>
+
+      <div class="control-block">
+        <label class="label popover-trigger" for="eventSlider" id="eventLabel" tabindex="0" data-popover-key="event-c">Event cutoff</label>
+        <div class="slider-row">
+          <span class="mono slider-min" id="eventMin">0</span>
+          <input id="eventSlider" type="range" min="0" max="1" value="0.5" step="0.01" aria-labelledby="eventLabel">
+          <label class="value-editor mono" for="eventInput"><span>c =</span><input class="value-pill mono" id="eventInput" type="number" min="0" max="1" value="0.500" step="0.01" aria-label="Event parameter c"></label>
+        </div>
+      </div>
+
+      <div class="control-block">
+        <span class="label popover-trigger" id="orderLabel" tabindex="0" data-popover="Both orders compute the same volume, but they accumulate it using different slice directions.">Integration order</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="orderLabel">
+          <button class="seg-btn active" type="button" data-order="dydx" role="radio" aria-checked="true">dy dx</button>
+          <button class="seg-btn" type="button" data-order="dxdy" role="radio" aria-checked="false">dx dy</button>
+        </div>
+      </div>
+
+      <div class="control-block">
+        <label class="label popover-trigger" for="sliceSlider" id="sliceLabel" tabindex="0" data-popover="Move s to see one layer of the double integral. The inner integral gives this slice area.">Accumulation slice</label>
+        <div class="slider-row">
+          <span class="mono slider-min" id="sliceMin">0</span>
+          <input id="sliceSlider" type="range" min="0" max="1" value="0.25" step="0.01" aria-labelledby="sliceLabel">
+          <label class="value-editor mono" for="sliceInput"><span>s =</span><input class="value-pill mono" id="sliceInput" type="number" min="0" max="1" value="0.250" step="0.01" aria-label="Accumulation slice s"></label>
+        </div>
+      </div>
+
+      <div class="control-block control-wide hidden" id="rateControls">
+        <div class="rate-grid">
+          <div>
+            <label class="label" for="rateASlider">Rate for X</label>
+            <div class="slider-row">
+              <span class="mono slider-min">0.3</span>
+              <input id="rateASlider" type="range" min="0.3" max="3" value="1" step="0.05" aria-label="Rate a for X">
+              <label class="value-editor mono" for="rateAInput"><span>a =</span><input class="value-pill mono" id="rateAInput" type="number" min="0.3" max="3" value="1.000" step="0.05" aria-label="Rate a for X numeric input"></label>
+            </div>
+          </div>
+          <div>
+            <label class="label" for="rateBSlider">Rate for Y</label>
+            <div class="slider-row">
+              <span class="mono slider-min">0.3</span>
+              <input id="rateBSlider" type="range" min="0.3" max="3" value="1" step="0.05" aria-label="Rate b for Y">
+              <label class="value-editor mono" for="rateBInput"><span>b =</span><input class="value-pill mono" id="rateBInput" type="number" min="0.3" max="3" value="1.000" step="0.05" aria-label="Rate b for Y numeric input"></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="views" aria-label="Linked visualizations">
+      <div class="canvas-card hero">
+        <canvas id="surfaceCanvas" tabindex="0" aria-label="3D joint pdf surface with selected probability volume. Drag to rotate; Shift drag or two-finger drag to move; wheel to zoom; use arrow keys from keyboard."></canvas>
+        <div class="canvas-badge mono popover-trigger" id="surfaceBadge" tabindex="0" data-popover="The selected volume under f(x,y) is the probability of the event.">probability = volume under f(x,y)</div>
+        <button class="btn plot-reset active" id="resetView" type="button">Reset view · drag rotate · Shift-drag move</button>
+        <button class="btn plot-calc-toggle" id="calcToggle" type="button" aria-controls="calculationPanel" aria-pressed="false">Show volume calculation</button>
+        <div class="calculation floating-calculation math" id="calculationPanel" role="region" aria-label="Volume calculation">
+          <div class="floating-calc-handle" id="calcDragHandle" tabindex="0" aria-label="Move volume calculation card">Volume calculation</div>
+          <div class="floating-calc-body" id="calculationContent"></div>
+        </div>
+      </div>
+      <div class="side-view">
+        <div class="canvas-card small">
+          <canvas id="regionCanvas" tabindex="0" aria-label="xy-plane region of integration, boundary, support, and accumulation slice"></canvas>
+          <div class="canvas-badge mono popover-trigger" id="regionBadge" tabindex="0" data-popover="The shaded region in the xy-plane tells us the integration limits.">xy region of integration</div>
+        </div>
+        <div class="formula-card" aria-live="polite">
+          <h2 id="formulaTitle">Probability value</h2>
+          <p class="message" id="formulaMessage">Region in the xy-plane + joint pdf height = probability volume.</p>
+          <div class="probability math" id="probabilityReadout">P(X ≤ c) = 0.7500</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="below">
+      <div class="explain">
+        <h2>What to watch</h2>
+        <p id="mainExplanation">The shaded base region is the region of integration. The amber volume above it is the probability. With dy dx, the demo fixes x = s and sweeps vertical slices across the selected region.</p>
+        <p id="orderExplanation">Both orders give the same probability, but the reversed order for Example 2 needs a split because the right edge changes from x = c to x = 1 - y.</p>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <span class="key"><span class="swatch s-support"></span>support</span>
+        <span class="key"><span class="swatch s-event"></span>shaded region and volume</span>
+        <span class="key"><span class="swatch s-surface"></span>joint pdf surface</span>
+        <span class="key"><span class="swatch s-slice"></span>current slice s</span>
+      </div>
+    </section>
+  </main>
+
+  <section class="tuning-panel" id="tuningPanel" aria-labelledby="tuningTitle">
+    <h2 id="tuningTitle">Teacher tuning helper</h2>
+    <p class="tune-note">Temporary controls for adjusting the 3D view, label anchors, and calculation overlay. Open this page with <span class="mono">?tune=1</span> to use it.</p>
+    <div class="tune-grid" id="tuneControls"></div>
+    <div class="tune-actions">
+      <button class="btn primary" id="copyTuningValues" type="button">Copy tuning values</button>
+      <span class="tune-status" id="tuneStatus" role="status"></span>
+    </div>
+    <textarea class="tune-output mono" id="tuneOutput" readonly aria-label="Current tuning values"></textarea>
+  </section>
+
+  <footer>
+    <div class="byline">XU, Ying · xu_ying@sutd.edu.sg · 10.022 Modelling Uncertainty</div>
+  </footer>
+</div>
+
+<button id="fbButton" type="button">Share feedback</button>
+<div id="fbOverlay" aria-hidden="true"></div>
+<section id="fbPanel" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+  <button id="fbClose" type="button" aria-label="Close feedback panel">×</button>
+  <h3 id="fbTitle">Share your feedback</h3>
+  <p class="fb-intro">Your email app will open with a prepared message. Nothing is sent automatically.</p>
+  <form id="fbForm">
+    <label for="fbCategory">Feedback type</label>
+    <select id="fbCategory" required>
+      <option>Something I found helpful</option>
+      <option>A suggestion for improvement</option>
+      <option>A content or explanation issue</option>
+      <option>A technical problem</option>
+      <option>General feedback</option>
+    </select>
+    <label for="fbDescription">Your feedback</label>
+    <textarea id="fbDescription" required></textarea>
+    <label for="fbExpected">What could make the demo better? <span class="mono">(optional)</span></label>
+    <textarea id="fbExpected"></textarea>
+    <label>Current demo context</label>
+    <div class="fb-context" id="fbContextSummary"></div>
+    <div class="fb-actions">
+      <button class="fb-secondary" id="fbCopy" type="button">Copy feedback</button>
+      <button class="fb-secondary" id="fbCancel" type="button">Cancel</button>
+      <button class="fb-submit" type="submit">Send by email</button>
+    </div>
+    <div id="fbStatus" role="status"></div>
+    <div id="fbPreparedText">
+      <label for="fbPreparedRecipient">To</label>
+      <input id="fbPreparedRecipient" type="text" readonly>
+      <label for="fbPreparedSubject">Subject</label>
+      <input id="fbPreparedSubject" type="text" readonly>
+      <label for="fbPreparedBody">Body</label>
+      <textarea id="fbPreparedBody" readonly></textarea>
+    </div>
+  </form>
+</section>
+
+<script>
+(function(){
+  "use strict";
+
+  var TAU = Math.PI * 2;
+  var MATH_FONT_STACK = '"Cambria Math","STIX Two Text","Latin Modern Math",serif';
+  var DEFAULT_VIEW_SETTINGS = { yaw:-0.78, pitch:1.25, zoom:1.14, centerX:.50, centerY:.59, zScale:1.35, selectedVolumeLabelX:.42, selectedVolumeLabelY:.28 };
+  var VIEW_SETTINGS_BY_EXAMPLE = {
+    triangle:{ yaw:.76, pitch:1.27, zoom:1.00, centerX:.42, centerY:.76, zScale:1.20, selectedVolumeLabelX:.21, selectedVolumeLabelY:.62 },
+    expo:{ yaw:-.72, pitch:1.18, zoom:1.18, centerX:.50, centerY:.61, zScale:1.55, selectedVolumeLabelX:.62, selectedVolumeLabelY:.34 }
+  };
+  var FEEDBACK_EMAIL_CONFIG = {
+    recipient:"10022mufeedback@gmail.com",
+    subjectPrefix:"[10.022 MU Demo Feedback]"
+  };
+  var C = {
+    navy:"#2E4374",
+    amber:"#E0793F",
+    sage:"#3F6F5E",
+    hair:"#DDD6C7",
+    hair2:"#C9C0AC",
+    grid:"#E9E2D5",
+    muted:"#8A8272",
+    ink:"#1F2937",
+    slice:"#D99A00",
+    blue:"#2563EB"
+  };
+  function cloneViewSettings(example){
+    var base = VIEW_SETTINGS_BY_EXAMPLE[example] || DEFAULT_VIEW_SETTINGS;
+    var clone = {};
+    Object.keys(DEFAULT_VIEW_SETTINGS).forEach(function(key){
+      clone[key] = base[key] == null ? DEFAULT_VIEW_SETTINGS[key] : base[key];
+    });
+    return clone;
+  }
+  var state = {
+    example:"triangle",
+    order:"dydx",
+    c:0.5,
+    a:1,
+    b:1,
+    s:0.25,
+    view:cloneViewSettings("triangle"),
+    camera:null,
+    dragging:false,
+    showCalculation:false,
+    lastX:0,
+    lastY:0
+  };
+  state.camera = state.view;
+  var els = {
+    surface:document.getElementById("surfaceCanvas"),
+    region:document.getElementById("regionCanvas"),
+    eventSlider:document.getElementById("eventSlider"),
+    eventInput:document.getElementById("eventInput"),
+    eventLabel:document.getElementById("eventLabel"),
+    eventMin:document.getElementById("eventMin"),
+    sliceSlider:document.getElementById("sliceSlider"),
+    sliceInput:document.getElementById("sliceInput"),
+    sliceMin:document.getElementById("sliceMin"),
+    rateControls:document.getElementById("rateControls"),
+    rateASlider:document.getElementById("rateASlider"),
+    rateBSlider:document.getElementById("rateBSlider"),
+    rateAInput:document.getElementById("rateAInput"),
+    rateBInput:document.getElementById("rateBInput"),
+    probabilityReadout:document.getElementById("probabilityReadout"),
+    modelPdf:document.getElementById("modelPdf"),
+    modelSupport:document.getElementById("modelSupport"),
+    modelEvent:document.getElementById("modelEvent"),
+    modelParams:document.getElementById("modelParams"),
+    modelInterpretation:document.getElementById("modelInterpretation"),
+    formulaMessage:document.getElementById("formulaMessage"),
+    calculationPanel:document.getElementById("calculationPanel"),
+    calculationContent:document.getElementById("calculationContent"),
+    calcDragHandle:document.getElementById("calcDragHandle"),
+    calcToggle:document.getElementById("calcToggle"),
+    mainExplanation:document.getElementById("mainExplanation"),
+    orderExplanation:document.getElementById("orderExplanation"),
+    tuningPanel:document.getElementById("tuningPanel"),
+    tuneControls:document.getElementById("tuneControls"),
+    tuneOutput:document.getElementById("tuneOutput"),
+    tuneStatus:document.getElementById("tuneStatus"),
+    copyTuningValues:document.getElementById("copyTuningValues")
+  };
+  var sctx = els.surface.getContext("2d");
+  var rctx = els.region.getContext("2d");
+  var tuningEnabled = new URLSearchParams(window.location.search).get("tune") === "1";
+
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function lerp(a,b,t){ return a + (b - a) * t; }
+  function fmt(v,d){ return Number(v).toFixed(d == null ? 2 : d).replace(/\.?0+$/,""); }
+  function fmt4(v){ return Number(v).toFixed(4); }
+  function fmtSlice(v){ return Number(v).toFixed(2); }
+  function fmtInput(v){ return Number(v).toFixed(3); }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,function(ch){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
+    });
+  }
+  function resizeCanvas(canvas){
+    var rect = canvas.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    var w = Math.max(260, Math.round(rect.width * dpr));
+    var h = Math.max(220, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h){
+      canvas.width = w;
+      canvas.height = h;
+    }
+    return { w:w, h:h, dpr:dpr };
+  }
+  function clear(ctx,canvas){
+    var size = resizeCanvas(canvas);
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,size.w,size.h);
+    return size;
+  }
+  function line(ctx,a,b,color,width,dash){
+    ctx.save();
+    ctx.strokeStyle = color || C.navy;
+    ctx.lineWidth = width || 1;
+    if (dash) ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function poly(ctx,pts,fill,stroke,width){
+    if (!pts.length) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x,pts[0].y);
+    for (var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.closePath();
+    if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = width || 1; ctx.stroke(); }
+    ctx.restore();
+  }
+  function label(ctx,text,p,color,align){
+    ctx.save();
+    ctx.fillStyle = color || C.ink;
+    ctx.font = "13px " + MATH_FONT_STACK;
+    ctx.textAlign = align || "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text,p.x,p.y);
+    ctx.restore();
+  }
+  function labelBox(ctx,text,p,color,align,bounds){
+    ctx.save();
+    ctx.font = "13px " + MATH_FONT_STACK;
+    ctx.textAlign = align || "center";
+    ctx.textBaseline = "middle";
+    var metrics = ctx.measureText(text);
+    var padX = 6;
+    var w = metrics.width + padX * 2;
+    var h = 20;
+    var tx = p.x, ty = p.y;
+    var x = align === "right" ? tx - w : (align === "left" ? tx : tx - w / 2);
+    var y = ty - h / 2;
+    if (bounds){
+      if (x < bounds.l) tx += bounds.l - x;
+      if (x + w > bounds.r) tx -= x + w - bounds.r;
+      y = ty - h / 2;
+      if (y < bounds.t) ty += bounds.t - y;
+      if (y + h > bounds.b) ty -= y + h - bounds.b;
+      x = align === "right" ? tx - w : (align === "left" ? tx : tx - w / 2);
+      y = ty - h / 2;
+    }
+    ctx.fillStyle = "rgba(255,253,249,.92)";
+    ctx.strokeStyle = color || C.amber;
+    ctx.lineWidth = 1;
+    roundRect(ctx,x,y,w,h,6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = color || C.ink;
+    ctx.fillText(text,tx,ty);
+    ctx.restore();
+  }
+  function roundRect(ctx,x,y,w,h,r){
+    var rr = Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+  function arrow(ctx,a,b,color){
+    line(ctx,a,b,color,1.8);
+    var ang = Math.atan2(b.y-a.y,b.x-a.x);
+    var len = 8;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(b.x,b.y);
+    ctx.lineTo(b.x - len*Math.cos(ang-.45), b.y - len*Math.sin(ang-.45));
+    ctx.lineTo(b.x - len*Math.cos(ang+.45), b.y - len*Math.sin(ang+.45));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function probability(){
+    if (state.example === "triangle") return 2 * state.c - state.c * state.c;
+    if (state.c >= 0) return 1 - (state.b / (state.a + state.b)) * Math.exp(-state.a * state.c);
+    return (state.a / (state.a + state.b)) * Math.exp(state.b * state.c);
+  }
+  function pdf(x,y){
+    if (state.example === "triangle"){
+      return x >= 0 && y >= 0 && x + y <= 1 ? 2 : 0;
+    }
+    return x >= 0 && y >= 0 ? state.a * state.b * Math.exp(-state.a*x - state.b*y) : 0;
+  }
+  function inSupport(x,y){
+    if (state.example === "triangle") return x >= 0 && y >= 0 && x + y <= 1;
+    return x >= 0 && y >= 0;
+  }
+  function inEvent(x,y){
+    if (!inSupport(x,y)) return false;
+    if (state.example === "triangle") return x <= state.c + 1e-9;
+    return x < y + state.c;
+  }
+  function domain(){
+    return state.example === "triangle"
+      ? { xMin:0, xMax:1, yMin:0, yMax:1, zMax:2, windowLabel:"triangle T" }
+      : { xMin:0, xMax:5, yMin:0, yMax:5, zMax:Math.max(.35, state.a * state.b), windowLabel:"first quadrant; window [0,5] × [0,5]" };
+  }
+  function normX(x,d){ return (x - d.xMin) / (d.xMax - d.xMin); }
+  function normY(y,d){ return (y - d.yMin) / (d.yMax - d.yMin); }
+  function denormX(u,d){ return d.xMin + u * (d.xMax - d.xMin); }
+  function denormY(v,d){ return d.yMin + v * (d.yMax - d.yMin); }
+  function regionTicks(d){
+    return state.example === "triangle"
+      ? [0,.5,1].map(function(value){ return { value:value, t:normX(value,d) }; })
+      : [0,2.5,5].map(function(value){ return { value:value, t:normX(value,d) }; });
+  }
+  function tickLabel(value){ return fmt(value); }
+
+  function project(pt,w,h){
+    var yaw = state.camera.yaw;
+    var pitch = state.camera.pitch;
+    var x = (pt.x - .5) * 2.04;
+    var y = (pt.y - .5) * 2.04;
+    var z = pt.z * (state.camera.zScale || DEFAULT_VIEW_SETTINGS.zScale || 1.35);
+    var cy = Math.cos(yaw), sy = Math.sin(yaw);
+    var cp = Math.cos(pitch), sp = Math.sin(pitch);
+    var rx = x * cy - y * sy;
+    var ry = x * sy + y * cy;
+    var rz = z;
+    var py = ry * cp - rz * sp;
+    var pz = ry * sp + rz * cp;
+    var scale = Math.min(w,h) * .31 * state.camera.zoom / (1 + pz * .15);
+    var centerX = w * (state.camera.centerX == null ? DEFAULT_VIEW_SETTINGS.centerX : state.camera.centerX);
+    var centerY = h * (state.camera.centerY == null ? DEFAULT_VIEW_SETTINGS.centerY : state.camera.centerY);
+    return { x:centerX + rx*scale, y:centerY + py*scale, depth:pz, z:pt.z };
+  }
+  function surfacePoint(x,y,d){
+    var z = pdf(x,y) / d.zMax;
+    return { x:normX(x,d), y:normY(y,d), z:clamp(z,0,1) };
+  }
+  function addQuad(list,pts,fill,stroke,width){
+    var depth = pts.reduce(function(sum,p){ return sum + p.depth; },0) / pts.length;
+    list.push({ pts:pts, fill:fill, stroke:stroke, width:width || 1, depth:depth });
+  }
+  function gridValues(d,steps){
+    var xs = [], ys = [];
+    for (var i=0;i<=steps;i++){
+      xs.push(lerp(d.xMin,d.xMax,i/steps));
+      ys.push(lerp(d.yMin,d.yMax,i/steps));
+    }
+    return { xs:xs, ys:ys };
+  }
+  function drawSurface(){
+    var size = clear(sctx,els.surface), w = size.w, h = size.h;
+    var d = domain();
+    if (state.example === "triangle"){
+      drawTriangleSurface(w,h,d);
+      drawAxes3d(w,h,d);
+      drawSurfaceSlice(w,h,d);
+      labelBox(sctx,"selected volume = " + fmt4(probability()),selectedVolumeLabelPoint(w,h,d,project({x:.26,y:.28,z:.72},w,h)),C.amber);
+      return;
+    }
+    drawExponentialSurface(w,h,d);
+    drawAxes3d(w,h,d);
+    drawSurfaceSlice(w,h,d);
+    labelBox(sctx,"selected volume = " + fmt4(probability()),selectedVolumeLabelPoint(w,h,d,expoVolumeLabelPoint(w,h,d)),C.amber);
+  }
+  function drawExponentialSurface(w,h,d){
+    var shapes = [];
+    var coarse = gridValues(d,34);
+    var selected = gridValues(d,58);
+    addBaseWindow(shapes,w,h,d);
+    addSurfaceGrid(shapes,w,h,d,coarse,false);
+    addSelectedBase(shapes,w,h,d,selected);
+    addSurfaceGrid(shapes,w,h,d,selected,true);
+    addSelectedVolumeWalls(shapes,w,h,d);
+    shapes.sort(function(a,b){ return b.depth - a.depth; });
+    shapes.forEach(function(shape){ poly(sctx,shape.pts,shape.fill,shape.stroke,shape.width); });
+    drawEventBoundaryLines(w,h,d);
+  }
+  function addBaseWindow(shapes,w,h,d){
+    function P(x,y,zv){ return project({x:normX(x,d),y:normY(y,d),z:zv},w,h); }
+    addQuad(shapes,[P(d.xMin,d.yMin,0),P(d.xMax,d.yMin,0),P(d.xMax,d.yMax,0),P(d.xMin,d.yMax,0)],"rgba(244,241,232,.34)","rgba(46,67,116,.20)",1);
+  }
+  function addSelectedBase(shapes,w,h,d,grid){
+    for (var i=0;i<grid.xs.length-1;i++){
+      for (var j=0;j<grid.ys.length-1;j++){
+        var x0 = grid.xs[i], x1 = grid.xs[i+1], y0 = grid.ys[j], y1 = grid.ys[j+1];
+        var cx = (x0+x1)/2, cy = (y0+y1)/2;
+        if (!inEvent(cx,cy)) continue;
+        addQuad(shapes,[
+          project({x:normX(x0,d),y:normY(y0,d),z:0},w,h),
+          project({x:normX(x1,d),y:normY(y0,d),z:0},w,h),
+          project({x:normX(x1,d),y:normY(y1,d),z:0},w,h),
+          project({x:normX(x0,d),y:normY(y1,d),z:0},w,h)
+        ],"rgba(224,121,63,.16)",null,1);
+      }
+    }
+  }
+  function addSurfaceGrid(shapes,w,h,d,grid,selectedOnly){
+    for (var i=0;i<grid.xs.length-1;i++){
+      for (var j=0;j<grid.ys.length-1;j++){
+        var x0 = grid.xs[i], x1 = grid.xs[i+1], y0 = grid.ys[j], y1 = grid.ys[j+1];
+        var cx = (x0+x1)/2, cy = (y0+y1)/2;
+        var selected = inEvent(cx,cy);
+        if (selectedOnly && !selected) continue;
+        if (!selectedOnly && selected) continue;
+        var density = pdf(cx,cy) / d.zMax;
+        var fill = selectedOnly
+          ? "rgba(224,121,63," + (.36 + .14 * density).toFixed(3) + ")"
+          : "rgba(46,67,116," + (.13 + .15 * density).toFixed(3) + ")";
+        addQuad(shapes,[
+          project(surfacePoint(x0,y0,d),w,h),
+          project(surfacePoint(x1,y0,d),w,h),
+          project(surfacePoint(x1,y1,d),w,h),
+          project(surfacePoint(x0,y1,d),w,h)
+        ],fill,null,1);
+      }
+    }
+  }
+  function eventBoundaryPoints(d,n){
+    var start = Math.max(d.xMin,state.c);
+    var end = Math.min(d.xMax,d.yMax + state.c);
+    var pts = [];
+    if (end < start) return pts;
+    for (var i=0;i<=n;i++){
+      var x = lerp(start,end,i/n);
+      var y = x - state.c;
+      pts.push({ x:x, y:y });
+    }
+    return pts;
+  }
+  function addSelectedVolumeWalls(shapes,w,h,d){
+    var wallFill = "rgba(224,121,63,.16)";
+    var edgeFill = "rgba(224,121,63,.105)";
+    addWallFromDataPoints(shapes,w,h,d,eventBoundaryPoints(d,80),wallFill,"rgba(224,121,63,.36)",6);
+    addWallFromDataPoints(shapes,w,h,d,edgePoints("left",d),edgeFill,"rgba(224,121,63,.22)",3);
+    addWallFromDataPoints(shapes,w,h,d,edgePoints("top",d),edgeFill,"rgba(224,121,63,.20)",3);
+    addWallFromDataPoints(shapes,w,h,d,edgePoints("right",d),edgeFill,"rgba(224,121,63,.18)",2);
+    addWallFromDataPoints(shapes,w,h,d,edgePoints("bottom",d),edgeFill,"rgba(224,121,63,.18)",2);
+  }
+  function edgePoints(edge,d){
+    var pts = [], i, t, x, y;
+    if (edge === "left"){
+      x = d.xMin;
+      var y0 = Math.max(d.yMin,d.xMin - state.c);
+      if (y0 > d.yMax) return pts;
+      for (i=0;i<=24;i++){
+        y = lerp(y0,d.yMax,i/24);
+        if (inEvent(x + 1e-6,y)) pts.push({ x:x, y:y });
+      }
+      return pts;
+    }
+    if (edge === "top"){
+      y = d.yMax;
+      var x1 = Math.min(d.xMax,d.yMax + state.c);
+      if (x1 < d.xMin) return pts;
+      for (i=0;i<=24;i++){
+        x = lerp(d.xMin,x1,i/24);
+        if (inEvent(x,y - 1e-6)) pts.push({ x:x, y:y });
+      }
+      return pts;
+    }
+    if (edge === "right"){
+      x = d.xMax;
+      var yr = Math.max(d.yMin,d.xMax - state.c);
+      if (yr > d.yMax) return pts;
+      for (i=0;i<=18;i++){
+        y = lerp(yr,d.yMax,i/18);
+        if (inEvent(x - 1e-6,y)) pts.push({ x:x, y:y });
+      }
+      return pts;
+    }
+    if (edge === "bottom"){
+      y = d.yMin;
+      var xb = Math.min(d.xMax,d.yMin + state.c);
+      if (xb < d.xMin) return pts;
+      for (i=0;i<=18;i++){
+        x = lerp(d.xMin,xb,i/18);
+        if (inEvent(x,y + 1e-6)) pts.push({ x:x, y:y });
+      }
+    }
+    return pts;
+  }
+  function addWallFromDataPoints(shapes,w,h,d,dataPts,fill,stroke,maxSegments){
+    if (!dataPts || dataPts.length < 2) return;
+    var segments = Math.min(maxSegments,dataPts.length - 1);
+    for (var s=0;s<segments;s++){
+      var start = Math.floor(s * (dataPts.length - 1) / segments);
+      var end = Math.floor((s + 1) * (dataPts.length - 1) / segments);
+      if (end <= start) continue;
+      var top = [], base = [];
+      for (var i=start;i<=end;i++){
+        var pt = dataPts[i];
+        top.push(project(surfacePoint(pt.x,pt.y,d),w,h));
+        base.push(project({x:normX(pt.x,d),y:normY(pt.y,d),z:0},w,h));
+      }
+      addQuad(shapes,top.concat(base.reverse()),fill,stroke,1);
+    }
+  }
+  function drawEventBoundaryLines(w,h,d){
+    var pts = eventBoundaryPoints(d,90);
+    if (!pts.length) return;
+    sctx.save();
+    sctx.strokeStyle = "rgba(224,121,63,.92)";
+    sctx.lineWidth = 2.1;
+    sctx.beginPath();
+    pts.forEach(function(pt,idx){
+      var p = project(surfacePoint(pt.x,pt.y,d),w,h);
+      if (idx === 0) sctx.moveTo(p.x,p.y);
+      else sctx.lineTo(p.x,p.y);
+    });
+    sctx.stroke();
+    sctx.setLineDash([5,4]);
+    sctx.lineWidth = 1.45;
+    sctx.beginPath();
+    pts.forEach(function(pt,idx){
+      var p = project({x:normX(pt.x,d),y:normY(pt.y,d),z:0},w,h);
+      if (idx === 0) sctx.moveTo(p.x,p.y);
+      else sctx.lineTo(p.x,p.y);
+    });
+    sctx.stroke();
+    sctx.restore();
+    var cLabelPt = pts[Math.floor(pts.length * .55)];
+    if (cLabelPt){
+      labelBox(
+        sctx,
+        "c = " + fmtSlice(state.c),
+        project(surfacePoint(cLabelPt.x,cLabelPt.y,d),w,h),
+        C.amber,
+        null,
+        { l:8, r:w-8, t:8, b:h-8 }
+      );
+    }
+  }
+  function expoVolumeLabelPoint(w,h,d){
+    var x = clamp(Math.max(.55,state.c + .95),d.xMin + .2,d.xMax - .35);
+    var y = clamp(Math.max(.9,x - state.c + .35),d.yMin + .2,d.yMax - .35);
+    return project({x:normX(x,d),y:normY(y,d),z:.28},w,h);
+  }
+  function selectedVolumeLabelPoint(w,h,d,fallback){
+    if (!tuningEnabled) return fallback;
+    return {
+      x:w * state.view.selectedVolumeLabelX,
+      y:h * state.view.selectedVolumeLabelY
+    };
+  }
+  function drawTriangleSurface(w,h,d){
+    var z = pdf(.2,.2) / d.zMax;
+    var c = clamp(state.c,0,1);
+    var shapes = [];
+    function P(x,y,zv){ return project({x:normX(x,d),y:normY(y,d),z:zv},w,h); }
+    var base = [P(0,0,0),P(1,0,0),P(0,1,0)];
+    var top = [P(0,0,z),P(1,0,z),P(0,1,z)];
+    var eventBase = [P(0,0,0),P(c,0,0),P(c,1-c,0),P(0,1,0)];
+    var eventTop = [P(0,0,z),P(c,0,z),P(c,1-c,z),P(0,1,z)];
+
+    addQuad(shapes,base,"rgba(244,241,232,.50)","rgba(46,67,116,.16)",1);
+    addQuad(shapes,top,"rgba(46,67,116,.16)","rgba(46,67,116,.44)",1.1);
+    addQuad(shapes,[base[0],base[1],top[1],top[0]],"rgba(46,67,116,.065)","rgba(46,67,116,.30)",1);
+    addQuad(shapes,[base[1],base[2],top[2],top[1]],"rgba(63,111,94,.07)","rgba(46,67,116,.34)",1);
+    addQuad(shapes,[base[2],base[0],top[0],top[2]],"rgba(46,67,116,.055)","rgba(46,67,116,.28)",1);
+    addQuad(shapes,eventBase,"rgba(224,121,63,.24)",null,1);
+    addQuad(shapes,[eventBase[0],eventBase[1],eventTop[1],eventTop[0]],"rgba(224,121,63,.18)","rgba(224,121,63,.34)",1);
+    addQuad(shapes,[eventBase[1],eventBase[2],eventTop[2],eventTop[1]],"rgba(224,121,63,.20)","rgba(224,121,63,.42)",1);
+    addQuad(shapes,[eventBase[2],eventBase[3],eventTop[3],eventTop[2]],"rgba(224,121,63,.16)","rgba(224,121,63,.28)",1);
+    addQuad(shapes,eventTop,"rgba(224,121,63,.42)","rgba(224,121,63,.80)",1.4);
+
+    shapes.sort(function(a,b){ return b.depth - a.depth; });
+    shapes.forEach(function(shape){ poly(sctx,shape.pts,shape.fill,shape.stroke,shape.width); });
+    line(sctx,P(0,0,z),P(1,0,z),"rgba(46,67,116,.70)",1.4);
+    line(sctx,P(1,0,z),P(0,1,z),"rgba(46,67,116,.70)",1.4);
+    line(sctx,P(0,1,z),P(0,0,z),"rgba(46,67,116,.70)",1.4);
+    line(sctx,P(0,0,0),P(1,0,0),"rgba(46,67,116,.50)",1.2);
+    line(sctx,P(1,0,0),P(0,1,0),"rgba(46,67,116,.50)",1.2);
+    line(sctx,P(0,1,0),P(0,0,0),"rgba(46,67,116,.50)",1.2);
+    line(sctx,P(0,0,0),P(0,0,z),"rgba(46,67,116,.54)",1.15);
+    line(sctx,P(1,0,0),P(1,0,z),"rgba(46,67,116,.54)",1.15);
+    line(sctx,P(0,1,0),P(0,1,z),"rgba(46,67,116,.54)",1.15);
+    line(sctx,P(c,0,z),P(c,1-c,z),"rgba(224,121,63,.95)",2);
+    line(sctx,P(c,0,0),P(c,1-c,0),"rgba(224,121,63,.75)",1.5);
+    labelBox(
+      sctx,
+      "c = " + fmtSlice(state.c),
+      P(c,clamp((1 - c) * .52,.08,.82),z),
+      C.amber,
+      null,
+      { l:8, r:w-8, t:8, b:h-8 }
+    );
+  }
+  function drawAxes3d(w,h,d){
+    var o = project({x:0,y:0,z:0},w,h);
+    var x = project({x:1.05,y:0,z:0},w,h);
+    var y = project({x:0,y:1.05,z:0},w,h);
+    var z = project({x:0,y:0,z:1.05},w,h);
+    arrow(sctx,o,x,C.navy);
+    arrow(sctx,o,y,C.navy);
+    arrow(sctx,o,z,C.navy);
+    label(sctx,"x",x,C.navy);
+    label(sctx,"y",y,C.navy);
+    label(sctx,"f(x,y)",z,C.navy);
+  }
+  function drawSurfaceSlice(w,h,d){
+    var fixed = state.order === "dydx" ? "x" : "y";
+    var s = clamp(state.s, fixed === "x" ? d.xMin : d.yMin, fixed === "x" ? d.xMax : d.yMax);
+    var pts = [];
+    var n = state.example === "expo" ? 46 : 80;
+    for (var i=0;i<=n;i++){
+      var t = i/n;
+      var x = fixed === "x" ? s : denormX(t,d);
+      var y = fixed === "x" ? denormY(t,d) : s;
+      if (!inSupport(x,y) || !inEvent(x,y)) continue;
+      pts.push({ base:project({x:normX(x,d),y:normY(y,d),z:0},w,h), top:project(surfacePoint(x,y,d),w,h), x:x, y:y });
+    }
+    if (!pts.length) return;
+    drawSliceCurtain(pts,fixed);
+    sctx.save();
+    var sliceColor = fixed === "x" ? C.slice : C.blue;
+    sctx.strokeStyle = sliceColor;
+    sctx.lineWidth = 2.6;
+    sctx.beginPath();
+    pts.forEach(function(pt,idx){
+      if (idx === 0) sctx.moveTo(pt.top.x,pt.top.y);
+      else sctx.lineTo(pt.top.x,pt.top.y);
+    });
+    sctx.stroke();
+    sctx.setLineDash([5,4]);
+    sctx.lineWidth = 1.7;
+    sctx.beginPath();
+    pts.forEach(function(pt,idx){
+      if (idx === 0) sctx.moveTo(pt.base.x,pt.base.y);
+      else sctx.lineTo(pt.base.x,pt.base.y);
+    });
+    sctx.stroke();
+    sctx.restore();
+    function drawSliceCurtain(points,fixedAxis){
+      var useAmber = fixedAxis === "x";
+      var color = useAmber ? "rgba(217,154,0,.54)" : "rgba(37,99,235,.40)";
+      var stroke = useAmber ? "rgba(217,154,0,.98)" : "rgba(37,99,235,.92)";
+      var top = points.map(function(pt){ return pt.top; });
+      var base = points.map(function(pt){ return pt.base; }).reverse();
+      poly(sctx,top.concat(base),color,stroke,state.example === "expo" ? 1.7 : 1.15);
+      if (state.example === "expo"){
+        for (var m=1;m<=2;m++){
+          var idx = Math.floor(m * (points.length - 1) / 3);
+          line(sctx,points[idx].base,points[idx].top,"rgba(255,255,255,.22)",.8);
+        }
+      }
+    }
+    var mid = pts[Math.floor(pts.length/2)];
+    labelBox(sctx,(fixed === "x" ? "x = s = " : "y = s = ") + fmtSlice(s),mid.top,sliceColor);
+  }
+
+  function regionRect(w,h){
+    var pad = { l:42, r:22, t:34, b:52 };
+    var size = Math.min(w - pad.l - pad.r, h - pad.t - pad.b);
+    var left = pad.l + (w - pad.l - pad.r - size) / 2;
+    var top = pad.t + (h - pad.t - pad.b - size) / 2;
+    return { l:left, t:top, r:left+size, b:top+size, w:size, h:size };
+  }
+  function mapRegion(rect,x,y,d){ return { x:rect.l + normX(x,d)*rect.w, y:rect.b - normY(y,d)*rect.h }; }
+  function drawRegionTicks(rect,d){
+    regionTicks(d).forEach(function(tick){
+      var px = mapRegion(rect,tick.value,d.yMin,d);
+      line(rctx,{x:px.x,y:rect.b},{x:px.x,y:rect.b+5},C.navy,1);
+      label(rctx,tickLabel(tick.value),{x:px.x,y:rect.b+17},C.muted);
+      var py = mapRegion(rect,d.xMin,tick.value,d);
+      line(rctx,{x:rect.l-5,y:py.y},{x:rect.l,y:py.y},C.navy,1);
+      if (tick.value > d.yMin) label(rctx,tickLabel(tick.value),{x:rect.l-8,y:py.y},C.muted,"right");
+    });
+  }
+  function drawRegion(){
+    var size = clear(rctx,els.region), w = size.w, h = size.h;
+    var d = domain(), rect = regionRect(w,h);
+    rctx.fillStyle = "#fffdf9";
+    rctx.fillRect(0,0,w,h);
+    for (var i=0;i<=5;i++){
+      var t = i/5;
+      line(rctx,{x:rect.l+t*rect.w,y:rect.t},{x:rect.l+t*rect.w,y:rect.b},C.grid,1);
+      line(rctx,{x:rect.l,y:rect.b-t*rect.h},{x:rect.r,y:rect.b-t*rect.h},C.grid,1);
+    }
+    drawEventRegion(rect,d);
+    drawSupportBoundary(rect,d);
+    drawBoundaryLine(rect,d);
+    drawRegionSlice(rect,d);
+    line(rctx,mapRegion(rect,d.xMin,d.yMin,d),mapRegion(rect,d.xMax,d.yMin,d),C.navy,1.5);
+    line(rctx,mapRegion(rect,d.xMin,d.yMin,d),mapRegion(rect,d.xMin,d.yMax,d),C.navy,1.5);
+    drawRegionTicks(rect,d);
+    label(rctx,"x",{x:rect.r+17,y:rect.b-8},C.navy);
+    label(rctx,"y",{x:rect.l+7,y:rect.t-16},C.navy);
+    label(rctx,d.windowLabel,{x:(rect.l+rect.r)/2,y:rect.b+34},C.navy);
+  }
+  function drawEventRegion(rect,d){
+    var nx = 80, ny = 80;
+    rctx.save();
+    for (var i=0;i<nx;i++){
+      for (var j=0;j<ny;j++){
+        var x0 = lerp(d.xMin,d.xMax,i/nx), x1 = lerp(d.xMin,d.xMax,(i+1)/nx);
+        var y0 = lerp(d.yMin,d.yMax,j/ny), y1 = lerp(d.yMin,d.yMax,(j+1)/ny);
+        var cx = (x0+x1)/2, cy = (y0+y1)/2;
+        if (!inSupport(cx,cy)) continue;
+        rctx.fillStyle = inEvent(cx,cy) ? "rgba(224,121,63,.42)" : "rgba(244,241,232,.92)";
+        var a = mapRegion(rect,x0,y0,d), b = mapRegion(rect,x1,y1,d);
+        rctx.fillRect(a.x,b.y,b.x-a.x,a.y-b.y);
+      }
+    }
+    rctx.restore();
+  }
+  function drawSupportBoundary(rect,d){
+    if (state.example === "triangle"){
+      poly(rctx,[mapRegion(rect,0,0,d),mapRegion(rect,1,0,d),mapRegion(rect,0,1,d)],null,"rgba(46,67,116,.9)",1.8);
+      label(rctx,"T",{x:rect.l+rect.w*.30,y:rect.b-rect.h*.26},C.navy);
+      label(rctx,"x + y = 1",{x:rect.l+rect.w*.67,y:rect.t+rect.h*.25},C.navy);
+    } else {
+      poly(rctx,[mapRegion(rect,0,0,d),mapRegion(rect,5,0,d),mapRegion(rect,5,5,d),mapRegion(rect,0,5,d)],null,"rgba(46,67,116,.75)",1.4);
+      arrow(rctx,{x:rect.r-24,y:rect.b},{x:rect.r+8,y:rect.b},C.sage);
+      arrow(rctx,{x:rect.l,y:rect.t+24},{x:rect.l,y:rect.t-8},C.sage);
+    }
+  }
+  function drawBoundaryLine(rect,d){
+    if (state.example === "triangle"){
+      var p0 = mapRegion(rect,state.c,0,d);
+      var p1 = mapRegion(rect,state.c,1-state.c,d);
+      line(rctx,p0,p1,C.amber,2.5);
+      labelBox(rctx,"c = " + fmtSlice(state.c),p1,C.amber);
+      labelBox(rctx,"shaded region X ≤ c",{x:rect.l+rect.w*Math.max(.22,state.c*.50),y:rect.b-rect.h*.18},C.amber);
+      return;
+    }
+    var pts = [];
+    var yAt0 = -state.c;
+    var xAt0 = state.c;
+    if (yAt0 >= 0 && yAt0 <= d.yMax) pts.push(mapRegion(rect,0,yAt0,d));
+    if (xAt0 >= 0 && xAt0 <= d.xMax) pts.push(mapRegion(rect,xAt0,0,d));
+    var yAtXMax = d.xMax - state.c;
+    if (yAtXMax >= 0 && yAtXMax <= d.yMax) pts.push(mapRegion(rect,d.xMax,yAtXMax,d));
+    var xAtYMax = d.yMax + state.c;
+    if (xAtYMax >= 0 && xAtYMax <= d.xMax) pts.push(mapRegion(rect,xAtYMax,d.yMax,d));
+    if (pts.length >= 2) line(rctx,pts[0],pts[1],C.amber,2.5,[7,4]);
+    labelBox(rctx,"c = " + fmtSlice(state.c),pts[0] || {x:rect.r-70,y:rect.t+50},C.amber);
+    labelBox(rctx,"shaded region X < Y + c",{x:rect.l+rect.w*.54,y:rect.t+rect.h*.27},C.amber);
+  }
+  function drawRegionSlice(rect,d){
+    var isVertical = state.order === "dydx";
+    var s = state.s;
+    if (isVertical){
+      var low = d.yMin, high = d.yMax;
+      if (state.example === "triangle"){
+        if (s > state.c) return;
+        high = 1 - s;
+      } else {
+        low = Math.max(0,s - state.c);
+        high = d.yMax;
+      }
+      var p0 = mapRegion(rect,s,low,d);
+      var p1 = mapRegion(rect,s,high,d);
+      line(rctx,p0,p1,C.slice,3);
+      labelBox(rctx,"x = s = " + fmtSlice(s),p1,C.slice);
+    } else {
+      var left = d.xMin, right = d.xMax;
+      if (state.example === "triangle"){
+        right = s <= 1 - state.c ? state.c : 1 - s;
+        if (right < 0) return;
+      } else {
+        right = s + state.c;
+        if (right <= 0) return;
+        right = Math.min(right,d.xMax);
+      }
+      var q0 = mapRegion(rect,left,s,d);
+      var q1 = mapRegion(rect,right,s,d);
+      line(rctx,q0,q1,C.blue,3);
+      labelBox(rctx,"y = s = " + fmtSlice(s),q1,C.blue);
+    }
+  }
+
+  function formulaData(){
+    var p = probability();
+    var cVal = fmtSlice(state.c);
+    var sVal = fmtSlice(state.s);
+    if (state.example === "triangle"){
+      if (state.order === "dydx"){
+        return {
+          event:"X ≤ c",
+          slice:"fix x = s = " + sVal,
+          outer:"0 ≤ x ≤ c",
+          inner:"0 ≤ y ≤ 1 - x",
+          prob:"P(X ≤ c) = " + fmt4(p),
+          message:"The inner integral gives the area of one vertical slice. The outer integral accumulates those slice areas from x = 0 to x = c.",
+          calcHtml:
+            '<div class="calc-step"><h3>Step 1 · Area of one slice</h3>' +
+            '<p>Fix <span class="math">x = s = ' + sVal + '</span>. In the visible slice, <span class="math">y</span> ranges from <span class="math">0</span> to <span class="math">1 - s</span>.</p>' +
+            '<div class="formula-lines">' +
+            '<div class="formula-line">slice area at <i>x</i> = <i>s</i> = ∫<sub>0</sub><sup>1-s</sup> 2 dy = 2(1 - s)</div>' +
+            '<div class="formula-line">at s = ' + sVal + ': slice area = ' + fmt4(2 * (1 - state.s)) + '</div>' +
+            '</div></div>' +
+            '<div class="calc-step"><h3>Step 2 · Accumulate slice areas</h3>' +
+            '<div class="formula-lines">' +
+            '<div class="formula-line">volume = ∫<sub>0</sub><sup>c</sup> 2(1 - x) dx</div>' +
+            '<div class="formula-line">P(X ≤ c) = ∫<sub>0</sub><sup>c</sup> ∫<sub>0</sub><sup>1-x</sup> 2 dy dx = 2c - c<sup>2</sup></div>' +
+            '<div class="formula-line">when c = ' + cVal + ', probability = ' + fmt4(p) + '</div>' +
+            '</div></div>',
+          orderNote:"Here c controls the shaded region. The moving slice uses s. This vertical-slice order gives one integral."
+        };
+      }
+      var split = 1 - state.c;
+      var lowSliceArea = 2 * state.c;
+      var highSliceArea = state.s <= split ? lowSliceArea : Math.max(0, 2 * (1 - state.s));
+      return {
+        event:"X ≤ c",
+        slice:"fix y = s = " + sVal,
+        outer:"0 ≤ y ≤ 1, split at y = 1 - c",
+        inner:"0 ≤ x ≤ c, then 0 ≤ x ≤ 1 - y",
+        prob:"P(X ≤ c) = " + fmt4(p),
+        message:"The inner integral gives the area of one horizontal slice. The outer integral accumulates the slice areas, but this order needs a split.",
+        calcHtml:
+          '<div class="calc-step"><h3>Step 1 · Area of one slice</h3>' +
+          '<p>Fix <span class="math">y = s = ' + sVal + '</span>. The right boundary changes at <span class="math">y = 1 - c</span>.</p>' +
+          '<div class="formula-lines">' +
+          '<div class="formula-line">if 0 ≤ y ≤ 1 - c: slice area = ∫<sub>0</sub><sup>c</sup> 2 dx = 2c</div>' +
+          '<div class="formula-line">if 1 - c &lt; y ≤ 1: slice area = ∫<sub>0</sub><sup>1-y</sup> 2 dx = 2(1 - y)</div>' +
+          '<div class="formula-line">at s = ' + sVal + ': slice area = ' + fmt4(highSliceArea) + '</div>' +
+          '</div></div>' +
+          '<div class="calc-step"><h3>Step 2 · Accumulate slice areas</h3>' +
+          '<div class="formula-lines">' +
+          '<div class="formula-line">volume = ∫<sub>0</sub><sup>1-c</sup> 2c dy + ∫<sub>1-c</sub><sup>1</sup> 2(1 - y) dy</div>' +
+          '<div class="formula-line">P(X ≤ c) = ∫<sub>0</sub><sup>1-c</sup> ∫<sub>0</sub><sup>c</sup> 2 dx dy + ∫<sub>1-c</sub><sup>1</sup> ∫<sub>0</sub><sup>1-y</sup> 2 dx dy</div>' +
+          '<div class="formula-line">= 2c - c<sup>2</sup> = ' + fmt4(p) + '</div>' +
+          '</div></div>',
+        orderNote:"This horizontal-slice order needs a split because the right boundary changes from x = c to x = 1 - y."
+      };
+    }
+    if (state.order === "dydx"){
+      var lower = Math.max(0,state.s - state.c);
+      return {
+        event:"X < Y + c",
+        slice:"fix x = s = " + sVal,
+        outer:"0 ≤ x < ∞",
+        inner:"max(0, x - c) ≤ y < ∞",
+        prob:"P(X < Y + c) = " + fmt4(p),
+        message:"The inner integral gives the area of one vertical slice. The lower y-limit changes because the boundary is y = x - c.",
+        calcHtml:
+          '<div class="calc-step"><h3>Step 1 · Area of one slice</h3>' +
+          '<p>Fix <span class="math">x = s = ' + sVal + '</span>. Here <span class="math">y</span> ranges from <span class="math">max(0, s - c) = ' + fmt(lower) + '</span> to <span class="math">∞</span>.</p>' +
+          '<div class="formula-lines">' +
+          '<div class="formula-line">slice area at <i>x</i> = <i>s</i> = ∫<sub>max(0,s-c)</sub><sup>∞</sup> ab exp(-as - by) dy</div>' +
+          '</div></div>' +
+          '<div class="calc-step"><h3>Step 2 · Accumulate slice areas</h3>' +
+          '<div class="formula-lines">' +
+          (state.c >= 0
+            ? '<div class="formula-line">volume = ∫<sub>0</sub><sup>c</sup> ∫<sub>0</sub><sup>∞</sup> ab exp(-ax - by) dy dx + ∫<sub>c</sub><sup>∞</sup> ∫<sub>x-c</sub><sup>∞</sup> ab exp(-ax - by) dy dx</div><div class="formula-line">= 1 - (b/(a+b)) exp(-ac) = ' + fmt4(p) + '</div>'
+            : '<div class="formula-line">volume = ∫<sub>0</sub><sup>∞</sup> ∫<sub>x-c</sub><sup>∞</sup> ab exp(-ax - by) dy dx</div><div class="formula-line">= (a/(a+b)) exp(bc) = ' + fmt4(p) + '</div>') +
+          '</div></div>',
+        orderNote:"Here c controls the shifted boundary. The moving slice uses s so the accumulation remains visible."
+      };
+    }
+    var upper = state.s + state.c;
+    return {
+      event:"X < Y + c",
+      slice:"fix y = s = " + sVal,
+      outer:"max(0, -c) ≤ y < ∞",
+      inner:"0 ≤ x ≤ y + c",
+      prob:"P(X < Y + c) = " + fmt4(p),
+      message:"The inner integral gives the area of one horizontal slice. A slice contributes only when y + c is positive.",
+      calcHtml:
+        '<div class="calc-step"><h3>Step 1 · Area of one slice</h3>' +
+        (upper > 0
+          ? '<p>Fix <span class="math">y = s = ' + sVal + '</span>. Here <span class="math">x</span> ranges from <span class="math">0</span> to <span class="math">s + c = ' + fmt(upper) + '</span>.</p><div class="formula-lines"><div class="formula-line">slice area at <i>y</i> = <i>s</i> = ∫<sub>0</sub><sup>s+c</sup> ab exp(-ax - bs) dx</div></div>'
+          : '<p>Fix <span class="math">y = s = ' + sVal + '</span>. This slice contributes no volume because <span class="math">s + c = ' + fmt(upper) + ' ≤ 0</span>.</p>') +
+        '</div>' +
+        '<div class="calc-step"><h3>Step 2 · Accumulate slice areas</h3>' +
+        '<div class="formula-lines">' +
+        (state.c >= 0
+          ? '<div class="formula-line">volume = ∫<sub>0</sub><sup>∞</sup> ∫<sub>0</sub><sup>y+c</sup> ab exp(-ax - by) dx dy</div><div class="formula-line">= 1 - (b/(a+b)) exp(-ac) = ' + fmt4(p) + '</div>'
+          : '<div class="formula-line">volume = ∫<sub>-c</sub><sup>∞</sup> ∫<sub>0</sub><sup>y+c</sup> ab exp(-ax - by) dx dy</div><div class="formula-line">= (a/(a+b)) exp(bc) = ' + fmt4(p) + '</div>') +
+        '</div></div>',
+      orderNote:"For c < 0, horizontal slices start only after y = -c."
+    };
+  }
+  function renderReadout(){
+    var data = formulaData();
+    els.probabilityReadout.textContent = data.prob;
+    els.formulaMessage.textContent = data.message;
+    els.mainExplanation.textContent = state.example === "triangle"
+      ? "The shaded region X ≤ c selects part of the triangular base. Since f(x,y) = 2 is flat on T, the probability volume is selected base area × 2."
+      : "The shaded region X < Y + c is the part of the first quadrant above y = x - c. The surface is curved, so probability must be accumulated under ab exp(-ax-by).";
+    els.orderExplanation.textContent = data.orderNote + " Both orders accumulate the same total volume.";
+    els.calculationContent.innerHTML = data.calcHtml;
+    updateCalculationVisibility();
+  }
+  function updateCalculationVisibility(){
+    if (!els.calculationPanel || !els.calcToggle) return;
+    els.calculationPanel.classList.toggle("show",state.showCalculation);
+    els.calcToggle.classList.toggle("active",state.showCalculation);
+    els.calcToggle.setAttribute("aria-pressed",state.showCalculation ? "true" : "false");
+    els.calcToggle.textContent = state.showCalculation ? "Hide volume calculation" : "Show volume calculation";
+  }
+  function renderModelCard(){
+    if (!els.modelPdf || !els.modelSupport || !els.modelEvent || !els.modelParams || !els.modelInterpretation) return;
+    if (state.example === "triangle"){
+      els.modelPdf.innerHTML =
+        '<div class="model-line">f(x,y) = 2, for (x,y) ∈ T</div>' +
+        '<div class="model-line">f(x,y) = 0, otherwise</div>';
+      els.modelSupport.innerHTML = '<div class="model-line">T = {x ≥ 0, y ≥ 0, x + y ≤ 1}</div>';
+      els.modelEvent.innerHTML = '<div class="model-line">X ≤ c</div>';
+      els.modelParams.innerHTML = '<div class="model-line">Current c = ' + fmtInput(state.c) + '</div>';
+      els.modelInterpretation.textContent = "The shaded region is X ≤ c. The selected volume under f(x,y) gives P(X ≤ c).";
+      return;
+    }
+    els.modelPdf.innerHTML =
+      '<div class="model-line">f(x,y) = ab exp(−ax − by), for x ≥ 0, y ≥ 0</div>' +
+      '<div class="model-line">f(x,y) = 0, otherwise</div>';
+    els.modelSupport.innerHTML = '<div class="model-line">Domain: x ≥ 0, y ≥ 0</div>';
+    els.modelEvent.innerHTML = '<div class="model-line">X < Y + c</div>';
+    els.modelParams.innerHTML =
+      '<div class="model-line">Current c = ' + fmtInput(state.c) +
+      ', a = ' + fmtInput(state.a) +
+      ', b = ' + fmtInput(state.b) + '</div>';
+    els.modelInterpretation.textContent = "The shaded region is X < Y + c. The selected volume under f(x,y) gives P(X < Y + c).";
+  }
+  function popoverText(trigger){
+    if (trigger.getAttribute("data-popover-key") === "event-c"){
+      return state.example === "triangle"
+        ? "c changes the shaded region X ≤ c. As the region grows, the selected volume grows."
+        : "c shifts the boundary y = x − c. Positive c makes the shaded region larger; negative c makes it smaller.";
+    }
+    return trigger.getAttribute("data-popover") || "";
+  }
+  function setupLearningPopovers(){
+    var triggers = Array.prototype.slice.call(document.querySelectorAll("[data-popover], [data-popover-key]"));
+    if (!triggers.length) return;
+    var popover = document.createElement("div");
+    popover.id = "learningPopover";
+    popover.className = "learning-popover";
+    popover.setAttribute("role","tooltip");
+    document.body.appendChild(popover);
+    var active = null;
+
+    function setPopoverExpanded(trigger,value){
+      if (!trigger.hasAttribute("aria-controls")){
+        trigger.setAttribute("aria-expanded",value);
+      }
+    }
+
+    function positionPopover(trigger){
+      var rect = trigger.getBoundingClientRect();
+      popover.style.left = "0px";
+      popover.style.top = "0px";
+      var gap = 8;
+      var margin = 10;
+      var popRect = popover.getBoundingClientRect();
+      var left = rect.left + rect.width / 2 - popRect.width / 2;
+      left = clamp(left, margin, window.innerWidth - popRect.width - margin);
+      var top = rect.bottom + gap;
+      if (top + popRect.height + margin > window.innerHeight){
+        top = rect.top - popRect.height - gap;
+      }
+      top = clamp(top, margin, window.innerHeight - popRect.height - margin);
+      popover.style.left = left + "px";
+      popover.style.top = top + "px";
+    }
+
+    function openPopover(trigger){
+      if (active && active !== trigger) setPopoverExpanded(active,"false");
+      active = trigger;
+      popover.textContent = popoverText(trigger);
+      popover.classList.add("show");
+      setPopoverExpanded(trigger,"true");
+      positionPopover(trigger);
+    }
+
+    function closePopover(trigger){
+      if (trigger && active !== trigger) return;
+      if (active) setPopoverExpanded(active,"false");
+      active = null;
+      popover.classList.remove("show");
+    }
+
+    triggers.forEach(function(trigger){
+      trigger.classList.add("popover-trigger");
+      if (!trigger.hasAttribute("tabindex") && !/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(trigger.tagName)){
+        trigger.tabIndex = 0;
+      }
+      trigger.setAttribute("aria-describedby", popover.id);
+      setPopoverExpanded(trigger,"false");
+      trigger.addEventListener("mouseenter",function(){ openPopover(trigger); });
+      trigger.addEventListener("mouseleave",function(){ closePopover(trigger); });
+      trigger.addEventListener("focus",function(){ openPopover(trigger); });
+      trigger.addEventListener("blur",function(){ closePopover(trigger); });
+      trigger.addEventListener("click",function(e){
+        if (trigger.tagName === "LABEL") e.preventDefault();
+        if (active === trigger && popover.classList.contains("show")){
+          closePopover(trigger);
+        } else {
+          openPopover(trigger);
+        }
+        e.stopPropagation();
+      });
+    });
+
+    document.addEventListener("click",function(e){
+      if (!active) return;
+      if (active.contains(e.target)) return;
+      closePopover();
+    });
+    document.addEventListener("keydown",function(e){
+      if (e.key === "Escape") closePopover();
+    });
+    window.addEventListener("resize",function(){ if (active) positionPopover(active); });
+    window.addEventListener("scroll",function(){ if (active) positionPopover(active); }, true);
+  }
+  function syncControls(){
+    var expo = state.example === "expo";
+    els.rateControls.classList.toggle("hidden",!expo);
+    els.eventLabel.textContent = expo ? "Event shift" : "Event cutoff";
+    els.eventSlider.min = expo ? -5 : 0;
+    els.eventSlider.max = expo ? 5 : 1;
+    els.eventSlider.step = expo ? 0.05 : 0.01;
+    els.eventInput.min = els.eventSlider.min;
+    els.eventInput.max = els.eventSlider.max;
+    els.eventInput.step = els.eventSlider.step;
+    els.eventSlider.value = state.c;
+    if (document.activeElement !== els.eventInput) els.eventInput.value = fmtInput(state.c);
+    els.eventMin.textContent = expo ? "-5" : "0";
+    var d = domain();
+    if (state.order === "dydx"){
+      els.sliceSlider.min = d.xMin;
+      els.sliceSlider.max = d.xMax;
+      els.sliceMin.textContent = fmt(d.xMin);
+    } else {
+      els.sliceSlider.min = d.yMin;
+      els.sliceSlider.max = d.yMax;
+      els.sliceMin.textContent = fmt(d.yMin);
+    }
+    els.sliceSlider.step = expo ? 0.05 : 0.01;
+    els.sliceInput.min = els.sliceSlider.min;
+    els.sliceInput.max = els.sliceSlider.max;
+    els.sliceInput.step = els.sliceSlider.step;
+    state.s = clamp(state.s, Number(els.sliceSlider.min), Number(els.sliceSlider.max));
+    els.sliceSlider.value = state.s;
+    if (document.activeElement !== els.sliceInput) els.sliceInput.value = fmtInput(state.s);
+    els.rateASlider.value = state.a;
+    els.rateBSlider.value = state.b;
+    if (document.activeElement !== els.rateAInput) els.rateAInput.value = fmtInput(state.a);
+    if (document.activeElement !== els.rateBInput) els.rateBInput.value = fmtInput(state.b);
+  }
+  function render(){
+    applyViewOverlayPositions();
+    syncControls();
+    renderModelCard();
+    drawSurface();
+    drawRegion();
+    renderReadout();
+    clampFloatingCalculationPanel();
+    updateTuningPanel();
+  }
+  function applyViewOverlayPositions(){
+    var plotCard = els.surface.parentElement;
+    if (!plotCard) return;
+    plotCard.classList.toggle("tune-positioned",tuningEnabled);
+  }
+  function resetCamera(){
+    state.view = cloneViewSettings(state.example);
+    state.camera = state.view;
+    render();
+  }
+  function setExample(example){
+    state.example = example;
+    if (example === "triangle"){
+      state.c = .5;
+      state.s = state.order === "dydx" ? .25 : .35;
+    } else {
+      state.c = -1;
+      state.s = .8;
+    }
+    document.querySelectorAll("[data-example]").forEach(function(btn){
+      var active = btn.getAttribute("data-example") === example;
+      btn.classList.toggle("active",active);
+      btn.setAttribute("aria-selected",active ? "true" : "false");
+    });
+    resetCamera();
+  }
+  function setOrder(order){
+    state.order = order;
+    state.s = state.example === "triangle" ? .25 : .8;
+    document.querySelectorAll("[data-order]").forEach(function(btn){
+      var active = btn.getAttribute("data-order") === order;
+      btn.classList.toggle("active",active);
+      btn.setAttribute("aria-checked",active ? "true" : "false");
+    });
+    render();
+  }
+  function pointer(evt){
+    var src = evt.touches ? evt.touches[0] : evt;
+    var rect = els.surface.getBoundingClientRect();
+    return { x:src.clientX - rect.left, y:src.clientY - rect.top };
+  }
+  function clampFloatingCalculationPanel(){
+    if (!els.calculationPanel) return;
+    var panel = els.calculationPanel;
+    if (!panel.classList.contains("show")) return;
+    var parent = panel.parentElement;
+    if (!parent || !panel.style.left || !panel.style.top) return;
+    var parentRect = parent.getBoundingClientRect();
+    var panelRect = panel.getBoundingClientRect();
+    var margin = 8;
+    var left = clamp(parseFloat(panel.style.left) || 0, margin, Math.max(margin, parentRect.width - panelRect.width - margin));
+    var top = clamp(parseFloat(panel.style.top) || 0, margin, Math.max(margin, parentRect.height - panelRect.height - margin));
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+  }
+  function setupFloatingCalculationPanel(){
+    if (!els.calculationPanel || !els.calcDragHandle) return;
+    var drag = { active:false, dx:0, dy:0 };
+    function setPanelPosition(left,top){
+      var panel = els.calculationPanel;
+      var parent = panel.parentElement;
+      if (!parent) return;
+      var parentRect = parent.getBoundingClientRect();
+      var panelRect = panel.getBoundingClientRect();
+      var margin = 8;
+      left = clamp(left, margin, Math.max(margin, parentRect.width - panelRect.width - margin));
+      top = clamp(top, margin, Math.max(margin, parentRect.height - panelRect.height - margin));
+      panel.style.left = left + "px";
+      panel.style.top = top + "px";
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+    }
+    function beginDrag(e){
+      var panel = els.calculationPanel;
+      var parent = panel.parentElement;
+      if (!parent) return;
+      var parentRect = parent.getBoundingClientRect();
+      var panelRect = panel.getBoundingClientRect();
+      drag.active = true;
+      drag.dx = e.clientX - panelRect.left;
+      drag.dy = e.clientY - panelRect.top;
+      panel.classList.add("dragging");
+      setPanelPosition(panelRect.left - parentRect.left, panelRect.top - parentRect.top);
+      if (els.calcDragHandle.setPointerCapture && e.pointerId != null) els.calcDragHandle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    function moveDrag(e){
+      if (!drag.active) return;
+      var parent = els.calculationPanel.parentElement;
+      if (!parent) return;
+      var parentRect = parent.getBoundingClientRect();
+      setPanelPosition(e.clientX - parentRect.left - drag.dx, e.clientY - parentRect.top - drag.dy);
+      e.preventDefault();
+    }
+    function endDrag(){
+      drag.active = false;
+      els.calculationPanel.classList.remove("dragging");
+    }
+    els.calcDragHandle.addEventListener("pointerdown",beginDrag);
+    window.addEventListener("pointermove",moveDrag);
+    window.addEventListener("pointerup",endDrag);
+    window.addEventListener("pointercancel",endDrag);
+    els.calcDragHandle.addEventListener("keydown",function(e){
+      var keys = { ArrowLeft:[-10,0], ArrowRight:[10,0], ArrowUp:[0,-10], ArrowDown:[0,10] };
+      if (!keys[e.key]) return;
+      var panel = els.calculationPanel;
+      var parent = panel.parentElement;
+      if (!parent) return;
+      var parentRect = parent.getBoundingClientRect();
+      var panelRect = panel.getBoundingClientRect();
+      var delta = keys[e.key];
+      setPanelPosition(panelRect.left - parentRect.left + delta[0], panelRect.top - parentRect.top + delta[1]);
+      e.preventDefault();
+    });
+  }
+  function setupSurfaceInteraction(){
+    function dragMode(e){
+      if (e && e.touches && e.touches.length >= 2) return "pan";
+      if (e && (e.shiftKey || e.button === 1 || e.button === 2)) return "pan";
+      return "rotate";
+    }
+    function panCamera(dx,dy){
+      var s = resizeCanvas(els.surface);
+      var w = Math.max(1,s.w || els.surface.width || 1);
+      var h = Math.max(1,s.h || els.surface.height || 1);
+      state.camera.centerX = clamp((state.camera.centerX == null ? DEFAULT_VIEW_SETTINGS.centerX : state.camera.centerX) + dx / w, .18, .82);
+      state.camera.centerY = clamp((state.camera.centerY == null ? DEFAULT_VIEW_SETTINGS.centerY : state.camera.centerY) + dy / h, .18, .88);
+    }
+    function updateDragClass(){
+      els.surface.classList.toggle("panning",state.dragMode === "pan");
+      els.surface.classList.toggle("dragging",state.dragMode !== "pan" && state.dragging);
+    }
+    function touchCenter(e){
+      if (!e.touches || e.touches.length < 2) return pointer(e);
+      var rect = els.surface.getBoundingClientRect();
+      return {
+        x:((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left,
+        y:((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top
+      };
+    }
+    els.surface.addEventListener("mousedown",function(e){
+      var p = pointer(e);
+      state.dragging = true;
+      state.dragMode = dragMode(e);
+      state.lastX = p.x;
+      state.lastY = p.y;
+      updateDragClass();
+      if (state.dragMode === "pan") e.preventDefault();
+    });
+    els.surface.addEventListener("contextmenu",function(e){ e.preventDefault(); });
+    window.addEventListener("mousemove",function(e){
+      if (!state.dragging) return;
+      var p = pointer(e);
+      if (state.dragMode === "pan"){
+        panCamera(p.x - state.lastX,p.y - state.lastY);
+      } else {
+        state.camera.yaw += (p.x - state.lastX) * .008;
+        state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+      }
+      state.lastX = p.x;
+      state.lastY = p.y;
+      render();
+    });
+    window.addEventListener("mouseup",function(){
+      state.dragging = false;
+      state.dragMode = null;
+      els.surface.classList.remove("dragging");
+      els.surface.classList.remove("panning");
+    });
+    els.surface.addEventListener("touchstart",function(e){
+      var p = touchCenter(e);
+      state.dragging = true;
+      state.dragMode = dragMode(e);
+      state.lastX = p.x;
+      state.lastY = p.y;
+      updateDragClass();
+      e.preventDefault();
+    },{ passive:false });
+    els.surface.addEventListener("touchmove",function(e){
+      if (!state.dragging) return;
+      var p = touchCenter(e);
+      if (state.dragMode === "pan" || (e.touches && e.touches.length >= 2)){
+        state.dragMode = "pan";
+        panCamera(p.x - state.lastX,p.y - state.lastY);
+      } else {
+        state.camera.yaw += (p.x - state.lastX) * .008;
+        state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+      }
+      state.lastX = p.x;
+      state.lastY = p.y;
+      updateDragClass();
+      render();
+      e.preventDefault();
+    },{ passive:false });
+    els.surface.addEventListener("touchend",function(){
+      state.dragging = false;
+      state.dragMode = null;
+      els.surface.classList.remove("dragging");
+      els.surface.classList.remove("panning");
+    });
+    els.surface.addEventListener("wheel",function(e){
+      state.camera.zoom = clamp(state.camera.zoom * (e.deltaY > 0 ? .94 : 1.06), .72, 1.48);
+      render();
+      e.preventDefault();
+    },{ passive:false });
+    els.surface.addEventListener("keydown",function(e){
+      if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")){
+        var step = e.key === "ArrowLeft" || e.key === "ArrowUp" ? -.025 : .025;
+        var surfaceSize = resizeCanvas(els.surface);
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") panCamera(step * surfaceSize.w,0);
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") panCamera(0,step * surfaceSize.h);
+        render();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight"){
+        state.camera.yaw += e.key === "ArrowLeft" ? -.08 : .08;
+        render();
+        e.preventDefault();
+      }
+      if (e.key === "ArrowUp" || e.key === "ArrowDown"){
+        state.camera.pitch = clamp(state.camera.pitch + (e.key === "ArrowUp" ? -.06 : .06), .18, 1.42);
+        render();
+        e.preventDefault();
+      }
+    });
+  }
+  function setupFeedback(){
+    var button = document.getElementById("fbButton");
+    var panel = document.getElementById("fbPanel");
+    var overlay = document.getElementById("fbOverlay");
+    var form = document.getElementById("fbForm");
+    var fb = {
+      category:document.getElementById("fbCategory"),
+      description:document.getElementById("fbDescription"),
+      expected:document.getElementById("fbExpected"),
+      context:document.getElementById("fbContextSummary"),
+      status:document.getElementById("fbStatus"),
+      prepared:document.getElementById("fbPreparedText"),
+      recipient:document.getElementById("fbPreparedRecipient"),
+      subject:document.getElementById("fbPreparedSubject"),
+      body:document.getElementById("fbPreparedBody"),
+      close:document.getElementById("fbClose"),
+      cancel:document.getElementById("fbCancel"),
+      copy:document.getElementById("fbCopy")
+    };
+    var subjectTags = {
+      "Something I found helpful":"[Helpful]",
+      "A suggestion for improvement":"[Suggestion]",
+      "A content or explanation issue":"[Content Issue]",
+      "A technical problem":"[Technical Issue]",
+      "General feedback":"[General]"
+    };
+    var lastFocus = null;
+    function clean(value){ return String(value || "").replace(/\s+/g," ").trim(); }
+    function fieldText(value){
+      return String(value || "").replace(/\r\n/g,"\n").replace(/[ \t]+\n/g,"\n").replace(/\n[ \t]+/g,"\n").trim();
+    }
+    function setStatus(message,ok){
+      fb.status.textContent = message || "";
+      fb.status.classList.toggle("ok",Boolean(ok));
+    }
+    function currentFeedbackContext(){
+      var lines = [
+        "Demo: Probability as Volume Under a Joint pdf",
+        "Selected example: " + (state.example === "triangle" ? "Example 2 triangular joint pdf" : "Example 3 exponential lifetimes"),
+        "Event: " + (state.example === "triangle" ? "X <= c" : "X < Y + c"),
+        "Event parameter: c = " + fmt(state.c),
+        "Integration order: " + (state.order === "dydx" ? "dy dx" : "dx dy"),
+        "Accumulation slice: s = " + fmt(state.s),
+        "Probability value: " + fmt4(probability())
+      ];
+      if (state.example === "expo") lines.splice(4,0,"Rates: a = " + fmt(state.a) + ", b = " + fmt(state.b));
+      return lines.join("\n");
+    }
+    function setContext(){ fb.context.textContent = currentFeedbackContext(); }
+    function subjectFor(type){ return FEEDBACK_EMAIL_CONFIG.subjectPrefix + " " + (subjectTags[type] || "[General]"); }
+    function openFeedback(){
+      lastFocus = document.activeElement;
+      setContext();
+      setStatus("");
+      fb.prepared.classList.remove("show");
+      panel.classList.add("show");
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden","false");
+      setTimeout(function(){ fb.description.focus(); },0);
+    }
+    function closeFeedback(){
+      panel.classList.remove("show");
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden","true");
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    function buildEmail(){
+      var type = clean(fb.category.value);
+      var feedback = fieldText(fb.description.value);
+      var improvement = fieldText(fb.expected.value);
+      if (!type || !subjectTags[type]){
+        setStatus("Please choose what you would like to share.");
+        fb.category.focus();
+        return null;
+      }
+      if (!feedback){
+        setStatus("Please enter your feedback before sending.");
+        fb.description.focus();
+        return null;
+      }
+      setContext();
+      return {
+        recipient:FEEDBACK_EMAIL_CONFIG.recipient,
+        subject:subjectFor(type),
+        body:[
+          "Feedback type:",
+          type,
+          "",
+          "Student feedback:",
+          feedback,
+          "",
+          "Suggested improvement:",
+          improvement || "(not provided)",
+          "",
+          fb.context.textContent
+        ].join("\n")
+      };
+    }
+    function showPrepared(email){
+      fb.recipient.value = email.recipient;
+      fb.subject.value = email.subject;
+      fb.body.value = email.body;
+    }
+    function mailtoUrl(email){
+      return "mailto:" + encodeURIComponent(email.recipient) +
+        "?subject=" + encodeURIComponent(email.subject) +
+        "&body=" + encodeURIComponent(email.body);
+    }
+    function submitFeedback(event){
+      event.preventDefault();
+      var email = buildEmail();
+      if (!email) return;
+      showPrepared(email);
+      window.location.href = mailtoUrl(email);
+      setStatus("Your email app should now be open. Please review the message and press Send.",true);
+    }
+    function copyText(text){
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+      return Promise.reject(new Error("Clipboard API unavailable"));
+    }
+    function copyPrepared(){
+      var email = buildEmail();
+      if (!email) return;
+      showPrepared(email);
+      var text = "To: " + email.recipient + "\nSubject: " + email.subject + "\n\n" + email.body;
+      copyText(text).then(function(){
+        setStatus("Feedback copied. Please paste it into an email and send it to " + FEEDBACK_EMAIL_CONFIG.recipient + ".",true);
+      }).catch(function(){
+        fb.prepared.classList.add("show");
+        setStatus("Clipboard access failed. The prepared feedback is shown below for copying.");
+      });
+    }
+    button.addEventListener("click",openFeedback);
+    fb.close.addEventListener("click",closeFeedback);
+    fb.cancel.addEventListener("click",closeFeedback);
+    fb.copy.addEventListener("click",copyPrepared);
+    overlay.addEventListener("click",closeFeedback);
+    form.addEventListener("submit",submitFeedback);
+    document.addEventListener("keydown",function(event){
+      if (event.key === "Escape" && panel.classList.contains("show")) closeFeedback();
+    });
+  }
+  var TUNE_CONTROLS = [
+    { key:"yaw", label:"yaw", min:-3.14, max:3.14, step:.01 },
+    { key:"pitch", label:"pitch", min:.18, max:1.42, step:.01 },
+    { key:"zoom", label:"zoom", min:.70, max:1.60, step:.01 },
+    { key:"centerX", label:"centerX", min:.35, max:.65, step:.01 },
+    { key:"centerY", label:"centerY", min:.40, max:.80, step:.01 },
+    { key:"zScale", label:"zScale", min:.80, max:2.00, step:.01 },
+    { key:"selectedVolumeLabelX", label:"volume label X", min:.05, max:.95, step:.01 },
+    { key:"selectedVolumeLabelY", label:"volume label Y", min:.05, max:.95, step:.01 }
+  ];
+  function tuneSnippet(){
+    var lines = [state.example + ":{"];
+    TUNE_CONTROLS.forEach(function(control,idx){
+      var comma = idx === TUNE_CONTROLS.length - 1 ? "" : ",";
+      lines.push("  " + control.key + ":" + Number(state.view[control.key]).toFixed(2) + comma);
+    });
+    lines.push("}");
+    return lines.join("\n");
+  }
+  function updateTuningPanel(){
+    if (!tuningEnabled || !els.tuningPanel) return;
+    TUNE_CONTROLS.forEach(function(control){
+      var input = els.tuningPanel.querySelector('[data-tune-key="' + control.key + '"]');
+      var value = els.tuningPanel.querySelector('[data-tune-value="' + control.key + '"]');
+      if (input && document.activeElement !== input) input.value = state.view[control.key];
+      if (value) value.textContent = Number(state.view[control.key]).toFixed(2);
+    });
+    if (els.tuneOutput) els.tuneOutput.value = tuneSnippet();
+  }
+  function setupTuning(){
+    if (!tuningEnabled || !els.tuningPanel || !els.tuneControls) return;
+    els.tuningPanel.classList.add("show");
+    TUNE_CONTROLS.forEach(function(control){
+      var row = document.createElement("label");
+      row.className = "tune-control";
+      var name = document.createElement("span");
+      name.textContent = control.label;
+      var input = document.createElement("input");
+      input.type = "range";
+      input.min = control.min;
+      input.max = control.max;
+      input.step = control.step;
+      input.value = state.view[control.key];
+      input.setAttribute("data-tune-key",control.key);
+      var value = document.createElement("span");
+      value.className = "tune-value mono";
+      value.setAttribute("data-tune-value",control.key);
+      value.textContent = Number(state.view[control.key]).toFixed(2);
+      input.addEventListener("input",function(){
+        state.view[control.key] = Number(input.value);
+        state.camera = state.view;
+        if (els.tuneStatus) els.tuneStatus.textContent = "";
+        render();
+      });
+      row.appendChild(name);
+      row.appendChild(input);
+      row.appendChild(value);
+      els.tuneControls.appendChild(row);
+    });
+    if (els.copyTuningValues){
+      els.copyTuningValues.addEventListener("click",function(){
+        var text = tuneSnippet();
+        function copied(){ if (els.tuneStatus) els.tuneStatus.textContent = "Copied tuning values."; }
+        function fallback(){
+          if (els.tuneOutput){
+            els.tuneOutput.focus();
+            els.tuneOutput.select();
+          }
+          if (els.tuneStatus) els.tuneStatus.textContent = "Select the values below to copy.";
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(copied,fallback);
+        } else {
+          fallback();
+        }
+      });
+    }
+    updateTuningPanel();
+  }
+
+  document.querySelectorAll("[data-example]").forEach(function(btn){
+    btn.addEventListener("click",function(){ setExample(btn.getAttribute("data-example")); });
+  });
+  document.querySelectorAll("[data-order]").forEach(function(btn){
+    btn.addEventListener("click",function(){ setOrder(btn.getAttribute("data-order")); });
+  });
+  function inputNumberValue(input){
+    var text = String(input.value || "").trim();
+    if (text === "" || text === "-" || text === "." || text === "-.") return null;
+    var value = Number(text);
+    return Number.isFinite(value) ? value : null;
+  }
+  function setEventValue(value){
+    var expo = state.example === "expo";
+    var min = expo ? -5 : 0;
+    var max = expo ? 5 : 1;
+    state.c = clamp(value,min,max);
+    render();
+  }
+  function setSliceValue(value){
+    state.s = clamp(value,Number(els.sliceSlider.min),Number(els.sliceSlider.max));
+    render();
+  }
+  function setRateA(value){
+    state.a = clamp(value,.3,3);
+    render();
+  }
+  function setRateB(value){
+    state.b = clamp(value,.3,3);
+    render();
+  }
+  function bindNumberInput(input,setter,current){
+    input.addEventListener("input",function(){
+      var value = inputNumberValue(input);
+      if (value == null) return;
+      setter(value);
+    });
+    input.addEventListener("blur",function(){
+      var value = inputNumberValue(input);
+      setter(value == null ? current() : value);
+    });
+  }
+  els.eventSlider.addEventListener("input",function(){
+    setEventValue(Number(els.eventSlider.value));
+  });
+  els.sliceSlider.addEventListener("input",function(){
+    setSliceValue(Number(els.sliceSlider.value));
+  });
+  els.rateASlider.addEventListener("input",function(){
+    setRateA(Number(els.rateASlider.value));
+  });
+  els.rateBSlider.addEventListener("input",function(){
+    setRateB(Number(els.rateBSlider.value));
+  });
+  bindNumberInput(els.eventInput,setEventValue,function(){ return state.c; });
+  bindNumberInput(els.sliceInput,setSliceValue,function(){ return state.s; });
+  bindNumberInput(els.rateAInput,setRateA,function(){ return state.a; });
+  bindNumberInput(els.rateBInput,setRateB,function(){ return state.b; });
+  if (els.calcToggle){
+    els.calcToggle.addEventListener("click",function(){
+      state.showCalculation = !state.showCalculation;
+      updateCalculationVisibility();
+      clampFloatingCalculationPanel();
+    });
+  }
+  document.getElementById("resetView").addEventListener("click",resetCamera);
+  window.addEventListener("resize",render);
+  setupSurfaceInteraction();
+  setupFloatingCalculationPanel();
+  setupFeedback();
+  setupTuning();
+  setupLearningPopovers();
+  render();
+})();
+</script>
+<script>
+(function(){
+  if (new URLSearchParams(window.location.search).get("edit") !== "1") return;
+  var PREFIX = "W9C1-D3";
+  var TARGETS = [
+    ["main.panel","DEMO"],
+    [".model-card","FORMULA-SETUP"],
+    [".controls","SLIDER-GROUPS"],
+    [".control-wide:first-child","SLIDER-EXAMPLE"],
+    [".controls .control-block:nth-of-type(2)","SLIDER-C"],
+    [".controls .control-block:nth-of-type(3)","SLIDER-ORDER"],
+    [".controls .control-block:nth-of-type(4)","SLIDER-S"],
+    ["#rateControls","SLIDER-RATES"],
+    [".views","PLOTS"],
+    [".canvas-card.hero","PLOT-SURFACE"],
+    [".side-view .canvas-card.small","PLOT-REGION"],
+    [".formula-card","FORMULA-PANEL"],
+    ["#calculationPanel","CALC"],
+    [".explain","EXPLAIN-REGION"],
+    [".legend","EXPLAIN-LEGEND"]
+  ];
+  var DYNAMIC = [
+    [".control-block","CONTROL"],
+    [".slider-row","SLIDER-ROW"],
+    [".rate-grid > div","INPUT-RATE"],
+    ["input:not([type='range'])","INPUT"],
+    ["select","SELECT"],
+    ["textarea","TEXTAREA"],
+    [".segmented","OPTION-GROUP"],
+    [".canvas-badge","PLOT-LABEL"],
+    [".view-title","PLOT-TITLE"],
+    ["#probabilityReadout","FORMULA-PROBABILITY"],
+    [".legend .item","EXPLAIN-LEGEND-ITEM"],
+    ["#calculationPanel .calc-step","CALC-STEP"],
+    ["#calculationPanel .formula-lines","FORMULA"]
+  ];
+  var toastTimer = null;
+
+  function fullId(suffix){ return PREFIX + "-" + suffix; }
+
+  function showToast(message){
+    var toast = document.querySelector(".teacher-edit-toast");
+    if (!toast){
+      toast = document.createElement("div");
+      toast.className = "teacher-edit-toast";
+      toast.setAttribute("role","status");
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 1200);
+  }
+
+  function copyId(id){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(id).then(function(){ showToast("Copied " + id); }, fallback);
+    } else {
+      fallback();
+    }
+    function fallback(){
+      var area = document.createElement("textarea");
+      area.value = id;
+      area.style.position = "fixed";
+      area.style.left = "-999px";
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand("copy"); showToast("Copied " + id); }
+      catch (err) { showToast(id); }
+      area.remove();
+    }
+  }
+
+  function makeLabel(id){
+    var label = document.createElement("button");
+    label.type = "button";
+    label.className = "teacher-edit-label";
+    label.textContent = id;
+    label.title = "Copy edit label " + id;
+    label.addEventListener("click",function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      copyId(id);
+    });
+    return label;
+  }
+
+  function labelInlineBefore(el,id){
+    if (!el || el.dataset.teacherEditLabelled === id) return;
+    if (el.previousElementSibling && el.previousElementSibling.classList && el.previousElementSibling.classList.contains("teacher-edit-label")) return;
+    el.dataset.teacherEditLabelled = id;
+    var label = makeLabel(id);
+    label.classList.add("teacher-edit-inline");
+    el.parentNode.insertBefore(label,el);
+  }
+
+  function labelElement(el,id){
+    if (!el || el.dataset.teacherEditLabelled === id) return;
+    if (/^(INPUT|SELECT|TEXTAREA|IFRAME|CANVAS)$/.test(el.tagName)) {
+      labelInlineBefore(el,id);
+      return;
+    }
+    if (el.querySelector(":scope > .teacher-edit-label")) return;
+    el.dataset.teacherEditLabelled = id;
+    el.classList.add("teacher-edit-anchor");
+    var label = makeLabel(id);
+    el.insertBefore(label,el.firstChild);
+  }
+
+  function refreshLabels(){
+    TARGETS.forEach(function(item){
+      document.querySelectorAll(item[0]).forEach(function(el,index){
+        labelElement(el,fullId(item[1] + (index ? "-" + (index + 1) : "")));
+      });
+    });
+    DYNAMIC.forEach(function(item){
+      document.querySelectorAll(item[0]).forEach(function(el,index){
+        labelElement(el,fullId(item[1] + "-" + (index + 1)));
+      });
+    });
+  }
+
+  var indicator = document.createElement("div");
+  indicator.className = "teacher-edit-indicator";
+  indicator.textContent = "Edit labels ON";
+  document.body.appendChild(indicator);
+  refreshLabels();
+  new MutationObserver(refreshLabels).observe(document.body,{ childList:true, subtree:true });
+})();
+</script>
+</body>
+</html>
