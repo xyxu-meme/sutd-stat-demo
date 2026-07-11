@@ -1,0 +1,2483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+Demo purpose: Stage 1 standalone interactive demo for visualizing joint probability density functions as 3D surfaces, supports, slices, and marginals.
+Source PDF: week9class1_solution.pdf.
+Supported topic: Week 9 Class 1, continuous joint distributions; Example 2 triangular joint pdf and Example 3 independent exponential lifetimes.
+Output filename: joint-pdf-3d-explorer-demo.html.
+Known limitations: The 3D view uses a compact custom canvas renderer, so it is intended for teaching visualization rather than precise CAD-style inspection.
+-->
+<title>Joint Distributions: Surface, Support, and Marginals</title>
+<style>
+  :root{
+    --paper:#FAF7F0;
+    --ink:#1F2937;
+    --bar:#2E4374;
+    --navy:var(--bar);
+    --amber:#E0793F;
+    --sage:#3F6F5E;
+    --hair:#DDD6C7;
+    --hair-2:#C9C0AC;
+    --hair2:var(--hair-2);
+    --muted:#8A8272;
+    --soft:#F2EEE3;
+    --white:#FFFFFF;
+    --grid:#E9E2D5;
+    --slice-x:#D99A00;
+    --slice-y:#2563EB;
+    --side-plot-height:clamp(234px,27.3vh,286px);
+    --plot-gap:14px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    min-height:100vh;
+    margin:0;
+    padding:28px 14px 44px;
+    background-color:var(--paper);
+    background-image:radial-gradient(var(--hair2) 1px, transparent 1px);
+    background-size:18px 18px;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+  }
+  .mono{ font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace; }
+  .math-font{
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
+  }
+  .page{ width:100%; max-width:1180px; }
+  header{ margin:0 0 16px; }
+  .eyebrow{
+    margin:0 0 7px;
+    color:var(--sage);
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.075em;
+    text-transform:uppercase;
+  }
+  h1{
+    margin:0 0 8px;
+    color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    font-size:clamp(28px,4.2vw,40px);
+    line-height:1.12;
+    font-weight:650;
+  }
+  .lede{
+    margin:0;
+    max-width:100%;
+    color:#4B5159;
+    font-size:15.5px;
+    line-height:1.55;
+  }
+  .panel{
+    background:var(--white);
+    border:1px solid var(--hair);
+    border-radius:14px;
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.055);
+    padding:16px clamp(13px,2.6vw,24px) 20px;
+  }
+  .controls{
+    display:grid;
+    grid-template-columns:auto minmax(360px,1fr);
+    grid-template-areas:
+      "dist dist"
+      "slice sliceval"
+      "params params";
+    gap:11px 16px;
+    align-items:center;
+    padding-bottom:13px;
+    margin-bottom:14px;
+    border-bottom:1px dashed var(--hair);
+  }
+  .control-block{ min-width:0; }
+  .dist-control{ grid-area:dist; }
+  .slice-control{ grid-area:slice; }
+  .slice-value-control{ grid-area:sliceval; }
+  .label{
+    display:block;
+    margin:0 0 7px;
+    color:#4B5159;
+    font-size:13px;
+    font-weight:650;
+  }
+  .segmented{
+    display:inline-flex;
+    flex-wrap:wrap;
+    gap:2px;
+    padding:3px;
+    border-radius:999px;
+    background:var(--soft);
+  }
+  .dist-control .segmented{
+    flex-wrap:nowrap;
+  }
+  button,input{ font-family:inherit; }
+  button{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .seg-btn{
+    appearance:none;
+    min-height:36px;
+    padding:8px 12px;
+    border:0;
+    border-radius:999px;
+    background:transparent;
+    color:#6B6459;
+    cursor:pointer;
+    font-size:12.5px;
+    font-weight:700;
+  }
+  .dist-control .seg-btn{
+    padding-left:10px;
+    padding-right:10px;
+    white-space:nowrap;
+  }
+  .seg-btn.active{ background:var(--ink); color:#fff; }
+  .btn{
+    appearance:none;
+    min-height:38px;
+    padding:8px 12px;
+    border:1px solid var(--hair2);
+    border-radius:8px;
+    background:#fff;
+    color:#4B5159;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:650;
+  }
+  .btn.primary{ background:var(--sage); border-color:var(--sage); color:#fff; }
+  .btn.active,.btn[aria-pressed="true"]{
+    background:#FCEEE2;
+    border-color:rgba(224,121,63,.68);
+    color:#8A4B22;
+  }
+  .btn:disabled{ opacity:.45; cursor:default; }
+  .btn:focus-visible,.seg-btn:focus-visible,input:focus-visible,canvas:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+  .button-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .slice-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  .slider-row{
+    display:grid;
+    grid-template-columns:auto minmax(180px,1fr) auto auto;
+    gap:10px;
+    align-items:center;
+  }
+  input[type="range"]{ width:100%; accent-color:var(--amber); }
+  .value-pill{
+    min-width:68px;
+    width:86px;
+    padding:6px 8px;
+    border:1px solid var(--hair);
+    border-radius:8px;
+    background:#fffdf9;
+    color:#8A4B22;
+    text-align:center;
+    font-size:12.5px;
+    font-weight:750;
+  }
+  .value-editor{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:var(--bar);
+    font-weight:750;
+    white-space:nowrap;
+  }
+  input.value-pill{
+    appearance:textfield;
+  }
+  input.value-pill::-webkit-outer-spin-button,
+  input.value-pill::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  .param-controls{
+    display:none;
+    grid-area:params;
+    grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto;
+    gap:10px 12px;
+    align-items:end;
+  }
+  .param-controls.show{ display:grid; }
+  .param-row{
+    display:grid;
+    grid-template-columns:minmax(120px,1fr) auto;
+    gap:10px;
+    align-items:center;
+  }
+  .preset-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+  .views{
+    display:grid;
+    grid-template-columns:minmax(0,1.45fr) minmax(300px,.8fr);
+    gap:var(--plot-gap);
+    align-items:stretch;
+  }
+  .hero-view,.side-view{
+    min-width:0;
+  }
+  .side-view{
+    display:grid;
+    grid-template-rows:auto auto;
+    gap:var(--plot-gap);
+  }
+  .canvas-card{
+    position:relative;
+    min-width:0;
+    border:1px solid var(--hair2);
+    border-radius:12px;
+    background:linear-gradient(#fff,#fffdf9);
+    overflow:hidden;
+  }
+  .canvas-card.hero{ height:calc(var(--side-plot-height) * 2 + var(--plot-gap)); min-height:0; }
+  .canvas-card.small{ height:var(--side-plot-height); min-height:0; }
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+  #surfaceCanvas{ cursor:grab; }
+  #surfaceCanvas.dragging{ cursor:grabbing; }
+  .canvas-badge{
+    position:absolute;
+    left:12px;
+    top:10px;
+    padding:5px 8px;
+    border:1px solid rgba(46,67,116,.16);
+    border-radius:8px;
+    background:rgba(255,255,255,.9);
+    color:var(--navy);
+    font-size:12px;
+    font-weight:750;
+    pointer-events:none;
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
+  }
+  .canvas-badge[data-popover]{
+    pointer-events:auto;
+  }
+  .popover-trigger{
+    cursor:help;
+  }
+  .popover-trigger:focus-visible{
+    outline:2px solid rgba(224,121,63,.72);
+    outline-offset:2px;
+  }
+  .learning-popover{
+    position:fixed;
+    z-index:1500;
+    display:none;
+    max-width:260px;
+    padding:9px 10px;
+    border:1px solid rgba(201,192,172,.92);
+    border-left:4px solid var(--sage);
+    border-radius:10px;
+    background:rgba(255,253,249,.98);
+    color:var(--ink);
+    box-shadow:0 12px 28px rgba(31,41,55,.18);
+    font:600 12.5px/1.42 system-ui,-apple-system,Segoe UI,sans-serif;
+    pointer-events:none;
+  }
+  .learning-popover.show{
+    display:block;
+  }
+  .view-title{
+    position:absolute;
+    right:12px;
+    top:10px;
+    padding:5px 8px;
+    border-radius:8px;
+    background:rgba(242,238,227,.86);
+    color:var(--muted);
+    font-size:12px;
+    font-weight:700;
+    pointer-events:none;
+  }
+  .plot-reset{
+    position:absolute;
+    right:12px;
+    bottom:12px;
+    z-index:3;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 1px 2px rgba(31,41,55,.08);
+  }
+  .area-calc-toggle{
+    position:absolute;
+    top:12px;
+    right:12px;
+    z-index:5;
+    background:rgba(255,255,255,.95);
+    box-shadow:0 1px 2px rgba(31,41,55,.08);
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  .area-calc-toggle:disabled{
+    display:none;
+  }
+  .area-calc-popover{
+    position:absolute;
+    top:12px;
+    right:12px;
+    z-index:5;
+    display:inline-block;
+  }
+  .area-calc-popover[hidden]{
+    display:none;
+  }
+  .area-calc-popover .area-calc-toggle{
+    position:static;
+  }
+  .area-calc-panel{
+    position:absolute;
+    top:54px;
+    right:12px;
+    z-index:4;
+    display:none;
+    width:min(330px, calc(100% - 24px));
+    max-height:calc(100% - 112px);
+    overflow:auto;
+    padding:10px 12px;
+    border:1px solid rgba(224,121,63,.34);
+    border-radius:9px;
+    background:rgba(255,253,249,.96);
+    box-shadow:0 8px 22px rgba(31,41,55,.12);
+    color:#6F3A18;
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
+    text-align:left;
+  }
+  .area-calc-panel.show{
+    display:block;
+  }
+  .area-calc-panel h3{
+    margin:0 0 5px;
+    color:#7C3F1A;
+    font-size:13px;
+    line-height:1.2;
+  }
+  .area-calc-panel p{
+    margin:0 0 8px;
+    font-size:12.5px;
+    line-height:1.35;
+  }
+  .calc-math{
+    display:grid;
+    gap:2px;
+    margin:3px 0 7px;
+    font-size:13px;
+    line-height:1.32;
+    text-align:left;
+  }
+  .calc-math .calc-label{
+    font-weight:700;
+  }
+  .calc-math .calc-eq{
+    padding-left:12px;
+    white-space:nowrap;
+  }
+  .math-var{
+    font-style:italic;
+  }
+  .below{
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);
+    gap:14px;
+    margin-top:14px;
+  }
+  .readout,.explain{
+    min-width:0;
+    border:1px solid var(--hair);
+    border-radius:12px;
+    background:#fffdf9;
+    padding:11px 13px;
+  }
+  .readout{
+    display:grid;
+    gap:6px;
+    align-content:start;
+  }
+  .row{
+    display:grid;
+    grid-template-columns:140px minmax(0,1fr);
+    gap:10px;
+    align-items:start;
+    font-size:13.5px;
+    line-height:1.36;
+  }
+  .row .k{ color:#6B6459; font-weight:700; }
+  .row .v{
+    min-width:0;
+    overflow-wrap:anywhere;
+    color:var(--ink);
+  }
+  .row.slice{
+    margin-top:4px;
+    padding:9px 10px;
+    border-radius:9px;
+    background:#FCEEE2;
+  }
+  .row.slice .k{ color:#8A4B22; }
+  .row.slice .v{ color:#7C3F1A; font-weight:750; }
+  .slice-summary{
+    margin:0 0 5px;
+  }
+  .slice-derivation{
+    display:grid;
+    gap:2px;
+    margin-top:4px;
+    padding:7px 9px;
+    border:1px solid rgba(224,121,63,.24);
+    border-radius:7px;
+    background:rgba(255,253,249,.62);
+    color:#6F3A18;
+    font-weight:650;
+    overflow-x:auto;
+  }
+  .slice-derivation .step{
+    white-space:nowrap;
+  }
+  .slice-derivation math{
+    font-family:"Cambria Math","STIX Two Math","STIX Two Text","Latin Modern Math",serif;
+    font-size:15px;
+    line-height:1.2;
+  }
+  .slice-derivation .continued{
+    padding-left:1.8em;
+  }
+  .readout .v{
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
+    font-size:14px;
+    line-height:1.55;
+  }
+  .explain .formula-text{
+    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
+  }
+  .explain h2{
+    margin:0 0 6px;
+    color:var(--navy);
+    font-size:16px;
+  }
+  .explain p{
+    margin:0 0 7px;
+    color:#4B5159;
+    font-size:14px;
+    line-height:1.52;
+  }
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 14px;
+    margin-top:8px;
+    color:#6B6459;
+    font-size:12.5px;
+  }
+  footer{
+    margin-top:6px;
+    padding:0 4px;
+  }
+  .byline{
+    margin-top:16px;
+    padding-top:10px;
+    border-top:1px dashed var(--hair-2);
+    font-size:12px;
+    color:var(--muted);
+  }
+  .key{ display:inline-flex; gap:6px; align-items:center; }
+  .swatch{
+    width:12px;
+    height:12px;
+    border-radius:3px;
+    border:1px solid rgba(31,41,55,.12);
+  }
+  .s-surface{ background:rgba(46,67,116,.32); }
+  .s-support{ background:#F4F1E8; }
+  .s-slice-x{ background:var(--slice-x); }
+  .s-slice-y{ background:var(--slice-y); }
+  .sr-only{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    border:0;
+  }
+  .feedback-anchor{
+    position:fixed;
+    width:1px;
+    height:1px;
+    right:0;
+    bottom:0;
+    overflow:hidden;
+  }
+  #fbButton{
+    position:fixed;
+    right:22px;
+    bottom:18px;
+    z-index:72;
+    border:1px solid var(--hair);
+    border-radius:999px;
+    background:#fff;
+    color:var(--bar);
+    box-shadow:0 4px 14px rgba(31,41,55,.16);
+    padding:9px 14px;
+    font-size:12.5px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  #fbButton:hover,
+  #fbButton:focus-visible{
+    background:#F3F0E7;
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+  #fbOverlay{
+    position:fixed;
+    inset:0;
+    z-index:105;
+    display:none;
+    background:rgba(17,19,24,.34);
+  }
+  #fbOverlay.show{ display:block; }
+  #fbPanel{
+    position:fixed;
+    right:16px;
+    bottom:76px;
+    z-index:106;
+    display:none;
+    width:min(420px, calc(100vw - 28px));
+    max-height:min(76vh, 620px);
+    overflow:auto;
+    background:#fff;
+    border:1px solid var(--hair);
+    border-radius:12px;
+    box-shadow:0 18px 56px rgba(31,41,55,.30);
+    padding:16px;
+  }
+  #fbPanel.show{ display:block; }
+  #fbPanel h3{
+    margin:0 34px 8px 0;
+    font-size:18px;
+    color:var(--ink);
+  }
+  #fbClose{
+    position:absolute;
+    top:12px;
+    right:12px;
+    border:none;
+    background:transparent;
+    color:#7B7280;
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    padding:4px;
+  }
+  #fbPanel label{
+    display:block;
+    font-size:12px;
+    font-weight:800;
+    color:#4B5563;
+    margin:11px 0 5px;
+  }
+  #fbPanel .fb-intro{
+    margin:0 34px 12px 0;
+    font-size:13px;
+    line-height:1.45;
+    color:#4B5563;
+  }
+  #fbPanel select,
+  #fbPanel textarea,
+  #fbPanel input[type="text"]{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid var(--hair-2);
+    border-radius:8px;
+    padding:8px 9px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+  }
+  #fbPanel textarea{
+    min-height:74px;
+    resize:vertical;
+    line-height:1.45;
+  }
+  #fbPanel .fb-note{
+    font-size:12px;
+    color:#6B7280;
+    line-height:1.45;
+    margin:10px 0;
+  }
+  #fbPanel .fb-context{
+    background:#FCFBF7;
+    border:1px solid var(--hair);
+    border-radius:8px;
+    padding:9px;
+    font-size:12px;
+    color:#4B5563;
+    line-height:1.45;
+    white-space:pre-line;
+  }
+  #fbPanel .fb-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:14px;
+  }
+  #fbPanel .fb-secondary,
+  #fbPanel .fb-submit{
+    border-radius:8px;
+    padding:9px 13px;
+    font-size:12.5px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  #fbPanel .fb-secondary{
+    background:#fff;
+    color:#5B6472;
+    border:1px solid var(--hair);
+  }
+  #fbPanel .fb-submit{
+    background:var(--bar);
+    color:#fff;
+    border:1px solid var(--bar);
+  }
+  #fbStatus{
+    min-height:18px;
+    font-size:12.5px;
+    color:#9A3412;
+    margin-top:8px;
+  }
+  #fbStatus.ok{ color:#2F6F4E; }
+  #fbPreparedText{
+    display:none;
+    margin-top:8px;
+  }
+  #fbPreparedText.show{ display:block; }
+  #fbPreparedText input,
+  #fbPreparedText textarea{
+    font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    font-size:12px;
+  }
+  @media (max-width:920px){
+    .controls{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "dist"
+        "slice"
+        "sliceval"
+        "params";
+    }
+    .dist-control .segmented{
+      flex-wrap:wrap;
+    }
+    .views,.below{ grid-template-columns:1fr; }
+    .side-view{ grid-template-columns:1fr 1fr; grid-template-rows:auto; }
+    .canvas-card.hero{ height:468px; }
+  }
+  @media (max-width:620px){
+    body{ padding:18px 10px 34px; }
+    .panel{ padding:15px 12px 18px; border-radius:12px; }
+    .side-view{ grid-template-columns:1fr; }
+    .canvas-card.hero{ height:429px; }
+    .canvas-card.small{ height:260px; }
+    .param-controls.show{ grid-template-columns:1fr; }
+    .row{ grid-template-columns:1fr; gap:3px; }
+    .slider-row{ grid-template-columns:auto minmax(120px,1fr) auto; }
+    .slider-row .value-editor,
+    .slider-row .value-pill,
+    .slider-row .btn{ grid-column:1 / -1; width:max-content; }
+    .value-pill{ width:max-content; }
+    .area-calc-toggle{
+      top:auto;
+      right:10px;
+      bottom:10px;
+    }
+    .area-calc-popover{
+      top:auto;
+      right:10px;
+      bottom:10px;
+    }
+    .area-calc-panel{
+      top:auto;
+      left:10px;
+      right:10px;
+      bottom:56px;
+      width:auto;
+      max-height:45%;
+    }
+    #fbButton{ right:14px; bottom:14px; }
+    #fbPanel{ right:8px; left:8px; bottom:72px; width:auto; max-height:78vh; }
+  }
+</style>
+  <style>
+    .teacher-edit-label{
+      position:absolute;
+      top:6px;
+      left:6px;
+      z-index:80;
+      max-width:min(260px,calc(100% - 12px));
+      padding:3px 7px;
+      border:1px solid rgba(46,67,116,.38);
+      border-radius:999px;
+      background:rgba(250,247,240,.96);
+      color:#2E4374;
+      font:700 10.5px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      box-shadow:0 3px 10px rgba(31,41,55,.12);
+      cursor:pointer;
+      white-space:normal;
+      text-align:left;
+    }
+    .teacher-edit-label:hover,.teacher-edit-label:focus-visible{
+      background:#fff;
+      outline:2px solid rgba(224,121,63,.45);
+      outline-offset:2px;
+    }
+    .teacher-edit-label.teacher-edit-inline{
+      position:static;
+      display:inline-block;
+      margin:0 5px 4px 0;
+      vertical-align:middle;
+    }
+    .teacher-edit-anchor{ position:relative !important; }
+    .teacher-edit-indicator,.teacher-edit-toast{
+      position:fixed;
+      right:14px;
+      z-index:2000;
+      border:1px solid rgba(46,67,116,.32);
+      border-radius:999px;
+      background:rgba(31,41,55,.94);
+      color:#fff;
+      font:700 12px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;
+      box-shadow:0 10px 26px rgba(31,41,55,.22);
+    }
+    .teacher-edit-indicator{ bottom:14px; padding:8px 11px; }
+    .teacher-edit-toast{ bottom:54px; padding:7px 10px; opacity:0; transform:translateY(4px); transition:opacity .16s ease,transform .16s ease; }
+    .teacher-edit-toast.show{ opacity:1; transform:translateY(0); }
+    @media(max-width:640px){
+      .teacher-edit-label{ font-size:9.5px; top:4px; left:4px; max-width:calc(100% - 8px); }
+      .teacher-edit-indicator{ right:10px; bottom:10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty · Week 9, Class 1 · Singapore University of Technology and Design</p>
+    <h1>Joint Distributions: Surface, Support, and Marginals</h1>
+    <p class="lede">Compare the 3D joint pdf surface, its xy-plane support, and the marginal pdfs for several familiar examples.</p>
+  </header>
+
+  <main class="panel">
+    <section class="controls" aria-label="Demo controls">
+      <div class="control-block dist-control">
+        <span class="label popover-trigger" id="distLabel" tabindex="0" data-popover="Choose a joint pdf. Watch how the surface, xy-plane view, and marginal curve update together.">Distribution</span>
+        <div class="segmented" role="tablist" aria-labelledby="distLabel">
+          <button class="seg-btn" type="button" data-dist="uniform" role="tab">Independent uniforms</button>
+          <button class="seg-btn active" type="button" data-dist="triangle" role="tab" aria-selected="true">Example 2 triangular prism</button>
+          <button class="seg-btn" type="button" data-dist="bell" role="tab">Bell-shaped joint pdf</button>
+          <button class="seg-btn" type="button" data-dist="expo" role="tab">Example 3 exponential lifetimes</button>
+        </div>
+      </div>
+      <div class="control-block slice-control">
+        <span class="label popover-trigger" id="sliceLabel" tabindex="0" data-popover="Choose whether to fix x or fix y. The slice shows one cross-section of the joint pdf surface.">Slice mode</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="sliceLabel">
+          <button class="seg-btn active" type="button" data-slice="none" role="radio" aria-checked="true">No slice</button>
+          <button class="seg-btn" type="button" data-slice="x" role="radio">Fix x = c</button>
+          <button class="seg-btn" type="button" data-slice="y" role="radio">Fix y = c</button>
+        </div>
+      </div>
+      <div class="control-block slice-grid slice-value-control">
+        <label class="label popover-trigger" for="sliceSlider" tabindex="0" data-popover="Move c to slide the cross-section. Watch its area change and match the marginal value.">Slice cutoff</label>
+        <div class="slider-row">
+          <span class="mono" id="sliceMin">0</span>
+          <input id="sliceSlider" type="range" min="0" max="1" value="0.35" step="0.01" aria-label="Slice value c">
+          <span class="mono" id="sliceMax">1</span>
+          <label class="value-editor mono" for="sliceValue"><span>c =</span><input class="value-pill mono" id="sliceValue" type="number" min="0" max="1" value="0.350" step="0.01" aria-label="Set c value"></label>
+        </div>
+      </div>
+      <div class="control-block param-controls" id="expControls" aria-label="Example 3 exponential rate controls">
+        <div>
+          <label class="label" for="rateASlider">Rate a for X</label>
+          <div class="param-row">
+            <input id="rateASlider" type="range" min="0.3" max="3" value="1" step="0.05" aria-label="Rate a for X">
+            <span class="value-pill mono" id="rateAValue">a = 1</span>
+          </div>
+        </div>
+        <div>
+          <label class="label" for="rateBSlider">Rate b for Y</label>
+          <div class="param-row">
+            <input id="rateBSlider" type="range" min="0.3" max="3" value="1" step="0.05" aria-label="Rate b for Y">
+            <span class="value-pill mono" id="rateBValue">b = 1</span>
+          </div>
+        </div>
+        <div class="preset-row" aria-label="Example 3 rate presets">
+          <button class="btn" type="button" data-exp-preset="1,1">equal rates</button>
+          <button class="btn" type="button" data-exp-preset="2,1">faster X decay</button>
+          <button class="btn" type="button" data-exp-preset="1,2">faster Y decay</button>
+          <button class="btn" type="button" data-exp-preset="0.7,1.8">strongly asymmetric</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="views" aria-label="Linked visualizations">
+      <div class="hero-view">
+        <div class="canvas-card hero">
+          <canvas id="surfaceCanvas" tabindex="0" aria-label="Joint pdf surface in teaching view. Drag to rotate; use arrow keys to rotate from keyboard."></canvas>
+          <div class="canvas-badge mono popover-trigger" id="surfaceBadge" tabindex="0" data-popover="The height f(x,y) is density, not probability by itself. Areas and volumes give probability-related values.">f(x,y)</div>
+          <span class="area-calc-popover popover-trigger" id="areaCalcPopover" tabindex="-1" hidden data-popover="Open this to see why the cross-section area equals the marginal value at the selected c."><button class="btn area-calc-toggle" id="areaCalcToggle" type="button" aria-controls="areaCalcPanel" aria-expanded="false" disabled>Show area calculation</button></span>
+          <div class="area-calc-panel" id="areaCalcPanel" aria-live="polite"></div>
+          <button class="btn plot-reset active" type="button" data-camera="reset">Reset view · drag to rotate</button>
+        </div>
+      </div>
+      <div class="side-view">
+        <div class="canvas-card small">
+          <canvas id="supportCanvas" tabindex="0" aria-label="xy-plane support and active slice line"></canvas>
+          <div class="canvas-badge mono popover-trigger" tabindex="0" data-popover="This view shows where f(x,y) is nonzero and where the current slice cuts the xy-plane.">xy-plane view</div>
+        </div>
+        <div class="canvas-card small">
+          <canvas id="marginalCanvas" tabindex="0" aria-label="Marginal pdf graphs for X and Y"></canvas>
+          <div class="canvas-badge mono popover-trigger" tabindex="0" data-popover="This one-variable curve is formed by collecting cross-section areas from the 3D surface.">marginals</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="below">
+      <div class="readout mono" aria-live="polite" id="readout">
+        <div class="row"><span class="k">Joint pdf</span><span class="v" id="formulaJoint"></span></div>
+        <div class="row"><span class="k">Support</span><span class="v" id="formulaSupport"></span></div>
+        <div class="row"><span class="k">Marginals</span><span class="v" id="formulaMarginals"></span></div>
+      </div>
+      <aside class="explain">
+        <h2 id="messageTitle">What to notice</h2>
+        <p id="messageBody"></p>
+        <p>The xy panel shows where the joint density lives. The 3D panel shows how high the density is. The marginal panels summarize the joint density along one variable.</p>
+        <div class="legend" aria-label="Legend">
+          <span class="key"><span class="swatch s-surface"></span>surface</span>
+          <span class="key"><span class="swatch s-support"></span>support</span>
+          <span class="key"><span class="swatch s-slice-x"></span>x slice / f_X</span>
+          <span class="key"><span class="swatch s-slice-y"></span>y slice / f_Y</span>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <footer>
+    <div class="byline">XU, Ying · xu_ying@sutd.edu.sg · 10.022 Modelling Uncertainty</div>
+  </footer>
+</div>
+
+<span id="feedback" class="feedback-anchor" aria-hidden="true"></span>
+<button id="fbButton" type="button" aria-label="Open feedback form for this demo">Feedback</button>
+<div id="fbOverlay" aria-hidden="true"></div>
+<div id="fbPanel" role="dialog" aria-modal="true" aria-labelledby="fbTitle" aria-describedby="fbIntro">
+  <button id="fbClose" type="button" aria-label="Close feedback panel">&times;</button>
+  <h3 id="fbTitle">Share your feedback</h3>
+  <p class="fb-intro" id="fbIntro">Tell us what worked well and what could be improved. Your feedback will help refine this interactive demo.</p>
+  <form id="fbForm" novalidate>
+    <label for="fbCategory">What would you like to share?</label>
+    <select id="fbCategory" required>
+      <option value="" selected disabled>Select feedback type</option>
+      <option value="Something I found helpful">Something I found helpful</option>
+      <option value="A suggestion for improvement">A suggestion for improvement</option>
+      <option value="A content or explanation issue">A content or explanation issue</option>
+      <option value="A technical problem">A technical problem</option>
+      <option value="General feedback">General feedback</option>
+    </select>
+
+    <label for="fbDescription">Your feedback</label>
+    <textarea id="fbDescription" required></textarea>
+
+    <label for="fbExpected">What could make the demo better?</label>
+    <textarea id="fbExpected"></textarea>
+
+    <div class="fb-context" id="fbContextSummary">Demo: Joint Distributions</div>
+    <p class="fb-note">Please do not include personal or confidential information.</p>
+    <div class="fb-actions">
+      <button class="fb-secondary" id="fbCancel" type="button">Cancel</button>
+      <button class="fb-secondary" id="fbCopy" type="button">Copy feedback</button>
+      <button class="fb-submit" type="submit">Send feedback</button>
+    </div>
+    <div id="fbStatus" role="status" aria-live="polite"></div>
+    <div id="fbPreparedText" class="fb-prepared" aria-label="Prepared feedback email">
+      <label for="fbPreparedRecipient">Recipient</label>
+      <input id="fbPreparedRecipient" type="text" readonly>
+      <label for="fbPreparedSubject">Subject</label>
+      <input id="fbPreparedSubject" type="text" readonly>
+      <label for="fbPreparedBody">Message</label>
+      <textarea id="fbPreparedBody" readonly></textarea>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var C = {
+    ink:"#1F2937",
+    navy:"#2E4374",
+    amber:"#E0793F",
+    sage:"#3F6F5E",
+    xSlice:"#D99A00",
+    ySlice:"#2563EB",
+    xSliceFill:"rgba(217,154,0,.24)",
+    ySliceFill:"rgba(37,99,235,.20)",
+    xSliceFillStrong:"rgba(217,154,0,.32)",
+    ySliceFillStrong:"rgba(37,99,235,.28)",
+    hair:"#DDD6C7",
+    hair2:"#C9C0AC",
+    soft:"#F2EEE3",
+    support:"#F4F1E8",
+    grid:"#E9E2D5"
+  };
+  var TAU = Math.PI * 2;
+  var MATH_FONT_STACK = '"Cambria Math","STIX Two Text","Latin Modern Math",serif';
+  var prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var TEACHING_CAMERA = { yaw:-.78, pitch:1.25, zoom:1.14, centerY:.61 };
+  var TEACHING_CAMERA_BY_DIST = {
+    triangle:{ yaw:.68, pitch:1.02, zoom:1.06, centerY:.68 }
+  };
+  var FEEDBACK_EMAIL_CONFIG = {
+    recipient:"10022mufeedback@gmail.com",
+    subjectPrefix:"[10.022 MU Demo Feedback]"
+  };
+
+  var dists = {
+    uniform:{
+      id:"uniform",
+      name:"Independent uniforms",
+      xMin:0, xMax:1, yMin:0, yMax:1, zMax:1.25,
+      formula:"f(x,y) = 1 for 0 ≤ x ≤ 1, 0 ≤ y ≤ 1; 0 otherwise",
+      support:"Unit square: 0 ≤ x ≤ 1 and 0 ≤ y ≤ 1",
+      marginals:"f_X(x) = 1, 0 ≤ x ≤ 1;  f_Y(y) = 1, 0 ≤ y ≤ 1",
+      message:"A flat roof over a square support gives uniform marginals.",
+      pdf:function(x,y){ return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? 1 : 0; },
+      marginal:function(t){ return t >= 0 && t <= 1 ? 1 : 0; },
+      supportContains:function(x,y){ return x >= 0 && x <= 1 && y >= 0 && y <= 1; },
+      sliceRange:function(mode,c){ return mode === "x" ? "y ranges from 0 to 1" : "x ranges from 0 to 1"; },
+      sliceFormula:function(mode,c){ return mode === "x" ? "f_X(" + fmt(c) + ") = 1" : "f_Y(" + fmt(c) + ") = 1"; }
+    },
+    triangle:{
+      id:"triangle",
+      name:"Example 2 triangular prism",
+      xMin:0, xMax:1, yMin:0, yMax:1, zMax:2.25,
+      formula:"f(x,y) = 2 for x ≥ 0, y ≥ 0, x + y ≤ 1; 0 otherwise",
+      support:"Triangle T with vertices (0,0), (1,0), and (0,1)",
+      marginals:"f_X(x) = 2(1−x), 0 ≤ x ≤ 1;  f_Y(y) = 2(1−y), 0 ≤ y ≤ 1",
+      message:"The density height is constant, but the triangular support narrows as x or y increases. A slice at c has length 1−c, so its area is 2(1−c). That is why the marginals decrease linearly.",
+      pdf:function(x,y){ return x >= 0 && y >= 0 && x + y <= 1 ? 2 : 0; },
+      marginal:function(t){ return t >= 0 && t <= 1 ? 2 * (1 - t) : 0; },
+      supportContains:function(x,y){ return x >= 0 && y >= 0 && x + y <= 1; },
+      sliceRange:function(mode,c){
+        return mode === "x" ? "y ranges from 0 to " + fmt(1-c) : "x ranges from 0 to " + fmt(1-c);
+      },
+      sliceFormula:function(mode,c){
+        var v = 2 * (1 - c);
+        return mode === "x"
+          ? "f_X(" + fmt(c) + ") = ∫ from 0 to " + fmt(1-c) + " of 2 dy = 2(1−" + fmt(c) + ") = " + fmt(v)
+          : "f_Y(" + fmt(c) + ") = ∫ from 0 to " + fmt(1-c) + " of 2 dx = 2(1−" + fmt(c) + ") = " + fmt(v);
+      }
+    },
+    bell:{
+      id:"bell",
+      name:"Bell-shaped joint pdf",
+      xMin:-3, xMax:3, yMin:-3, yMax:3, zMax:.175,
+      formula:"f(x,y) = φ(x)φ(y) = (1 / 2π) exp(−(x² + y²)/2)",
+      support:"Theoretical support is the whole plane; displayed window is −3 ≤ x ≤ 3 and −3 ≤ y ≤ 3",
+      marginals:"f_X(x) = φ(x);  f_Y(y) = φ(y)",
+      message:"The joint pdf is highest near the center and decreases smoothly away from it. Its marginals are also bell-shaped.",
+      pdf:function(x,y){ return Math.exp(-(x*x + y*y)/2) / TAU; },
+      marginal:function(t){ return Math.exp(-(t*t)/2) / Math.sqrt(TAU); },
+      supportContains:function(x,y){ return x >= -3 && x <= 3 && y >= -3 && y <= 3; },
+      sliceRange:function(mode,c){ return mode === "x" ? "y ranges across the displayed window" : "x ranges across the displayed window"; },
+      sliceFormula:function(mode,c){
+        var v = this.marginal(c);
+        return mode === "x" ? "f_X(" + fmt(c) + ") = φ(" + fmt(c) + ") = " + fmt(v) : "f_Y(" + fmt(c) + ") = φ(" + fmt(c) + ") = " + fmt(v);
+      }
+    },
+    expo:{
+      id:"expo",
+      name:"Example 3 exponential lifetimes",
+      xMin:0, xMax:5, yMin:0, yMax:5, zMax:1,
+      formula:"X ~ Exponential(a), Y ~ Exponential(b), independent; f(x,y) = ab exp(−ax−by), x ≥ 0, y ≥ 0; 0 otherwise",
+      support:"True support is the first quadrant: x ≥ 0, y ≥ 0. The plot shows the finite window 0 ≤ x ≤ 5 and 0 ≤ y ≤ 5.",
+      marginals:"f_X(x) = a exp(−ax), x ≥ 0;  f_Y(y) = b exp(−by), y ≥ 0",
+      message:"The surface is highest near (0,0), where both lifetimes are short. Because X and Y are independent exponential lifetimes, the total probability over the first quadrant is 1.",
+      pdf:function(x,y){ return x >= 0 && y >= 0 ? state.a * state.b * Math.exp(-state.a*x - state.b*y) : 0; },
+      marginalX:function(x){ return x >= 0 ? state.a * Math.exp(-state.a*x) : 0; },
+      marginalY:function(y){ return y >= 0 ? state.b * Math.exp(-state.b*y) : 0; },
+      marginal:function(t){ return this.marginalX(t); },
+      supportContains:function(x,y){ return x >= 0 && y >= 0; },
+      sliceRange:function(mode,c){ return mode === "x" ? "y ranges from 0 to ∞" : "x ranges from 0 to ∞"; },
+      sliceFormula:function(mode,c){
+        if (mode === "x"){
+          return "f_X(" + fmt(c) + ") = ∫ from 0 to ∞ of ab exp(−a·" + fmt(c) + " − b·y) dy = a exp(−a·" + fmt(c) + ") = " + fmt(this.marginalX(c));
+        }
+        return "f_Y(" + fmt(c) + ") = ∫ from 0 to ∞ of ab exp(−a·x − b·" + fmt(c) + ") dx = b exp(−b·" + fmt(c) + ") = " + fmt(this.marginalY(c));
+      }
+    }
+  };
+
+  var state = {
+    dist:"triangle",
+    slice:"none",
+    c:.35,
+    a:1,
+    b:1,
+    showCalculation:false,
+    camera:{ yaw:TEACHING_CAMERA.yaw, pitch:TEACHING_CAMERA.pitch, zoom:TEACHING_CAMERA.zoom, centerY:TEACHING_CAMERA.centerY },
+    dragging:false,
+    lastX:0,
+    lastY:0,
+    anim:null
+  };
+
+  var els = {
+    surface:document.getElementById("surfaceCanvas"),
+    support:document.getElementById("supportCanvas"),
+    marginal:document.getElementById("marginalCanvas"),
+    formulaJoint:document.getElementById("formulaJoint"),
+    formulaSupport:document.getElementById("formulaSupport"),
+    formulaMarginals:document.getElementById("formulaMarginals"),
+    messageBody:document.getElementById("messageBody"),
+    sliceSlider:document.getElementById("sliceSlider"),
+    sliceValue:document.getElementById("sliceValue"),
+    sliceMin:document.getElementById("sliceMin"),
+    sliceMax:document.getElementById("sliceMax"),
+    surfaceBadge:document.getElementById("surfaceBadge"),
+    areaCalcPopover:document.getElementById("areaCalcPopover"),
+    areaCalcToggle:document.getElementById("areaCalcToggle"),
+    areaCalcPanel:document.getElementById("areaCalcPanel"),
+    expControls:document.getElementById("expControls"),
+    rateASlider:document.getElementById("rateASlider"),
+    rateBSlider:document.getElementById("rateBSlider"),
+    rateAValue:document.getElementById("rateAValue"),
+    rateBValue:document.getElementById("rateBValue")
+  };
+  var ctx = els.surface.getContext("2d");
+  var sctx = els.support.getContext("2d");
+  var mctx = els.marginal.getContext("2d");
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a) * t; }
+  function fmt(v){
+    var abs = Math.abs(v);
+    if (abs !== 0 && abs < .001) return v.toExponential(2);
+    return (Math.round(v * 1000) / 1000).toFixed(abs >= 10 ? 1 : 3).replace(/\.?0+$/,"");
+  }
+  function fmtCInput(v){
+    return Number(v).toFixed(3);
+  }
+  function normX(dist,x){ return (x - dist.xMin) / (dist.xMax - dist.xMin); }
+  function normY(dist,y){ return (y - dist.yMin) / (dist.yMax - dist.yMin); }
+  function denormX(dist,u){ return lerp(dist.xMin, dist.xMax, u); }
+  function denormY(dist,v){ return lerp(dist.yMin, dist.yMax, v); }
+  function axisTicks(min,max){
+    return [
+      { t:0, value:min },
+      { t:.5, value:lerp(min,max,.5) },
+      { t:1, value:max }
+    ];
+  }
+  function tickLabel(value){ return fmt(value); }
+  function getZMax(dist){
+    return dist.id === "expo" ? Math.max(.08, state.a * state.b * 1.08) : dist.zMax;
+  }
+  function zAxisTicks3D(dist){
+    var zMax = getZMax(dist);
+    if (dist.id === "triangle"){
+      return [
+        { t:0, value:0 },
+        { t:1 / zMax, value:1 },
+        { t:2 / zMax, value:2 }
+      ];
+    }
+    return [
+      { t:0, value:0 },
+      { t:.5, value:zMax * .5 },
+      { t:1, value:zMax }
+    ];
+  }
+  function marginalX(dist,x){ return dist.marginalX ? dist.marginalX(x) : dist.marginal(x); }
+  function marginalY(dist,y){ return dist.marginalY ? dist.marginalY(y) : dist.marginal(y); }
+  function sliceColor(mode){ return mode === "y" ? C.ySlice : C.xSlice; }
+  function sliceFill(mode){ return mode === "y" ? C.ySliceFill : C.xSliceFill; }
+  function sliceFillStrong(mode){ return mode === "y" ? C.ySliceFillStrong : C.xSliceFillStrong; }
+  var MATHML_NS = "http://www.w3.org/1998/Math/MathML";
+  function mathEl(name,text){
+    var el = document.createElementNS(MATHML_NS,name);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function mn(text){ return mathEl("mn",text); }
+  function mi(text){ return mathEl("mi",text); }
+  function mo(text){ return mathEl("mo",text); }
+  function mtext(text){ return mathEl("mtext",text); }
+  function mrow(){
+    var row = mathEl("mrow");
+    for (var i=0;i<arguments.length;i++) row.appendChild(arguments[i]);
+    return row;
+  }
+  function normalMi(text){
+    var el = mi(text);
+    el.setAttribute("mathvariant","normal");
+    return el;
+  }
+  function fSub(axis){
+    var sub = mathEl("msub");
+    sub.appendChild(mi("f"));
+    sub.appendChild(mi(axis));
+    return sub;
+  }
+  function callSymbol(symbol,arg){
+    return mrow(symbol,mo("("),mn(arg),mo(")"));
+  }
+  function callSymbolVar(symbol,arg){
+    return mrow(symbol,mo("("),mi(arg),mo(")"));
+  }
+  function integralWithLimits(upper){
+    var intNode = mathEl("msubsup");
+    intNode.appendChild(mo("∫"));
+    intNode.appendChild(mn("0"));
+    intNode.appendChild(upper === "∞" ? mo("∞") : mn(upper));
+    return intNode;
+  }
+  function mathLine(label){
+    var math = mathEl("math");
+    math.setAttribute("display","inline");
+    math.setAttribute("aria-label",label);
+    math.classList.add("slice-math");
+    return math;
+  }
+  function appendMathLine(container,index,label,row){
+    var line = document.createElement("div");
+    line.className = "step" + (index ? " continued" : "");
+    var math = mathLine(label);
+    math.appendChild(row);
+    line.appendChild(math);
+    container.appendChild(line);
+  }
+  function appendSliceDerivationLines(container,dist){
+    var isX = state.slice === "x";
+    var c = state.c;
+    var v = isX ? marginalX(dist,c) : marginalY(dist,c);
+    var axis = isX ? "X" : "Y";
+    var variable = isX ? "y" : "x";
+    var valueText = fmt(v);
+    if (dist.id === "triangle"){
+      var upper = mrow(mn("1"),mo("−"),mi("c"));
+      var integral = mathEl("msubsup");
+      integral.appendChild(mo("∫"));
+      integral.appendChild(mn("0"));
+      integral.appendChild(upper);
+      appendMathLine(container,0,"marginal value f_" + axis + " of c equals integral from 0 to 1 minus c of 2 d" + variable,
+        mrow(callSymbolVar(fSub(axis),"c"),mo("="),integral,mn("2"),mi("d"),mi(variable)));
+      appendMathLine(container,1,"equals 2 times 1 minus c",
+        mrow(mo("="),mn("2"),mo("("),mn("1"),mo("−"),mi("c"),mo(")")));
+      appendMathLine(container,2,"equals " + valueText,mrow(mo("="),mn(valueText)));
+      return;
+    }
+    if (dist.id === "expo"){
+      var fixedTerm = isX ? "ac" : "bc";
+      var freeTerm = isX ? "by" : "ax";
+      var resultRate = isX ? "a" : "b";
+      appendMathLine(container,0,"marginal value f_" + axis + " of c equals integral from 0 to infinity of ab exp terms",
+        mrow(callSymbolVar(fSub(axis),"c"),mo("="),integralWithLimits("∞"),mtext("ab exp(−" + fixedTerm + " − " + freeTerm + ") d" + variable)));
+      appendMathLine(container,1,"equals " + resultRate + " exp of negative " + fixedTerm,
+        mrow(mo("="),mi(resultRate),mtext(" exp(−" + fixedTerm + ")")));
+      appendMathLine(container,2,"equals " + valueText,mrow(mo("="),mn(valueText)));
+      return;
+    }
+    if (dist.id === "bell"){
+      appendMathLine(container,0,"marginal value f_" + axis + " of c equals phi of c",
+        mrow(callSymbolVar(fSub(axis),"c"),mo("="),callSymbolVar(mi("φ"),"c")));
+      appendMathLine(container,1,"equals " + valueText,mrow(mo("="),mn(valueText)));
+      return;
+    }
+    appendMathLine(container,0,"marginal value f_" + axis + " of c equals " + valueText,
+      mrow(callSymbolVar(fSub(axis),"c"),mo("="),mn(valueText)));
+  }
+  function crossSectionReadout(dist){
+    var range = dist.sliceRange(state.slice,state.c);
+    if (dist.id === "triangle"){
+      return range + "; length = 1−c = " + fmt(1-state.c);
+    }
+    return range;
+  }
+  function expInterpretation(){
+    if (Math.abs(state.a - state.b) < .001) return "The two rates are equal, so the decay is balanced in the x- and y-directions.";
+    if (state.a > state.b) return "The surface decays faster in the x-direction because X has the larger rate.";
+    return "The surface decays faster in the y-direction because Y has the larger rate.";
+  }
+
+  function resizeCanvas(canvas){
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var w = Math.max(260, rect.width);
+    var h = Math.max(190, rect.height);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    canvas.getContext("2d").setTransform(dpr,0,0,dpr,0,0);
+  }
+  function size(canvas){ return { w:canvas.width/(window.devicePixelRatio||1), h:canvas.height/(window.devicePixelRatio||1) }; }
+  function clear(c, canvas){
+    var s = size(canvas);
+    c.clearRect(0,0,s.w,s.h);
+    return s;
+  }
+  function line(c,a,b,color,width,dash){
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = width || 1;
+    if (dash) c.setLineDash(dash);
+    c.beginPath();
+    c.moveTo(a.x,a.y);
+    c.lineTo(b.x,b.y);
+    c.stroke();
+    c.restore();
+  }
+  function poly(c,pts,fill,stroke,width){
+    if (!pts.length) return;
+    c.save();
+    c.beginPath();
+    c.moveTo(pts[0].x, pts[0].y);
+    for (var i=1;i<pts.length;i++) c.lineTo(pts[i].x, pts[i].y);
+    c.closePath();
+    if (fill){ c.fillStyle = fill; c.fill(); }
+    if (stroke){ c.strokeStyle = stroke; c.lineWidth = width || 1; c.stroke(); }
+    c.restore();
+  }
+  function label(c,text,p,color,align){
+    c.save();
+    c.fillStyle = color || C.ink;
+    c.font = "13px " + MATH_FONT_STACK;
+    c.textAlign = align || "center";
+    c.textBaseline = "middle";
+    c.fillText(text,p.x,p.y);
+    c.restore();
+  }
+  function labelBox(c,text,p,color,align,bounds){
+    c.save();
+    c.font = "13px " + MATH_FONT_STACK;
+    c.textAlign = align || "center";
+    c.textBaseline = "middle";
+    var metrics = c.measureText(text);
+    var padX = 6, padY = 4;
+    var w = metrics.width + padX * 2;
+    var h = 20;
+    var tx = p.x, ty = p.y;
+    var x = align === "right" ? tx - w : (align === "left" ? tx : tx - w/2);
+    var y = ty - h/2;
+    if (bounds){
+      if (x < bounds.l) tx += bounds.l - x;
+      if (x + w > bounds.r) tx -= x + w - bounds.r;
+      y = ty - h/2;
+      if (y < bounds.t) ty += bounds.t - y;
+      if (y + h > bounds.b) ty -= y + h - bounds.b;
+      x = align === "right" ? tx - w : (align === "left" ? tx : tx - w/2);
+      y = ty - h/2;
+    }
+    c.fillStyle = "rgba(255,253,249,.92)";
+    c.strokeStyle = color || C.amber;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.roundRect(x,y,w,h,6);
+    c.fill();
+    c.stroke();
+    c.fillStyle = color || C.ink;
+    c.fillText(text,tx,ty);
+    c.restore();
+  }
+  function labelBoxLines(c,lines,p,color,align,bounds){
+    c.save();
+    var fontSize = lines.some(function(text){ return text.length > 86; }) ? 10.5 : (lines.some(function(text){ return text.length > 62; }) ? 11.5 : 13);
+    c.font = fontSize + "px " + MATH_FONT_STACK;
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    var padX = 6, padY = 5, lineHeight = Math.max(13, fontSize + 3);
+    var w = 0;
+    lines.forEach(function(text){ w = Math.max(w,c.measureText(text).width); });
+    w += padX * 2;
+    var clipped = false;
+    if (bounds && w > bounds.r - bounds.l){
+      w = bounds.r - bounds.l;
+      clipped = true;
+    }
+    var h = lines.length * lineHeight + padY * 2;
+    var tx = p.x, ty = p.y;
+    var x = align === "right" ? tx - w : (align === "left" ? tx : tx - w/2);
+    var y = ty - h/2;
+    if (bounds){
+      if (x < bounds.l) tx += bounds.l - x;
+      if (x + w > bounds.r) tx -= x + w - bounds.r;
+      y = ty - h/2;
+      if (y < bounds.t) ty += bounds.t - y;
+      if (y + h > bounds.b) ty -= y + h - bounds.b;
+      x = align === "right" ? tx - w : (align === "left" ? tx : tx - w/2);
+      y = ty - h/2;
+    }
+    c.fillStyle = "rgba(255,253,249,.92)";
+    c.strokeStyle = color || C.amber;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.roundRect(x,y,w,h,6);
+    c.fill();
+    c.stroke();
+    c.fillStyle = color || C.ink;
+    var clipPad = 2;
+    c.save();
+    c.beginPath();
+    c.rect(x + clipPad,y + clipPad,w - clipPad * 2,h - clipPad * 2);
+    c.clip();
+    lines.forEach(function(text,index){
+      var lineX = x + padX;
+      var lineY = y + padY + lineHeight/2 + index * lineHeight;
+      c.fillText(text,lineX,lineY);
+      if (/^(Show|Hide) area calculation$/.test(text)){
+        var underlineWidth = Math.min(c.measureText(text).width,w - padX * 2);
+        c.save();
+        c.strokeStyle = color || C.ink;
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(lineX,lineY + fontSize * .48);
+        c.lineTo(lineX + underlineWidth,lineY + fontSize * .48);
+        c.stroke();
+        c.restore();
+      }
+    });
+    c.restore();
+    c.restore();
+    return { x:x, y:y, w:w, h:h };
+  }
+  function sliceValueText(){
+    return (state.slice === "x" ? "x" : "y") + " = " + fmt(state.c);
+  }
+  function crossSectionLabelText(){
+    return "cross-section at " + sliceValueText();
+  }
+  function sliceVariable(){
+    return state.slice === "x" ? "y" : "x";
+  }
+  function marginalSymbol(){
+    return state.slice === "x" ? "f_X(c)" : "f_Y(c)";
+  }
+  function calcValue(dist){
+    return state.slice === "x" ? marginalX(dist,state.c) : marginalY(dist,state.c);
+  }
+  function mathVar(name){
+    return '<span class="math-var">' + name + '</span>';
+  }
+  function rangeHtml(dist){
+    var variable = sliceVariable();
+    if (dist.id === "uniform") return mathVar(variable) + " ranges from 0 to 1.";
+    if (dist.id === "triangle") return mathVar(variable) + " ranges from 0 to 1−" + mathVar("c") + " (= " + fmt(1 - state.c) + ").";
+    if (dist.id === "bell") return mathVar(variable) + " ranges across the displayed window.";
+    return mathVar(variable) + " ranges from 0 to ∞.";
+  }
+  function calcEquationRows(dist){
+    var isX = state.slice === "x";
+    var variable = sliceVariable();
+    var val = calcValue(dist);
+    if (dist.id === "uniform"){
+      return [
+        "= ∫<sub>0</sub><sup>1</sup> 1 d" + mathVar(variable),
+        "= 1"
+      ];
+    }
+    if (dist.id === "triangle"){
+      return [
+        "= ∫<sub>0</sub><sup>1−" + mathVar("c") + "</sup> 2 d" + mathVar(variable),
+        "= 2(1−" + mathVar("c") + ")",
+        "= " + fmt(val)
+      ];
+    }
+    if (dist.id === "bell"){
+      return isX
+        ? [
+          "= ∫<sub>−∞</sub><sup>∞</sup> φ(" + mathVar("c") + ")φ(" + mathVar("y") + ") d" + mathVar("y"),
+          "= φ(" + mathVar("c") + ")",
+          "= " + fmt(val)
+        ]
+        : [
+          "= ∫<sub>−∞</sub><sup>∞</sup> φ(" + mathVar("x") + ")φ(" + mathVar("c") + ") d" + mathVar("x"),
+          "= φ(" + mathVar("c") + ")",
+          "= " + fmt(val)
+        ];
+    }
+    return isX
+      ? [
+        "= ∫<sub>0</sub><sup>∞</sup> " + mathVar("a") + mathVar("b") + " e<sup>−" + mathVar("a") + mathVar("c") + "−" + mathVar("b") + mathVar("y") + "</sup> d" + mathVar("y"),
+        "= " + mathVar("a") + " e<sup>−" + mathVar("a") + mathVar("c") + "</sup>",
+        "= " + fmt(val)
+      ]
+      : [
+        "= ∫<sub>0</sub><sup>∞</sup> " + mathVar("a") + mathVar("b") + " e<sup>−" + mathVar("a") + mathVar("x") + "−" + mathVar("b") + mathVar("c") + "</sup> d" + mathVar("x"),
+        "= " + mathVar("b") + " e<sup>−" + mathVar("b") + mathVar("c") + "</sup>",
+        "= " + fmt(val)
+      ];
+  }
+  function sliceLabelLines3D(dist){
+    return [
+      crossSectionLabelText(),
+      "area under cross-section = " + fmt(calcValue(dist))
+    ];
+  }
+  function renderAreaCalculation(dist){
+    if (!els.areaCalcToggle || !els.areaCalcPanel) return;
+    var hasSlice = state.slice !== "none";
+    if (els.areaCalcPopover){
+      els.areaCalcPopover.hidden = !hasSlice;
+      els.areaCalcPopover.tabIndex = hasSlice ? 0 : -1;
+    }
+    els.areaCalcToggle.disabled = !hasSlice;
+    els.areaCalcToggle.textContent = state.showCalculation ? "Hide area calculation" : "Show area calculation";
+    els.areaCalcToggle.setAttribute("aria-expanded", state.showCalculation && hasSlice ? "true" : "false");
+    els.areaCalcPanel.classList.toggle("show", state.showCalculation && hasSlice);
+    if (!hasSlice){
+      els.areaCalcPanel.textContent = "";
+      return;
+    }
+    var variable = sliceVariable();
+    var rows = calcEquationRows(dist).map(function(row){
+      return '<div class="calc-eq">' + row + '</div>';
+    }).join("");
+    var theoretical = dist.id === "bell"
+      ? '<p>Theoretical area uses ' + mathVar(variable) + ' from −∞ to ∞.</p>'
+      : "";
+    els.areaCalcPanel.innerHTML =
+      '<h3>Cross-section details</h3>' +
+      '<p>In this cross-section, ' + rangeHtml(dist) + '</p>' +
+      theoretical +
+      '<h3>Area calculation</h3>' +
+      '<div class="calc-math">' +
+        '<div class="calc-label">Area under cross-section</div>' +
+        rows +
+      '</div>' +
+      '<p>This equals ' + marginalSymbol() + '.</p>';
+  }
+
+  function setupLearningPopovers(){
+    var triggers = Array.prototype.slice.call(document.querySelectorAll("[data-popover]"));
+    if (!triggers.length) return;
+    var popover = document.createElement("div");
+    popover.id = "learningPopover";
+    popover.className = "learning-popover";
+    popover.setAttribute("role","tooltip");
+    document.body.appendChild(popover);
+    var active = null;
+
+    function positionPopover(trigger){
+      var rect = trigger.getBoundingClientRect();
+      popover.style.left = "0px";
+      popover.style.top = "0px";
+      var gap = 8;
+      var margin = 10;
+      var popRect = popover.getBoundingClientRect();
+      var left = rect.left + rect.width / 2 - popRect.width / 2;
+      left = clamp(left, margin, window.innerWidth - popRect.width - margin);
+      var top = rect.bottom + gap;
+      if (top + popRect.height + margin > window.innerHeight){
+        top = rect.top - popRect.height - gap;
+      }
+      top = clamp(top, margin, window.innerHeight - popRect.height - margin);
+      popover.style.left = left + "px";
+      popover.style.top = top + "px";
+    }
+
+    function openPopover(trigger){
+      if (active && active !== trigger) active.setAttribute("aria-expanded","false");
+      active = trigger;
+      popover.textContent = trigger.getAttribute("data-popover") || "";
+      popover.classList.add("show");
+      trigger.setAttribute("aria-expanded","true");
+      positionPopover(trigger);
+    }
+
+    function closePopover(trigger){
+      if (trigger && active !== trigger) return;
+      if (active) active.setAttribute("aria-expanded","false");
+      active = null;
+      popover.classList.remove("show");
+    }
+
+    triggers.forEach(function(trigger){
+      trigger.classList.add("popover-trigger");
+      if (!trigger.hasAttribute("tabindex") && !/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(trigger.tagName)){
+        trigger.tabIndex = 0;
+      }
+      trigger.setAttribute("aria-describedby", popover.id);
+      trigger.setAttribute("aria-expanded","false");
+      trigger.addEventListener("mouseenter", function(){ openPopover(trigger); });
+      trigger.addEventListener("mouseleave", function(){ closePopover(trigger); });
+      trigger.addEventListener("focus", function(){ openPopover(trigger); });
+      trigger.addEventListener("blur", function(){ closePopover(trigger); });
+      trigger.addEventListener("click", function(e){
+        if (trigger.tagName === "LABEL") e.preventDefault();
+        if (active === trigger && popover.classList.contains("show")){
+          closePopover(trigger);
+        } else {
+          openPopover(trigger);
+        }
+        e.stopPropagation();
+      });
+    });
+
+    document.addEventListener("click", function(e){
+      if (!active) return;
+      if (active.contains(e.target)) return;
+      closePopover();
+    });
+    document.addEventListener("keydown", function(e){
+      if (e.key === "Escape") closePopover();
+    });
+    window.addEventListener("resize", function(){ if (active) positionPopover(active); });
+    window.addEventListener("scroll", function(){ if (active) positionPopover(active); }, true);
+  }
+
+  function projectRaw(pt,w,h){
+    var yaw = state.camera.yaw;
+    var pitch = state.camera.pitch;
+    var x = (pt.x - .5) * 2.05;
+    var y = (pt.y - .5) * 2.05;
+    var z = pt.z * 1.18;
+    var cy = Math.cos(yaw), sy = Math.sin(yaw);
+    var cp = Math.cos(pitch), sp = Math.sin(pitch);
+    var xr = x * cy - y * sy;
+    var yr = x * sy + y * cy;
+    var zr = z;
+    var yp = yr * cp - zr * sp;
+    var zp = yr * sp + zr * cp;
+    var scale = Math.min(w,h) * .335 * state.camera.zoom;
+    return { x:w*.5 + xr*scale, y:h*(state.camera.centerY || TEACHING_CAMERA.centerY) + yp*scale, depth:zp };
+  }
+  function P(u,v,z,w,h){ return projectRaw({x:u,y:v,z:z},w,h); }
+  function addFace(faces, pts, fill, stroke, width){
+    var depth = 0;
+    pts.forEach(function(p){ depth += p.depth; });
+    faces.push({ pts:pts, fill:fill, stroke:stroke, width:width || 1, depth:depth/pts.length });
+  }
+  function faceFromUVW(faces,w,h,arr,fill,stroke,width){
+    addFace(faces, arr.map(function(p){ return P(p[0],p[1],p[2],w,h); }), fill, stroke, width);
+  }
+  function drawFaces(c, faces){
+    faces.sort(function(a,b){ return b.depth - a.depth; });
+    faces.forEach(function(f){ poly(c,f.pts,f.fill,f.stroke,f.width); });
+  }
+  function drawGrid3D(c,w,h){
+    for (var i=0;i<=4;i++){
+      var t = i/4;
+      line(c,P(t,0,0,w,h),P(t,1,0,w,h),C.grid,1);
+      line(c,P(0,t,0,w,h),P(1,t,0,w,h),C.grid,1);
+    }
+  }
+  function drawTicks3D(c,w,h,dist){
+    axisTicks(dist.xMin,dist.xMax).forEach(function(tick){
+      var p = P(tick.t,0,0,w,h);
+      var q = P(tick.t,-.025,0,w,h);
+      line(c,p,q,C.navy,1);
+      label(c,tickLabel(tick.value),P(tick.t,-.07,0,w,h),C.muted || "#6B6459");
+    });
+    axisTicks(dist.yMin,dist.yMax).forEach(function(tick){
+      var p = P(0,tick.t,0,w,h);
+      var q = P(-.025,tick.t,0,w,h);
+      line(c,p,q,C.navy,1);
+      if (tick.t > 0) label(c,tickLabel(tick.value),P(-.075,tick.t,0,w,h),C.muted || "#6B6459");
+    });
+    zAxisTicks3D(dist).forEach(function(tick){
+      var p = P(0,0,tick.t,w,h);
+      var q = P(-.025,0,tick.t,w,h);
+      line(c,p,q,C.navy,1);
+      if (tick.t > 0) label(c,tickLabel(tick.value),P(-.08,0,tick.t,w,h),C.muted || "#6B6459","right");
+    });
+  }
+  function drawAxes3D(c,w,h,dist){
+    var o = P(0,0,0,w,h), px = P(1.12,0,0,w,h), py = P(0,1.12,0,w,h), pz = P(0,0,1.08,w,h);
+    line(c,o,px,C.navy,1.8);
+    line(c,o,py,C.navy,1.8);
+    line(c,o,pz,C.navy,1.8);
+    drawTicks3D(c,w,h,dist);
+    label(c,"x",px,C.navy);
+    label(c,"y",py,C.navy);
+    label(c,"f(x,y)",pz,C.navy);
+  }
+  function addSupportSurface(faces,w,h,dist){
+    if (dist.id === "triangle"){
+      faceFromUVW(faces,w,h,[[0,0,0],[1,0,0],[0,1,0]],"rgba(244,241,232,.28)","rgba(46,67,116,.72)",1.4);
+    } else {
+      faceFromUVW(faces,w,h,[[0,0,0],[1,0,0],[1,1,0],[0,1,0]],"rgba(244,241,232,.22)","rgba(46,67,116,.48)",1.2);
+    }
+  }
+  function addUniformPrism(faces,w,h){
+    var z = 1 / dists.uniform.zMax;
+    faceFromUVW(faces,w,h,[[0,0,z],[1,0,z],[1,1,z],[0,1,z]],"rgba(46,67,116,.22)","rgba(46,67,116,.88)",1.4);
+    faceFromUVW(faces,w,h,[[0,0,0],[1,0,0],[1,0,z],[0,0,z]],"rgba(46,67,116,.08)","rgba(46,67,116,.42)",1);
+    faceFromUVW(faces,w,h,[[1,0,0],[1,1,0],[1,1,z],[1,0,z]],"rgba(63,111,94,.08)","rgba(46,67,116,.40)",1);
+    faceFromUVW(faces,w,h,[[0,1,0],[1,1,0],[1,1,z],[0,1,z]],"rgba(63,111,94,.06)","rgba(46,67,116,.32)",1);
+  }
+  function addTrianglePrism(faces,w,h){
+    var z = 2 / dists.triangle.zMax;
+    faceFromUVW(faces,w,h,[[0,0,z],[1,0,z],[0,1,z]],"rgba(46,67,116,.24)","rgba(46,67,116,.90)",1.4);
+    faceFromUVW(faces,w,h,[[0,0,0],[1,0,0],[1,0,z],[0,0,z]],"rgba(46,67,116,.08)","rgba(46,67,116,.42)",1);
+    faceFromUVW(faces,w,h,[[0,0,0],[0,1,0],[0,1,z],[0,0,z]],"rgba(63,111,94,.08)","rgba(46,67,116,.42)",1);
+    faceFromUVW(faces,w,h,[[1,0,0],[0,1,0],[0,1,z],[1,0,z]],"rgba(63,111,94,.07)","rgba(46,67,116,.46)",1);
+  }
+  function addBellSurface(faces,w,h,dist){
+    var n = 28;
+    for (var i=0;i<n;i++){
+      for (var j=0;j<n;j++){
+        var u0 = i/n, u1 = (i+1)/n, v0 = j/n, v1 = (j+1)/n;
+        var x0 = denormX(dist,u0), x1 = denormX(dist,u1);
+        var y0 = denormY(dist,v0), y1 = denormY(dist,v1);
+        var zMax = getZMax(dist);
+        var z00 = dist.pdf(x0,y0)/zMax;
+        var z10 = dist.pdf(x1,y0)/zMax;
+        var z11 = dist.pdf(x1,y1)/zMax;
+        var z01 = dist.pdf(x0,y1)/zMax;
+        var avg = (z00 + z10 + z11 + z01) / 4;
+        var alpha = .045 + avg * .18;
+        var fill = "rgba(46,67,116," + alpha.toFixed(3) + ")";
+        faceFromUVW(faces,w,h,[[u0,v0,z00],[u1,v0,z10],[u1,v1,z11],[u0,v1,z01]],fill,"rgba(46,67,116,.14)",.5);
+      }
+    }
+  }
+  function addSlice3D(faces,w,h,dist){
+    if (state.slice === "none") return;
+    var c = state.c;
+    var color = sliceColor(state.slice);
+    var fill = sliceFillStrong(state.slice);
+    var z, u, v, pts, i, n, x, y;
+    if (dist.id === "uniform"){
+      z = 1 / dist.zMax;
+      if (state.slice === "x"){
+        u = normX(dist,c);
+        faceFromUVW(faces,w,h,[[u,0,0],[u,1,0],[u,1,z],[u,0,z]],fill,color,1.6);
+      } else {
+        v = normY(dist,c);
+        faceFromUVW(faces,w,h,[[0,v,0],[1,v,0],[1,v,z],[0,v,z]],fill,color,1.6);
+      }
+    } else if (dist.id === "triangle"){
+      z = 2 / dist.zMax;
+      if (state.slice === "x"){
+        u = normX(dist,c);
+        faceFromUVW(faces,w,h,[[u,0,0],[u,1-c,0],[u,1-c,z],[u,0,z]],fill,color,1.6);
+      } else {
+        v = normY(dist,c);
+        faceFromUVW(faces,w,h,[[0,v,0],[1-c,v,0],[1-c,v,z],[0,v,z]],fill,color,1.6);
+      }
+    } else {
+      pts = [];
+      n = 44;
+      if (state.slice === "x"){
+        u = normX(dist,c);
+        for (i=0;i<=n;i++){
+          y = lerp(dist.yMin, dist.yMax, i/n);
+          pts.push([u, i/n, dist.pdf(c,y)/getZMax(dist)]);
+        }
+        for (i=n;i>=0;i--) pts.push([u, i/n, 0]);
+      } else {
+        v = normY(dist,c);
+        for (i=0;i<=n;i++){
+          x = lerp(dist.xMin, dist.xMax, i/n);
+          pts.push([i/n, v, dist.pdf(x,c)/getZMax(dist)]);
+        }
+        for (i=n;i>=0;i--) pts.push([i/n, v, 0]);
+      }
+      faceFromUVW(faces,w,h,pts,fill,color,1.4);
+    }
+  }
+  function drawPolyline(c,pts,color,width,dash){
+    if (pts.length < 2) return;
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = width || 2;
+    c.lineJoin = "round";
+    c.lineCap = "round";
+    if (dash) c.setLineDash(dash);
+    c.beginPath();
+    c.moveTo(pts[0].x, pts[0].y);
+    for (var i=1;i<pts.length;i++) c.lineTo(pts[i].x, pts[i].y);
+    c.stroke();
+    c.restore();
+  }
+  function sliceOverlayGeometry(dist,w,h){
+    if (state.slice === "none") return null;
+    var c = state.c;
+    var zMax = getZMax(dist);
+    var fill = [], top = [], base = [];
+    var i, n, x, y, u, v, z;
+    function addPair(uu,vv,zz){
+      base.push(P(uu,vv,0,w,h));
+      top.push(P(uu,vv,zz,w,h));
+    }
+    if (dist.id === "uniform"){
+      z = 1 / dist.zMax;
+      if (state.slice === "x"){
+        u = normX(dist,c);
+        addPair(u,0,z); addPair(u,1,z);
+      } else {
+        v = normY(dist,c);
+        addPair(0,v,z); addPair(1,v,z);
+      }
+    } else if (dist.id === "triangle"){
+      z = 2 / dist.zMax;
+      if (state.slice === "x"){
+        u = normX(dist,c);
+        addPair(u,0,z); addPair(u,clamp(1-c,0,1),z);
+      } else {
+        v = normY(dist,c);
+        addPair(0,v,z); addPair(clamp(1-c,0,1),v,z);
+      }
+    } else {
+      n = 56;
+      if (state.slice === "x"){
+        u = normX(dist,c);
+        for (i=0;i<=n;i++){
+          y = lerp(dist.yMin, dist.yMax, i/n);
+          addPair(u,i/n,dist.pdf(c,y)/zMax);
+        }
+      } else {
+        v = normY(dist,c);
+        for (i=0;i<=n;i++){
+          x = lerp(dist.xMin, dist.xMax, i/n);
+          addPair(i/n,v,dist.pdf(x,c)/zMax);
+        }
+      }
+    }
+    fill = base.concat(top.slice().reverse());
+    return { fill:fill, base:base, top:top };
+  }
+  function drawSliceOverlay(c,w,h,dist){
+    var g = sliceOverlayGeometry(dist,w,h);
+    if (!g) return;
+    var color = sliceColor(state.slice);
+    poly(c,g.fill,sliceFillStrong(state.slice),color,1.4);
+    drawPolyline(c,g.base,color,2.2);
+    drawPolyline(c,g.top,color,2.7);
+    if (g.base.length){
+      line(c,g.base[0],g.top[0],color,2);
+      line(c,g.base[g.base.length-1],g.top[g.top.length-1],color,2);
+      var mid = Math.floor(g.top.length/2);
+      var bounds = { l:10, r:w-10, t:14, b:h-14 };
+      labelBoxLines(c,sliceLabelLines3D(dist),{x:g.top[mid].x,y:g.top[mid].y - 34},color,null,bounds);
+    }
+  }
+  function drawSurface(){
+    var s = clear(ctx,els.surface), w = s.w, h = s.h;
+    var dist = dists[state.dist];
+    var faces = [];
+    drawGrid3D(ctx,w,h);
+    addSupportSurface(faces,w,h,dist);
+    if (dist.id === "uniform") addUniformPrism(faces,w,h);
+    if (dist.id === "triangle") addTrianglePrism(faces,w,h);
+    if (dist.id === "bell" || dist.id === "expo") addBellSurface(faces,w,h,dist);
+    drawFaces(ctx,faces);
+    drawSliceOverlay(ctx,w,h,dist);
+    drawAxes3D(ctx,w,h,dist);
+    els.surfaceBadge.textContent = dist.id === "bell" ? "φ(x)φ(y)" : (dist.id === "expo" ? "ab exp(−ax−by)" : (dist.id === "triangle" ? "height 2 on T" : "height 1"));
+  }
+
+  function supportRect(w,h){
+    var pad = { l:38, r:20, t:32, b:52 };
+    var size = Math.min(w - pad.l - pad.r, h - pad.t - pad.b);
+    var left = pad.l + (w - pad.l - pad.r - size) / 2;
+    var top = pad.t + (h - pad.t - pad.b - size) / 2;
+    return { l:left, t:top, r:left+size, b:top+size, w:size, h:size };
+  }
+  function mapSupport(r,u,v){ return { x:r.l + u*r.w, y:r.b - v*r.h }; }
+  function drawSupportTicks(c,r,dist){
+    axisTicks(dist.xMin,dist.xMax).forEach(function(tick){
+      var p = mapSupport(r,tick.t,0);
+      line(c,{x:p.x,y:r.b},{x:p.x,y:r.b+5},C.navy,1);
+      label(c,tickLabel(tick.value),{x:p.x,y:r.b+17},C.muted || "#6B6459");
+    });
+    axisTicks(dist.yMin,dist.yMax).forEach(function(tick){
+      var p = mapSupport(r,0,tick.t);
+      line(c,{x:r.l-5,y:p.y},{x:r.l,y:p.y},C.navy,1);
+      if (tick.t > 0) label(c,tickLabel(tick.value),{x:r.l-8,y:p.y},C.muted || "#6B6459","right");
+    });
+  }
+  function drawSupport(){
+    var s = clear(sctx,els.support), w = s.w, h = s.h;
+    var dist = dists[state.dist];
+    var r = supportRect(w,h);
+    sctx.fillStyle = "#fffdf9";
+    sctx.fillRect(0,0,w,h);
+    for (var i=0;i<=4;i++){
+      var t = i/4;
+      line(sctx,mapSupport(r,t,0),mapSupport(r,t,1),C.grid,1);
+      line(sctx,mapSupport(r,0,t),mapSupport(r,1,t),C.grid,1);
+    }
+    if (dist.id === "bell"){
+      for (var k=5;k>=1;k--){
+        var rad = (k/5) * r.w * .42;
+        sctx.save();
+        sctx.strokeStyle = "rgba(46,67,116," + (.08 + (6-k)*.035) + ")";
+        sctx.lineWidth = 1.2;
+        sctx.beginPath();
+        sctx.ellipse(r.l+r.w/2, r.t+r.h/2, rad, rad, 0, 0, TAU);
+        sctx.stroke();
+        sctx.restore();
+      }
+      poly(sctx,[mapSupport(r,0,0),mapSupport(r,1,0),mapSupport(r,1,1),mapSupport(r,0,1)],"rgba(244,241,232,.46)","rgba(46,67,116,.58)",1.3);
+      label(sctx,"display window [-3,3] x [-3,3]",{x:(r.l+r.r)/2,y:r.b+34},C.navy);
+    } else if (dist.id === "expo"){
+      poly(sctx,[mapSupport(r,0,0),mapSupport(r,1,0),mapSupport(r,1,1),mapSupport(r,0,1)],null,"rgba(46,67,116,.58)",1.3);
+      label(sctx,"first quadrant; window [0,5] × [0,5]",{x:(r.l+r.r)/2,y:r.b+34},C.navy);
+      label(sctx,"support continues",{x:r.r-54,y:r.t+18},C.sage);
+    } else if (dist.id === "triangle"){
+      poly(sctx,[mapSupport(r,0,0),mapSupport(r,1,0),mapSupport(r,0,1)],"rgba(244,241,232,.95)","rgba(46,67,116,.88)",1.6);
+      label(sctx,"T",{x:r.l+r.w*.23,y:r.b-r.h*.25},C.navy);
+      label(sctx,"x + y = 1",{x:r.l+r.w*.64,y:r.t+r.h*.24},C.navy);
+    } else {
+      poly(sctx,[mapSupport(r,0,0),mapSupport(r,1,0),mapSupport(r,1,1),mapSupport(r,0,1)],"rgba(244,241,232,.95)","rgba(46,67,116,.88)",1.6);
+      label(sctx,"unit square",{x:(r.l+r.r)/2,y:r.t+18},C.navy);
+    }
+    line(sctx,mapSupport(r,0,0),mapSupport(r,1.04,0),C.navy,1.4);
+    line(sctx,mapSupport(r,0,0),mapSupport(r,0,1.04),C.navy,1.4);
+    drawSupportTicks(sctx,r,dist);
+    label(sctx,"x",{x:r.r+18,y:r.b-10},C.navy);
+    label(sctx,"y",mapSupport(r,0,1.09),C.navy);
+    if (state.slice !== "none"){
+      var c = state.c, u = normX(dist,c), v = normY(dist,c);
+      if (state.slice === "x"){
+        var yTop = dist.id === "triangle" ? normY(dist,1-c) : 1;
+        line(sctx,mapSupport(r,u,0),mapSupport(r,u,yTop),sliceColor("x"),3);
+        labelBox(sctx,"x = " + fmt(c),mapSupport(r,u,Math.max(.18,yTop*.55)),sliceColor("x"));
+      } else {
+        var xRight = dist.id === "triangle" ? normX(dist,1-c) : 1;
+        line(sctx,mapSupport(r,0,v),mapSupport(r,xRight,v),sliceColor("y"),3);
+        labelBox(sctx,"y = " + fmt(c),mapSupport(r,Math.max(.2,xRight*.52),v),sliceColor("y"));
+      }
+    }
+  }
+
+  function graphRect(w,h){ return { l:42, r:w-18, t:30, b:h-34, w:w-60, h:h-64 }; }
+  function mapGraph(r,xNorm,yNorm){ return { x:r.l + xNorm*r.w, y:r.b - yNorm*r.h }; }
+  function drawGraphTicks(c,r,dist,yMax){
+    axisTicks(dist.xMin,dist.xMax).forEach(function(tick){
+      var p = mapGraph(r,tick.t,0);
+      line(c,{x:p.x,y:r.b},{x:p.x,y:r.b+5},C.navy,1);
+      label(c,tickLabel(tick.value),{x:p.x,y:r.b+18},C.muted || "#6B6459");
+    });
+    axisTicks(0,yMax).forEach(function(tick){
+      var p = mapGraph(r,0,tick.t);
+      line(c,{x:r.l-5,y:p.y},{x:r.l,y:p.y},C.navy,1);
+      label(c,tickLabel(tick.value),{x:r.l-8,y:p.y},C.muted || "#6B6459","right");
+    });
+  }
+  function drawCurve(c,r,fn,xMin,xMax,yMax,color,width){
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = width || 2;
+    c.beginPath();
+    for (var i=0;i<=160;i++){
+      var t = i/160;
+      var x = lerp(xMin,xMax,t);
+      var y = fn(x);
+      var p = mapGraph(r,t,clamp(y/yMax,0,1));
+      if (i === 0) c.moveTo(p.x,p.y); else c.lineTo(p.x,p.y);
+    }
+    c.stroke();
+    c.restore();
+  }
+  function drawMarginalCurves(c,r,dist,yMax){
+    var xFn = function(x){ return marginalX(dist,x); };
+    var yFn = function(y){ return marginalY(dist,y); };
+    var inactive = "rgba(107,100,89,.42)";
+    if (state.slice === "x"){
+      drawCurve(c,r,yFn,dist.yMin,dist.yMax,yMax,inactive,1.8);
+      drawCurve(c,r,xFn,dist.xMin,dist.xMax,yMax,C.xSlice,3);
+      label(c,"f_X(x)",{x:r.l+48,y:r.t+10},C.xSlice);
+      label(c,"f_Y(y)",{x:r.r-52,y:r.t+10},inactive);
+      return;
+    }
+    if (state.slice === "y"){
+      drawCurve(c,r,xFn,dist.xMin,dist.xMax,yMax,inactive,1.8);
+      drawCurve(c,r,yFn,dist.yMin,dist.yMax,yMax,C.ySlice,3);
+      label(c,"f_X(x)",{x:r.l+48,y:r.t+10},inactive);
+      label(c,"f_Y(y)",{x:r.r-52,y:r.t+10},C.ySlice);
+      return;
+    }
+    drawCurve(c,r,xFn,dist.xMin,dist.xMax,yMax,C.xSlice,2.3);
+    drawCurve(c,r,yFn,dist.yMin,dist.yMax,yMax,C.ySlice,2.3);
+    label(c,"f_X(x)",{x:r.l+48,y:r.t+10},C.xSlice);
+    label(c,"f_Y(y)",{x:r.r-52,y:r.t+10},C.ySlice);
+  }
+  function drawSliceToMarginalLink(c,r,dist,yMax,w){
+    if (state.slice === "none") return;
+    var cVal = state.c;
+    var isX = state.slice === "x";
+    var color = sliceColor(state.slice);
+    var tNorm = isX ? normX(dist,cVal) : normY(dist,cVal);
+    var val = isX ? marginalX(dist,cVal) : marginalY(dist,cVal);
+    var p = mapGraph(r,tNorm,clamp(val/yMax,0,1));
+    var base = mapGraph(r,tNorm,0);
+    c.save();
+    c.fillStyle = sliceFill(state.slice);
+    c.fillRect(p.x-6,p.y,12,base.y-p.y);
+    c.restore();
+    line(c,base,p,color,1.6,[4,4]);
+    c.save();
+    c.fillStyle = color;
+    c.strokeStyle = "#fff";
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(p.x,p.y,6,0,TAU);
+    c.fill();
+    c.stroke();
+    c.restore();
+    var lines = [
+      (isX ? "x" : "y") + " = " + fmt(cVal),
+      (isX ? "f_X(c)" : "f_Y(c)") + " = " + fmt(val)
+    ];
+    labelBoxLines(c,lines,{x:clamp(p.x,112,w-104),y:Math.max(r.t+34,p.y-24)},color,null,{l:r.l+4,r:r.r-4,t:r.t+4,b:r.b-6});
+  }
+  function drawMarginals(){
+    var s = clear(mctx,els.marginal), w = s.w, h = s.h;
+    var dist = dists[state.dist];
+    var r = graphRect(w,h);
+    var yMax = dist.id === "triangle" ? 2.1 : (dist.id === "uniform" ? 1.2 : (dist.id === "expo" ? Math.max(state.a,state.b) * 1.12 : .43));
+    mctx.fillStyle = "#fffdf9";
+    mctx.fillRect(0,0,w,h);
+    for (var i=0;i<=4;i++){
+      var t = i/4;
+      line(mctx,mapGraph(r,t,0),mapGraph(r,t,1),C.grid,1);
+      line(mctx,mapGraph(r,0,t),mapGraph(r,1,t),C.grid,1);
+    }
+    line(mctx,mapGraph(r,0,0),mapGraph(r,1.02,0),C.navy,1.5);
+    line(mctx,mapGraph(r,0,0),mapGraph(r,0,1.04),C.navy,1.5);
+    drawGraphTicks(mctx,r,dist,yMax);
+    drawMarginalCurves(mctx,r,dist,yMax);
+    drawSliceToMarginalLink(mctx,r,dist,yMax,w);
+  }
+
+  function updateReadout(){
+    var dist = dists[state.dist];
+    els.formulaJoint.textContent = dist.id === "expo" ? dist.formula + "; current a = " + fmt(state.a) + ", b = " + fmt(state.b) + ", f(0,0) = ab = " + fmt(state.a * state.b) : dist.formula;
+    els.formulaSupport.textContent = dist.support;
+    els.formulaMarginals.textContent = dist.marginals;
+    if (dist.id === "expo"){
+      els.messageBody.textContent = dist.message + " " + expInterpretation();
+    } else {
+      els.messageBody.textContent = dist.message;
+    }
+    renderAreaCalculation(dist);
+    if (document.activeElement !== els.sliceValue){
+      els.sliceValue.value = fmtCInput(state.c);
+    }
+    els.sliceMin.textContent = fmt(dist.xMin);
+    els.sliceMax.textContent = fmt(dist.xMax);
+    els.expControls.classList.toggle("show", dist.id === "expo");
+    els.rateAValue.textContent = "a = " + fmt(state.a);
+    els.rateBValue.textContent = "b = " + fmt(state.b);
+  }
+  function render(){
+    drawSurface();
+    drawSupport();
+    drawMarginals();
+    updateReadout();
+  }
+  function resizeAll(){
+    resizeCanvas(els.surface);
+    resizeCanvas(els.support);
+    resizeCanvas(els.marginal);
+    render();
+  }
+  function stopSweep(){
+    if (state.anim) cancelAnimationFrame(state.anim);
+    state.anim = null;
+  }
+  function resetTeachingCamera(){
+    var camera = TEACHING_CAMERA_BY_DIST[state.dist] || TEACHING_CAMERA;
+    state.camera = { yaw:camera.yaw, pitch:camera.pitch, zoom:camera.zoom, centerY:camera.centerY };
+  }
+  function setDist(id){
+    stopSweep();
+    state.dist = id;
+    resetTeachingCamera();
+    var dist = dists[id];
+    state.c = id === "bell" ? 0 : .35;
+    els.sliceSlider.min = dist.xMin;
+    els.sliceSlider.max = dist.xMax;
+    els.sliceSlider.step = (id === "bell" || id === "expo") ? .05 : .01;
+    els.sliceSlider.value = state.c;
+    els.sliceValue.min = dist.xMin;
+    els.sliceValue.max = dist.xMax;
+    els.sliceValue.step = els.sliceSlider.step;
+    els.sliceValue.value = fmtCInput(state.c);
+    document.querySelectorAll("[data-dist]").forEach(function(btn){
+      var active = btn.getAttribute("data-dist") === id;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    render();
+  }
+  function setSlice(mode){
+    stopSweep();
+    state.slice = mode;
+    if (mode === "none") state.showCalculation = false;
+    document.querySelectorAll("[data-slice]").forEach(function(btn){
+      var active = btn.getAttribute("data-slice") === mode;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-checked", active ? "true" : "false");
+    });
+    els.sliceSlider.disabled = mode === "none";
+    render();
+  }
+  function setCamera(kind){
+    resetTeachingCamera();
+    document.querySelectorAll("[data-camera]").forEach(function(btn){
+      btn.classList.toggle("active", btn.getAttribute("data-camera") === "reset");
+    });
+    render();
+  }
+  function pointer(evt){
+    var src = evt.touches ? evt.touches[0] : evt;
+    var rect = els.surface.getBoundingClientRect();
+    return { x:src.clientX - rect.left, y:src.clientY - rect.top };
+  }
+  function setupFeedback(){
+    var button = document.getElementById("fbButton");
+    var panel = document.getElementById("fbPanel");
+    var overlay = document.getElementById("fbOverlay");
+    var form = document.getElementById("fbForm");
+    if (!button || !panel || !overlay || !form) return;
+    var fb = {
+      category:document.getElementById("fbCategory"),
+      description:document.getElementById("fbDescription"),
+      expected:document.getElementById("fbExpected"),
+      context:document.getElementById("fbContextSummary"),
+      status:document.getElementById("fbStatus"),
+      prepared:document.getElementById("fbPreparedText"),
+      recipient:document.getElementById("fbPreparedRecipient"),
+      subject:document.getElementById("fbPreparedSubject"),
+      body:document.getElementById("fbPreparedBody"),
+      close:document.getElementById("fbClose"),
+      cancel:document.getElementById("fbCancel"),
+      copy:document.getElementById("fbCopy")
+    };
+    var subjectTags = {
+      "Something I found helpful":"[Helpful]",
+      "A suggestion for improvement":"[Suggestion]",
+      "A content or explanation issue":"[Content Issue]",
+      "A technical problem":"[Technical Issue]",
+      "General feedback":"[General]"
+    };
+    var lastFocus = null;
+    function clean(value){
+      return String(value || "").replace(/\s+/g," ").trim();
+    }
+    function fieldText(value){
+      return String(value || "")
+        .replace(/\r\n/g,"\n")
+        .replace(/[ \t]+\n/g,"\n")
+        .replace(/\n[ \t]+/g,"\n")
+        .trim();
+    }
+    function setStatus(message,ok){
+      fb.status.textContent = message || "";
+      fb.status.classList.toggle("ok",Boolean(ok));
+    }
+    function currentFeedbackContext(){
+      var dist = dists[state.dist];
+      var lines = [
+        "Demo: Joint Distributions: Surface, Support, and Marginals",
+        "Distribution: " + dist.name
+      ];
+      if (state.slice === "none"){
+        lines.push("Slice: No slice");
+      } else {
+        lines.push("Slice: " + (state.slice === "x" ? "x" : "y") + " = " + fmt(state.c));
+      }
+      if (state.dist === "expo"){
+        lines.push("Rates: a = " + fmt(state.a) + ", b = " + fmt(state.b));
+      }
+      return lines.join("\n");
+    }
+    function setContext(){
+      fb.context.textContent = currentFeedbackContext();
+    }
+    function subjectFor(type){
+      return FEEDBACK_EMAIL_CONFIG.subjectPrefix + " " + (subjectTags[type] || "[General]");
+    }
+    function openFeedback(){
+      lastFocus = document.activeElement;
+      setContext();
+      setStatus("");
+      fb.prepared.classList.remove("show");
+      panel.classList.add("show");
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden","false");
+      setTimeout(function(){ fb.description.focus(); },0);
+    }
+    function closeFeedback(){
+      panel.classList.remove("show");
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden","true");
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    function buildEmail(){
+      var type = clean(fb.category.value);
+      var feedback = fieldText(fb.description.value);
+      var improvement = fieldText(fb.expected.value);
+      if (!type || !subjectTags[type]){
+        setStatus("Please choose what you would like to share.");
+        fb.category.focus();
+        return null;
+      }
+      if (!feedback){
+        setStatus("Please enter your feedback before sending.");
+        fb.description.focus();
+        return null;
+      }
+      setContext();
+      return {
+        recipient:FEEDBACK_EMAIL_CONFIG.recipient,
+        subject:subjectFor(type),
+        body:[
+          "Feedback type:",
+          type,
+          "",
+          "Student feedback:",
+          feedback,
+          "",
+          "Suggested improvement:",
+          improvement || "(not provided)",
+          "",
+          fb.context.textContent
+        ].join("\n")
+      };
+    }
+    function showPrepared(email){
+      fb.recipient.value = email.recipient;
+      fb.subject.value = email.subject;
+      fb.body.value = email.body;
+    }
+    function mailtoUrl(email){
+      return "mailto:" + encodeURIComponent(email.recipient) +
+        "?subject=" + encodeURIComponent(email.subject) +
+        "&body=" + encodeURIComponent(email.body);
+    }
+    function submitFeedback(event){
+      event.preventDefault();
+      var email = buildEmail();
+      if (!email) return;
+      showPrepared(email);
+      window.location.href = mailtoUrl(email);
+      setStatus("Your email app should now be open. Please review the message and press Send.",true);
+    }
+    function copyText(text){
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        return navigator.clipboard.writeText(text);
+      }
+      return Promise.reject(new Error("Clipboard API unavailable"));
+    }
+    function copyPrepared(){
+      var email = buildEmail();
+      if (!email) return;
+      showPrepared(email);
+      var text = "To: " + email.recipient + "\nSubject: " + email.subject + "\n\n" + email.body;
+      copyText(text).then(function(){
+        setStatus("Feedback copied. Please paste it into an email and send it to " + FEEDBACK_EMAIL_CONFIG.recipient + ".",true);
+      }).catch(function(){
+        fb.prepared.classList.add("show");
+        setStatus("Clipboard access failed. The prepared feedback is shown below for copying.");
+      });
+    }
+
+    button.addEventListener("click",openFeedback);
+    fb.close.addEventListener("click",closeFeedback);
+    fb.cancel.addEventListener("click",closeFeedback);
+    fb.copy.addEventListener("click",copyPrepared);
+    overlay.addEventListener("click",closeFeedback);
+    form.addEventListener("submit",submitFeedback);
+    document.addEventListener("keydown",function(event){
+      if (event.key === "Escape" && panel.classList.contains("show")) closeFeedback();
+    });
+  }
+
+  document.querySelectorAll("[data-dist]").forEach(function(btn){
+    btn.addEventListener("click", function(){ setDist(btn.getAttribute("data-dist")); });
+  });
+  document.querySelectorAll("[data-slice]").forEach(function(btn){
+    btn.addEventListener("click", function(){ setSlice(btn.getAttribute("data-slice")); });
+  });
+  document.querySelectorAll("[data-camera]").forEach(function(btn){
+    btn.addEventListener("click", function(){ setCamera(btn.getAttribute("data-camera")); });
+  });
+  els.sliceSlider.addEventListener("input", function(){
+    stopSweep();
+    state.c = Number(els.sliceSlider.value);
+    render();
+  });
+  function parseCInput(){
+    var raw = String(els.sliceValue.value || "").trim();
+    if (raw === "" || raw === "-" || raw === "." || raw === "-.") return null;
+    var value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+  function setCFromInput(commit){
+    var dist = dists[state.dist];
+    var value = parseCInput();
+    if (value === null){
+      if (commit) els.sliceValue.value = fmtCInput(state.c);
+      return;
+    }
+    stopSweep();
+    state.c = clamp(value, dist.xMin, dist.xMax);
+    els.sliceSlider.value = state.c;
+    if (commit) els.sliceValue.value = fmtCInput(state.c);
+    render();
+  }
+  els.sliceValue.addEventListener("input", function(){ setCFromInput(false); });
+  els.sliceValue.addEventListener("blur", function(){ setCFromInput(true); });
+  els.sliceValue.addEventListener("keydown", function(event){
+    if (event.key === "Enter"){
+      event.preventDefault();
+      setCFromInput(true);
+      els.sliceValue.blur();
+    }
+  });
+  function setRates(a,b){
+    stopSweep();
+    state.a = clamp(Number(a), .3, 3);
+    state.b = clamp(Number(b), .3, 3);
+    els.rateASlider.value = state.a;
+    els.rateBSlider.value = state.b;
+    render();
+  }
+  els.rateASlider.addEventListener("input", function(){ setRates(els.rateASlider.value, state.b); });
+  els.rateBSlider.addEventListener("input", function(){ setRates(state.a, els.rateBSlider.value); });
+  document.querySelectorAll("[data-exp-preset]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var parts = btn.getAttribute("data-exp-preset").split(",");
+      setRates(parts[0], parts[1]);
+    });
+  });
+  els.areaCalcToggle.addEventListener("click", function(){
+    if (state.slice === "none") return;
+    state.showCalculation = !state.showCalculation;
+    render();
+  });
+  els.surface.addEventListener("mousedown", function(e){
+    var p = pointer(e);
+    state.dragging = true;
+    state.lastX = p.x;
+    state.lastY = p.y;
+    els.surface.classList.add("dragging");
+  });
+  window.addEventListener("mousemove", function(e){
+    if (!state.dragging) return;
+    var p = pointer(e);
+    state.camera.yaw += (p.x - state.lastX) * .008;
+    state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+    state.lastX = p.x;
+    state.lastY = p.y;
+    render();
+  });
+  window.addEventListener("mouseup", function(){
+    state.dragging = false;
+    els.surface.classList.remove("dragging");
+  });
+  els.surface.addEventListener("touchstart", function(e){
+    var p = pointer(e);
+    state.dragging = true;
+    state.lastX = p.x;
+    state.lastY = p.y;
+    els.surface.classList.add("dragging");
+    e.preventDefault();
+  }, { passive:false });
+  els.surface.addEventListener("touchmove", function(e){
+    if (!state.dragging) return;
+    var p = pointer(e);
+    state.camera.yaw += (p.x - state.lastX) * .008;
+    state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+    state.lastX = p.x;
+    state.lastY = p.y;
+    render();
+    e.preventDefault();
+  }, { passive:false });
+  els.surface.addEventListener("touchend", function(){
+    state.dragging = false;
+    els.surface.classList.remove("dragging");
+  });
+  els.surface.addEventListener("wheel", function(e){
+    state.camera.zoom = clamp(state.camera.zoom * (e.deltaY > 0 ? .94 : 1.06), .72, 1.48);
+    render();
+    e.preventDefault();
+  }, { passive:false });
+  els.surface.addEventListener("keydown", function(e){
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight"){
+      state.camera.yaw += e.key === "ArrowLeft" ? -.08 : .08;
+      render();
+      e.preventDefault();
+    }
+    if (e.key === "ArrowUp" || e.key === "ArrowDown"){
+      state.camera.pitch = clamp(state.camera.pitch + (e.key === "ArrowUp" ? -.06 : .06), .18, 1.42);
+      render();
+      e.preventDefault();
+    }
+  });
+  window.addEventListener("resize", resizeAll);
+  document.addEventListener("visibilitychange", function(){ if (document.hidden) stopSweep(); });
+
+  setupFeedback();
+  setupLearningPopovers();
+  setDist("triangle");
+  setSlice("none");
+  resizeAll();
+})();
+</script>
+<script>
+(function(){
+  if (new URLSearchParams(window.location.search).get("edit") !== "1") return;
+  var PREFIX = "W9C1-D1";
+  var TARGETS = [
+    ["main.panel","DEMO"],
+    [".controls","SLIDER-GROUPS"],
+    [".dist-control","SLIDER-DISTRIBUTION"],
+    [".slice-control","SLIDER-SLICE-MODE"],
+    [".slice-value-control","SLIDER-C"],
+    ["#expControls","SLIDER-RATES"],
+    [".views","PLOTS"],
+    [".canvas-card.hero","PLOT-SURFACE"],
+    [".side-view .canvas-card:nth-of-type(1)","PLOT-SUPPORT"],
+    [".side-view .canvas-card:nth-of-type(2)","PLOT-MARGINALS"],
+    ["#readout","FORMULA-SUMMARY"],
+    [".explain","EXPLAIN-RELATIONSHIP"],
+    ["#areaCalcPanel","CALC"]
+  ];
+  var DYNAMIC = [
+    [".control-block","CONTROL"],
+    [".slider-row","SLIDER-ROW"],
+    [".param-row","INPUT-RATE"],
+    ["input:not([type='range'])","INPUT"],
+    ["select","SELECT"],
+    ["textarea","TEXTAREA"],
+    [".preset-row","PRESETS"],
+    [".segmented","OPTION-GROUP"],
+    [".canvas-badge","PLOT-LABEL"],
+    [".view-title","PLOT-TITLE"],
+    ["#readout .row","FORMULA-ROW"],
+    [".legend","EXPLAIN-LEGEND"],
+    [".legend .item","EXPLAIN-LEGEND-ITEM"],
+    ["#areaCalcPanel .calc-label","CALC-LABEL"],
+    ["#areaCalcPanel .calc-eq","CALC-STEP"]
+  ];
+  var toastTimer = null;
+
+  function fullId(suffix){ return PREFIX + "-" + suffix; }
+
+  function showToast(message){
+    var toast = document.querySelector(".teacher-edit-toast");
+    if (!toast){
+      toast = document.createElement("div");
+      toast.className = "teacher-edit-toast";
+      toast.setAttribute("role","status");
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 1200);
+  }
+
+  function copyId(id){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(id).then(function(){ showToast("Copied " + id); }, fallback);
+    } else {
+      fallback();
+    }
+    function fallback(){
+      var area = document.createElement("textarea");
+      area.value = id;
+      area.style.position = "fixed";
+      area.style.left = "-999px";
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand("copy"); showToast("Copied " + id); }
+      catch (err) { showToast(id); }
+      area.remove();
+    }
+  }
+
+  function makeLabel(id){
+    var label = document.createElement("button");
+    label.type = "button";
+    label.className = "teacher-edit-label";
+    label.textContent = id;
+    label.title = "Copy edit label " + id;
+    label.addEventListener("click",function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      copyId(id);
+    });
+    return label;
+  }
+
+  function labelInlineBefore(el,id){
+    if (!el || el.dataset.teacherEditLabelled === id) return;
+    if (el.previousElementSibling && el.previousElementSibling.classList && el.previousElementSibling.classList.contains("teacher-edit-label")) return;
+    el.dataset.teacherEditLabelled = id;
+    var label = makeLabel(id);
+    label.classList.add("teacher-edit-inline");
+    el.parentNode.insertBefore(label,el);
+  }
+
+  function labelElement(el,id){
+    if (!el || el.dataset.teacherEditLabelled === id) return;
+    if (/^(INPUT|SELECT|TEXTAREA|IFRAME|CANVAS)$/.test(el.tagName)) {
+      labelInlineBefore(el,id);
+      return;
+    }
+    if (el.querySelector(":scope > .teacher-edit-label")) return;
+    el.dataset.teacherEditLabelled = id;
+    el.classList.add("teacher-edit-anchor");
+    var label = makeLabel(id);
+    el.insertBefore(label,el.firstChild);
+  }
+
+  function refreshLabels(){
+    TARGETS.forEach(function(item){
+      document.querySelectorAll(item[0]).forEach(function(el,index){
+        labelElement(el,fullId(item[1] + (index ? "-" + (index + 1) : "")));
+      });
+    });
+    DYNAMIC.forEach(function(item){
+      document.querySelectorAll(item[0]).forEach(function(el,index){
+        labelElement(el,fullId(item[1] + "-" + (index + 1)));
+      });
+    });
+  }
+
+  var indicator = document.createElement("div");
+  indicator.className = "teacher-edit-indicator";
+  indicator.textContent = "Edit labels ON";
+  document.body.appendChild(indicator);
+  refreshLabels();
+  new MutationObserver(refreshLabels).observe(document.body,{ childList:true, subtree:true });
+})();
+</script>
+</body>
+</html>
