@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+Stage 1 standalone interactive demo.
+Source PDF: Letcure notes/week9class2_solution.pdf, Week 9 Class 2, pages 19-21.
+Purpose: connect the event X + Y <= t to the cdf and pdf of S = X + Y for X,Y ~ uniform(0,1).
+-->
+<title>Uniform Sum Geometry</title>
+<style>
+  :root{
+    --paper:#FAF7F0; --ink:#1F2937; --bar:#2E4374; --navy:var(--bar);
+    --amber:#E0793F; --sage:#3F6F5E; --hair:#DDD6C7; --hair-2:#C9C0AC;
+    --muted:#8A8272; --soft:#F2EEE3; --white:#FFFFFF; --grid:#E9E2D5;
+    --active:#D99A00; --selected:rgba(224,121,63,.26);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;margin:0;padding:28px 14px 44px;display:flex;justify-content:center;
+    background-color:var(--paper);background-image:radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size:18px 18px;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .page{width:100%;max-width:1180px}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace}
+  .math{font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif}
+  header{margin:0 0 16px}
+  .eyebrow{margin:0 0 7px;color:var(--sage);font-size:12.5px;font-weight:700;letter-spacing:.075em;text-transform:uppercase}
+  h1{margin:0 0 8px;color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;font-size:clamp(28px,4.2vw,40px);line-height:1.12;font-weight:650}
+  .lede{max-width:920px;margin:0;color:#4B5159;font-size:15.5px;line-height:1.55}
+  .panel{background:var(--white);border:1px solid var(--hair);border-radius:14px;box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.055);padding:16px clamp(13px,2.6vw,24px) 20px}
+  .controls{display:grid;grid-template-columns:minmax(260px,1fr) auto auto;gap:12px 14px;align-items:end;padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed var(--hair)}
+  .control-block{min-width:0}
+  .label{display:block;margin:0 0 7px;color:#4B5159;font-size:13px;font-weight:650}
+  .slider-row{display:grid;grid-template-columns:minmax(150px,1fr) auto;gap:9px;align-items:center}
+  input[type="range"]{width:100%;accent-color:var(--amber)}
+  button,input,textarea,select{font-family:inherit}
+  button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .value-pill{width:86px;padding:6px 7px;border:1px solid var(--hair);border-radius:8px;background:#fffdf9;color:#8A4B22;text-align:center;font-size:12.5px;font-weight:750}
+  .btn{appearance:none;min-height:38px;border:1px solid rgba(46,67,116,.18);border-radius:10px;background:var(--navy);color:#fff;padding:9px 12px;cursor:pointer;font-size:13px;font-weight:750}
+  .btn.secondary{background:#fffdf9;color:var(--navy)}
+  .btn.active{background:var(--amber);border-color:rgba(124,63,26,.18)}
+  .btn.compact{min-height:34px;padding:7px 10px;border-radius:9px;font-size:12.5px;line-height:1}
+  .btn-row,.preset-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid rgba(224,121,63,.72);outline-offset:2px}
+  .demo-description{margin:0 0 9px;padding:9px 10px;border:1px solid rgba(201,192,172,.72);border-radius:12px;background:#fffaf2;color:#4B5159;font-size:13.2px;line-height:1.42}
+  .canvas-card,.readout,.note-card{position:relative;min-width:0;border:1px solid var(--hair);border-radius:12px;background:#fffdf9;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+  .canvas-card{height:660px;overflow:hidden}
+  canvas{display:block;width:100%;height:100%;border-radius:12px;background:linear-gradient(180deg,#fffdf9 0%,#fbf6eb 100%);touch-action:none}
+  .canvas-badge{position:absolute;top:12px;left:12px;z-index:2;max-width:calc(100% - 24px);padding:5px 8px;border:1px solid rgba(46,67,116,.16);border-radius:999px;background:rgba(255,255,255,.9);color:var(--navy);font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif;font-size:12px;font-weight:750;pointer-events:none}
+  .canvas-badge[data-popover]{pointer-events:auto}
+  .plot-toggle{position:absolute;z-index:4;min-height:30px;padding:6px 9px;border-radius:8px;box-shadow:0 7px 18px rgba(31,41,55,.12)}
+  .popover-trigger{cursor:help}
+  .popover-trigger:focus-visible{outline:2px solid rgba(224,121,63,.72);outline-offset:2px}
+  .learning-popover{position:fixed;z-index:1500;display:none;max-width:270px;padding:9px 10px;border:1px solid rgba(201,192,172,.92);border-left:4px solid var(--sage);border-radius:10px;background:rgba(255,253,249,.98);color:var(--ink);box-shadow:0 12px 28px rgba(31,41,55,.18);font:600 12.5px/1.42 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none}
+  .learning-popover.show{display:block}
+  .area-calc-card{position:absolute;z-index:3;width:260px;padding:10px 12px;border:1px solid rgba(201,192,172,.88);border-left:5px solid var(--amber);border-radius:12px;background:rgba(255,253,249,.96);box-shadow:0 10px 26px rgba(31,41,55,.13);color:#273449;font-size:12.5px;line-height:1.38}
+  .area-calc-card.hidden{display:none}
+  .area-calc-card.dragging{box-shadow:0 16px 34px rgba(31,41,55,.20)}
+  .area-calc-card h2{margin:0 0 6px;color:var(--navy);font-size:14px;line-height:1.2;cursor:move}
+  .area-calc-card p{margin:0 0 5px}.area-calc-card p:last-child{margin-bottom:0}
+  .calc-step{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px dashed rgba(201,192,172,.62)}
+  .calc-step:first-of-type{border-top:0}.calc-step strong{color:var(--ink)}
+  .below-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:14px;margin-top:14px;align-items:start}
+  .readout,.note-card{padding:12px}
+  .readout h2,.note-card h2{margin:0 0 7px;color:var(--navy);font-size:15px;line-height:1.25}
+  .read-row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;color:#4B5159;font-size:12.8px}
+  .read-row strong{color:var(--ink)}
+  .formula-line{margin:0 0 6px;color:#273449;font-size:13px;line-height:1.42}
+  .case-chip{display:inline-flex;align-items:center;gap:7px;margin:0 0 8px;padding:5px 8px;border:1px solid rgba(224,121,63,.34);border-radius:999px;background:rgba(224,121,63,.10);color:#7A3E18;font-size:12.5px;font-weight:800}
+  .case-chip::before{content:"";width:8px;height:8px;border-radius:999px;background:var(--amber)}
+  .note-card{border-left:5px solid var(--amber);color:#4B5159;font-size:13.5px;line-height:1.48}
+  .status{min-height:22px;margin:12px 0 0;color:#6F3A18;font-size:13px;font-weight:700}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin:12px 0 0;color:#5A6270;font-size:12.5px;font-weight:650}
+  .key{display:inline-flex;align-items:center;gap:6px}.swatch{width:20px;height:10px;border-radius:999px;border:1px solid transparent}
+  .s-region{background:var(--selected);border-color:rgba(224,121,63,.55)}.s-boundary{background:var(--amber)}.s-cdf{background:var(--navy)}.s-pdf{background:var(--sage)}.s-marker{background:var(--active)}
+  footer{margin-top:16px;padding:0 4px}.byline{color:var(--muted);font-size:12.5px;line-height:1.5;text-align:right}
+  #fbButton{position:fixed;right:18px;bottom:18px;z-index:1000;border:0;border-radius:999px;background:var(--navy);color:#fff;padding:11px 14px;box-shadow:0 8px 22px rgba(31,41,55,.18);cursor:pointer;font-weight:750}
+  #fbOverlay{position:fixed;inset:0;z-index:1100;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(31,41,55,.30)}
+  #fbOverlay.show{display:flex}.fb-panel{width:min(560px,100%);max-height:92vh;overflow:auto;border:1px solid var(--hair);border-radius:14px;background:#fffdf9;box-shadow:0 18px 50px rgba(31,41,55,.22);padding:16px}
+  .fb-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:8px}.fb-head h3{margin:0;color:var(--navy);font-size:18px}.fb-close{border:0;background:transparent;color:var(--muted);font-size:24px;line-height:1;cursor:pointer}
+  .fb-panel label{display:block;margin:12px 0 6px;color:#4B5159;font-size:13px;font-weight:700}.fb-panel textarea,.fb-panel select{width:100%;padding:9px 10px;border:1px solid var(--hair);border-radius:10px;background:#fff;color:var(--ink)}.fb-panel textarea{min-height:94px;resize:vertical}
+  .fb-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.fb-status{min-height:20px;margin-top:8px;color:#6F3A18;font-size:12.5px;font-weight:700}.fb-prepared{display:none;white-space:pre-wrap;margin-top:10px;padding:10px;border:1px dashed var(--hair-2);border-radius:10px;background:#fffaf2;font-size:12px}.fb-prepared.show{display:block}
+  .edit-badge{position:absolute;z-index:20;display:none;max-width:180px;padding:3px 6px;border-radius:7px;background:rgba(46,67,116,.92);color:#fff;font-size:10px;font-weight:800;letter-spacing:.02em;cursor:pointer}.edit-on .edit-badge{display:inline-block}
+  .edit-indicator{position:fixed;left:14px;bottom:14px;z-index:1200;display:none;padding:7px 9px;border-radius:999px;background:var(--ink);color:#fff;font-size:12px;font-weight:800}.edit-on .edit-indicator{display:block}
+  @media (max-width:900px){.controls{grid-template-columns:1fr}.canvas-card{height:900px}.below-grid{grid-template-columns:1fr}.btn.compact{min-height:38px}.preset-row .btn{flex:1 1 70px}}
+  @media (max-width:640px){body{padding:20px 10px 72px}.canvas-card{height:980px}.slider-row{grid-template-columns:1fr}.value-pill{width:100%}.byline{text-align:left}#fbButton{right:12px;bottom:12px}}
+</style>
+</head>
+<body>
+<div class="page" id="pageRoot">
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 9, Class 2 &middot; Singapore University of Technology and Design</p>
+    <h1>Uniform Sum Geometry</h1>
+    <p class="lede">Move the boundary <span class="math">x + y = t</span> in the unit square and connect the shaded event <span class="math">X + Y <= t</span> to the cdf and pdf of <span class="math">S = X + Y</span>.</p>
+  </header>
+  <main class="panel" data-edit-id="W9C2-D2-DEMO">
+    <span class="edit-badge">W9C2-D2-DEMO</span>
+    <section class="controls" aria-label="Boundary controls" data-edit-id="W9C2-D2-SLIDER-T">
+      <div class="control-block">
+        <p class="demo-description popover-trigger" tabindex="0" data-popover="Start with the shaded region in the unit square. Its area is F_S(t), and the rate at which that area grows is f_S(t).">Drag the diagonal boundary or either moving marker. Watch the same value <span class="math">t</span> update the shaded probability, the cdf point, and the pdf height together.</p>
+        <label class="label popover-trigger" for="tSlider" data-popover="Move t to slide the diagonal boundary x + y = t. The same t controls the shaded region, the CDF point, and the PDF point.">Boundary value <span class="math">t</span></label>
+        <div class="slider-row">
+          <input id="tSlider" type="range" min="-0.25" max="2.25" step="0.01" value="0.50" aria-label="Boundary value t">
+          <input class="value-pill mono" id="tInput" type="number" min="-0.25" max="2.25" step="0.01" value="0.50" aria-label="Boundary value t numeric input">
+        </div>
+      </div>
+      <div class="btn-row" aria-label="Animation controls">
+        <button class="btn compact" id="playBtn" type="button" aria-pressed="false">Play</button>
+        <button class="btn secondary compact" id="resetBtn" type="button">Reset</button>
+      </div>
+      <div class="preset-row" aria-label="Preset t values">
+        <button class="btn secondary compact" type="button" data-preset="0">0</button>
+        <button class="btn secondary compact" type="button" data-preset="0.5">0.5</button>
+        <button class="btn secondary compact" type="button" data-preset="1">1</button>
+        <button class="btn secondary compact" type="button" data-preset="1.5">1.5</button>
+        <button class="btn secondary compact" type="button" data-preset="2">2</button>
+      </div>
+    </section>
+    <section class="canvas-card" data-edit-id="W9C2-D2-PLOT-LINKED">
+      <canvas id="mainCanvas" tabindex="0" role="img" aria-label="Linked plots for the event X plus Y less than or equal to t, its cdf, and its pdf"></canvas>
+      <div class="canvas-badge mono popover-trigger" tabindex="0" data-popover="The left panel shows the event X + Y <= t. The two right panels show the same t on F_S(t) and f_S(t).">linked area, cdf, and pdf</div>
+      <button class="btn secondary compact plot-toggle" id="toggleCalc" type="button" aria-pressed="false" aria-controls="areaCalcCard">Show area calculation</button>
+      <aside class="area-calc-card hidden popover-trigger" id="areaCalcCard" tabindex="0" data-popover="This card follows the active geometry case. Since the joint density is 1, the area calculation is also the probability calculation."></aside>
+    </section>
+    <section class="below-grid">
+      <section class="readout popover-trigger" id="readout" tabindex="0" aria-live="polite" data-edit-id="W9C2-D2-FORMULA-READOUT" data-popover="These values are computed from the same current t used in all three linked plots."></section>
+      <section class="note-card popover-trigger" tabindex="0" data-edit-id="W9C2-D2-EXPLAIN-GEOMETRY" data-popover="This is the key bridge from Week 9 Class 1: a probability over a region is an area here because the joint density is constant.">
+        <h2>Geometry link</h2>
+        <p>Because the joint density is 1 on the unit square, probability is area. The cdf is the accumulated shaded area; the pdf is the slope of that accumulated area.</p>
+      </section>
+    </section>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="legend" aria-label="Plot legend">
+      <span class="key"><span class="swatch s-region"></span>selected region</span>
+      <span class="key"><span class="swatch s-boundary"></span>boundary x + y = t</span>
+      <span class="key"><span class="swatch s-cdf"></span>cdf F<sub>S</sub>(t)</span>
+      <span class="key"><span class="swatch s-pdf"></span>pdf f<sub>S</sub>(t)</span>
+      <span class="key"><span class="swatch s-marker"></span>current t marker</span>
+    </div>
+  </main>
+  <footer><div class="byline">XU, Ying &middot; xu_ying@sutd.edu.sg &middot; 10.022 Modelling Uncertainty</div></footer>
+  <div class="edit-indicator">Edit labels ON</div>
+</div>
+<button id="fbButton" type="button">Share feedback</button>
+<div id="fbOverlay" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+  <form class="fb-panel" id="fbForm">
+    <div class="fb-head"><h3 id="fbTitle">Share your feedback</h3><button class="fb-close" id="fbClose" type="button" aria-label="Close feedback panel">&times;</button></div>
+    <p class="lede" style="font-size:13px;">Tell us what worked well and what could be improved.</p>
+    <label for="fbCategory">Feedback type</label>
+    <select id="fbCategory" required><option value="" selected disabled>Select feedback type</option><option>Something I found helpful</option><option>A suggestion for improvement</option><option>A content or explanation issue</option><option>A technical problem</option><option>General feedback</option></select>
+    <label for="fbDescription">Your feedback</label><textarea id="fbDescription" required></textarea>
+    <label for="fbExpected">What could make the demo better? <span class="muted">(optional)</span></label><textarea id="fbExpected"></textarea>
+    <div class="fb-actions"><button class="btn" type="submit">Send by email</button><button class="btn secondary" id="fbCopy" type="button">Copy feedback</button></div>
+    <div class="fb-status" id="fbStatus" aria-live="polite"></div><div id="fbPreparedText" class="fb-prepared" aria-label="Prepared feedback email"></div>
+  </form>
+</div>
+<script>
+(function(){
+  "use strict";
+  var C={ink:"#1F2937",navy:"#2E4374",amber:"#E0793F",sage:"#3F6F5E",grid:"#E9E2D5",muted:"#8A8272",active:"#D99A00",hair:"#DDD6C7"};
+  var FEEDBACK_EMAIL_CONFIG={recipient:"10022mufeedback@gmail.com",subjectPrefix:"[10.022 MU Demo Feedback]"};
+  var prefersReduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var state={t:.5,playing:false,raf:null,last:0,direction:1,drag:null,showAreaCalc:false,calcPos:null,calcDrag:null};
+  var els={canvas:document.getElementById("mainCanvas"),tSlider:document.getElementById("tSlider"),tInput:document.getElementById("tInput"),play:document.getElementById("playBtn"),reset:document.getElementById("resetBtn"),toggleCalc:document.getElementById("toggleCalc"),readout:document.getElementById("readout"),status:document.getElementById("status"),areaCalc:document.getElementById("areaCalcCard")};
+  var ctx=els.canvas.getContext("2d"), layout=null;
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+  function fmt(v,d){return Number(v).toFixed(d==null?2:d)}
+  function fmtShort(v){return Math.abs(v)<10?fmt(v,3):fmt(v,2)}
+  function cdf(t){if(t<0)return 0;if(t<=1)return t*t/2;if(t<=2)return 1-(2-t)*(2-t)/2;return 1}
+  function pdf(t){if(t<0)return 0;if(t<=1)return t;if(t<=2)return 2-t;return 0}
+  function activeCase(t){if(t<0)return {name:"No overlap",formula:"F_S(t) = 0",detail:"The boundary is below the square, so the event has no area."};if(t<=1)return {name:t===1?"Breakpoint t = 1":"Growing triangle",formula:"F_S(t) = t^2 / 2",detail:"The selected region is a right triangle with base and height t."};if(t<=2)return {name:"Square minus triangle",formula:"F_S(t) = 1 - (2 - t)^2 / 2",detail:"The selected region is the unit square minus a shrinking top-right triangle."};return {name:"Full square",formula:"F_S(t) = 1",detail:"The boundary has passed the square, so the event fills the support."}}
+  function resizeCanvas(canvas){var dpr=window.devicePixelRatio||1,rect=canvas.parentElement.getBoundingClientRect(),w=Math.max(320,Math.round(rect.width)),h=Math.max(500,Math.round(rect.height));canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.width=w+"px";canvas.style.height=h+"px";canvas.getContext("2d").setTransform(dpr,0,0,dpr,0,0);return {w:w,h:h}}
+  function line(c,a,b,color,width,dash){c.save();c.strokeStyle=color;c.lineWidth=width||1.5;if(dash)c.setLineDash(dash);c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.restore()}
+  function label(c,text,x,y,color,align){c.save();c.fillStyle=color||C.ink;c.font="700 12.5px system-ui,-apple-system,Segoe UI,sans-serif";c.textAlign=align||"center";c.textBaseline="middle";c.fillText(text,x,y);c.restore()}
+  function labelBox(c,text,x,y,color,align){c.save();c.font="750 12px system-ui,-apple-system,Segoe UI,sans-serif";var m=c.measureText(text),bw=m.width+14,bh=24,sw=c.canvas.width/(window.devicePixelRatio||1),sh=c.canvas.height/(window.devicePixelRatio||1);x=clamp(x,8+bw/2,sw-8-bw/2);y=clamp(y,8+bh/2,sh-8-bh/2);c.fillStyle="rgba(255,253,249,.94)";c.strokeStyle=color||C.active;c.lineWidth=1.3;c.beginPath();c.roundRect(x-bw/2,y-bh/2,bw,bh,8);c.fill();c.stroke();c.fillStyle=color||C.ink;c.textAlign=align||"center";c.textBaseline="middle";c.fillText(text,x,y+1);c.restore()}
+  function makeLayout(w,h){var mobile=w<760,pad=34;if(!mobile){var outer=52,sideGap=64,leftW=Math.max(280,Math.min(h-120,(w-outer*2-sideGap)/2)),plotW=leftW,total=leftW+sideGap+plotW,groupL=(w-total)/2,sideL=groupL+leftW+sideGap,plotH=(leftW-50)/2;return {mobile:false,xy:{l:groupL,t:80,w:leftW,h:leftW},cdf:{l:sideL,t:80,w:plotW,h:plotH},pdf:{l:sideL,t:80+plotH+56,w:plotW,h:plotH}}}var top=58,scale=.9,xyW=Math.min(w-pad*2,380)*scale,plotW=xyW,plotL=(w-plotW)/2,plotH=166;return {mobile:true,xy:{l:(w-xyW)/2,t:top,w:xyW,h:xyW},cdf:{l:plotL,t:top+xyW+70,w:plotW,h:plotH},pdf:{l:plotL,t:top+xyW+70+plotH+62,w:plotW,h:plotH}}}
+  function xyMap(r,x,y){return {x:r.l+x*r.w,y:r.t+(1-y)*r.h}}
+  function xyInv(r,px,py){return {x:clamp((px-r.l)/r.w,0,1),y:clamp(1-(py-r.t)/r.h,0,1)}}
+  function tx(r,t){return r.l+(t+.25)/2.5*r.w}
+  function ty(r,v,ymax){return r.t+r.h-v/ymax*r.h}
+  function selectedPolygon(t){if(t<=0)return [];if(t>=2)return [[0,0],[1,0],[1,1],[0,1]];if(t<=1)return [[0,0],[t,0],[0,t]];return [[0,0],[1,0],[1,t-1],[t-1,1],[0,1]]}
+  function intersections(t){if(t<0||t>2)return [];if(t<=1)return [[t,0],[0,t]];return [[1,t-1],[t-1,1]]}
+  function drawAxes(c,r,xLabel,yLabel,ymax){c.save();c.strokeStyle=C.grid;c.lineWidth=1;for(var i=0;i<=5;i++){var xv=-.25+i*.5,x=tx(r,xv);c.beginPath();c.moveTo(x,r.t);c.lineTo(x,r.t+r.h);c.stroke();c.fillStyle="#6B7280";c.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";c.textAlign="center";c.fillText(fmt(xv,2).replace(/\.00$/,""),x,r.t+r.h+17)}for(var j=0;j<=4;j++){var v=j*ymax/4,y=ty(r,v,ymax);c.beginPath();c.moveTo(r.l,y);c.lineTo(r.l+r.w,y);c.stroke();c.fillStyle="#6B7280";c.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";c.textAlign="right";c.textBaseline="middle";c.fillText(fmt(v,2).replace(/\.00$/,""),r.l-8,y)}c.strokeStyle=C.navy;c.lineWidth=1.2;c.beginPath();c.moveTo(r.l,r.t);c.lineTo(r.l,r.t+r.h);c.lineTo(r.l+r.w,r.t+r.h);c.stroke();c.fillStyle=C.navy;c.font="700 12px system-ui,-apple-system,Segoe UI,sans-serif";c.textAlign="center";c.fillText(xLabel,r.l+r.w/2,r.t+r.h+36);c.save();c.translate(r.l-42,r.t+r.h/2);c.rotate(-Math.PI/2);c.fillText(yLabel,0,0);c.restore();c.restore()}
+  function drawCurve(c,r,fn,color,width,ymax,fillToT){c.save();if(fillToT!=null){c.beginPath();c.moveTo(tx(r,-.25),ty(r,0,ymax));for(var i=0;i<=160;i++){var t=-.25+Math.min(fillToT+.25,2.5)*i/160;c.lineTo(tx(r,t),ty(r,fn(t),ymax))}c.lineTo(tx(r,fillToT),ty(r,0,ymax));c.closePath();c.fillStyle=color==="cdf"?"rgba(46,67,116,.13)":"rgba(63,111,94,.13)";c.fill()}c.strokeStyle=color==="cdf"?C.navy:C.sage;c.lineWidth=width||2.4;c.beginPath();for(var j=0;j<=260;j++){var tt=-.25+2.5*j/260,p={x:tx(r,tt),y:ty(r,fn(tt),ymax)};if(j)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y)}c.stroke();c.restore()}
+  function drawSupport(c,r,t){c.save();label(c,"xy-plane support",r.l+r.w/2,r.t-35,C.navy);label(c,"X, Y ~ uniform(0,1); joint density = 1",r.l+r.w/2,r.t-16,C.sage);c.fillStyle="#fffdf9";c.strokeStyle=C.navy;c.lineWidth=1.8;c.strokeRect(r.l,r.t,r.w,r.h);for(var i=0;i<=4;i++){var g=i/4,p0=xyMap(r,g,0),p1=xyMap(r,g,1),q0=xyMap(r,0,g),q1=xyMap(r,1,g);c.strokeStyle=C.grid;c.lineWidth=1;c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);c.moveTo(q0.x,q0.y);c.lineTo(q1.x,q1.y);c.stroke()}c.fillStyle="#6B7280";c.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";c.textAlign="center";[0,.5,1].forEach(function(v){var p=xyMap(r,v,0);c.fillText(v,p.x,r.t+r.h+16)});c.textAlign="right";[0,.5,1].forEach(function(v){var p=xyMap(r,0,v);c.fillText(v,r.l-8,p.y+4)});label(c,"x",r.l+r.w/2,r.t+r.h+36,C.navy);label(c,"y",r.l-31,r.t+r.h/2,C.navy);var poly=selectedPolygon(t);if(poly.length){c.beginPath();poly.forEach(function(pt,k){var p=xyMap(r,pt[0],pt[1]);if(k)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y)});c.closePath();c.fillStyle="rgba(224,121,63,.26)";c.fill();c.strokeStyle="rgba(224,121,63,.72)";c.lineWidth=1.4;c.stroke()}var ints=intersections(t);if(ints.length){var a=xyMap(r,ints[0][0],ints[0][1]),b=xyMap(r,ints[1][0],ints[1][1]);line(c,a,b,C.amber,3);ints.forEach(function(pt){var p=xyMap(r,pt[0],pt[1]);c.fillStyle=C.active;c.strokeStyle="#fff";c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,5,0,Math.PI*2);c.fill();c.stroke();labelBox(c,"("+fmt(pt[0],2)+", "+fmt(pt[1],2)+")",p.x,p.y-22,C.active)})}else{var edgeY=t<0?r.t+r.h+20:r.t-20;line(c,{x:r.l,y:edgeY},{x:r.l+r.w,y:edgeY-r.w},C.amber,2,[6,4])}labelBox(c,"x + y = t = "+fmt(t,2),r.l+r.w*.63,r.t+r.h*.24,C.amber);var boxX=r.l+r.w*.51,boxY=r.t+r.h-42,area=cdf(t);labelBox(c,"selected area = P(S <= t) = F_S(t) = "+fmtShort(area),boxX,boxY,C.amber);if(Math.abs(t-1)<.035){labelBox(c,"breakpoint: triangle becomes complement",r.l+r.w/2,r.t+30,C.active)}c.restore()}
+  function drawLinkedPlot(c,r,title,fn,ymax,color,kind,t){drawAxes(c,r,"t",title,ymax);drawCurve(c,r,fn,kind,2.5,ymax,kind==="cdf"?t:null);if(kind==="pdf"){drawCurve(c,r,fn,kind,2.5,ymax,t)}var x=tx(r,t),y=ty(r,fn(t),ymax);line(c,{x:x,y:r.t},{x:x,y:r.t+r.h},C.active,1.8,[5,4]);c.save();c.fillStyle=C.active;c.strokeStyle="#fff";c.lineWidth=2;c.beginPath();c.arc(x,y,6,0,Math.PI*2);c.fill();c.stroke();c.restore();line(c,{x:x,y:ty(r,0,ymax)},{x:x,y:y},color,4);labelBox(c,"("+fmt(t,2)+", "+fmtShort(fn(t))+")",x+52,y-18,C.active);label(c,title,r.l+r.w/2,r.t-20,color);if(Math.abs(t-1)<.035)labelBox(c,"smooth CDF, slope changes",r.l+r.w*.58,r.t+24,C.active)}
+  function render(){var sz=resizeCanvas(els.canvas),w=sz.w,h=sz.h;ctx.clearRect(0,0,w,h);layout=makeLayout(w,h);drawSupport(ctx,layout.xy,state.t);drawLinkedPlot(ctx,layout.cdf,"cdf F_S(t)",cdf,1,C.navy,"cdf",state.t);drawLinkedPlot(ctx,layout.pdf,"pdf f_S(t)",pdf,1.05,C.sage,"pdf",state.t);line(ctx,{x:tx(layout.cdf,state.t),y:layout.cdf.t+layout.cdf.h},{x:tx(layout.pdf,state.t),y:layout.pdf.t},C.active,1.2,[4,5]);updateReadout();updateAreaCalculation();positionCalcToggle();positionAreaCalculation();syncControls()}
+  function positionCalcToggle(){var r=layout.xy,rect=els.toggleCalc.getBoundingClientRect(),tw=rect.width||150;els.toggleCalc.style.left=(r.l+r.w-tw-10)+"px";els.toggleCalc.style.top=(r.t+10)+"px"}
+  function clampCardPosition(pos){var sw=els.canvas.width/(window.devicePixelRatio||1),sh=els.canvas.height/(window.devicePixelRatio||1),rect=els.areaCalc.getBoundingClientRect(),cw=rect.width||parseFloat(els.areaCalc.style.width)||250,ch=rect.height||150;return {x:clamp(pos.x,8,sw-cw-8),y:clamp(pos.y,8,sh-ch-8)}}
+  function positionAreaCalculation(){els.areaCalc.classList.toggle("hidden",!state.showAreaCalc);els.toggleCalc.textContent=state.showAreaCalc?"Hide area calculation":"Show area calculation";els.toggleCalc.setAttribute("aria-pressed",state.showAreaCalc?"true":"false");if(!state.showAreaCalc)return;var r=layout.xy,cardW=Math.min(250,Math.max(200,r.w*.52));els.areaCalc.style.width=cardW+"px";if(!state.calcPos)state.calcPos={x:r.l+r.w-cardW-12,y:r.t+50};state.calcPos=clampCardPosition(state.calcPos);els.areaCalc.style.left=state.calcPos.x+"px";els.areaCalc.style.top=state.calcPos.y+"px"}
+  function updateReadout(){var t=state.t,cs=activeCase(t),f=cdf(t),d=pdf(t);els.readout.innerHTML='<h2>Live calculation</h2><span class="case-chip">'+cs.name+'</span><div class="read-row"><span>t</span><strong class="mono">'+fmt(t,2)+'</strong></div><div class="read-row"><span>F_S(t)</span><strong class="mono">'+fmtShort(f)+'</strong></div><div class="read-row"><span>f_S(t)</span><strong class="mono">'+fmtShort(d)+'</strong></div><p class="formula-line math">'+cs.formula+'</p><p class="formula-line">'+cs.detail+'</p><p class="formula-line">Selected area = probability = F_S(t), because f(x,y)=1 on the unit square.</p>';els.status.textContent=Math.abs(t-1)<.035?"At t = 1, the CDF is continuous, but the geometric formula and slope change.":"Drag the diagonal boundary or either moving marker to update all views from the same t."}
+  function updateAreaCalculation(){var t=state.t,f=cdf(t),html='<h2>Area calculation</h2><p class="math">P(S &le; t) = area of {x + y &le; t}</p>';if(t<0){html+='<p>No part of the unit square is selected.</p><div class="calc-step"><span>Area</span><strong class="mono">0</strong></div>'}else if(t<=1){html+='<p>The selected region is a right triangle.</p><div class="calc-step"><span>base</span><strong class="mono">'+fmt(t,2)+'</strong></div><div class="calc-step"><span>height</span><strong class="mono">'+fmt(t,2)+'</strong></div><div class="calc-step"><span>area</span><strong class="mono">t^2 / 2 = '+fmtShort(f)+'</strong></div>'}else if(t<=2){html+='<p>Use the complement of the top-right triangle.</p><div class="calc-step"><span>missing leg</span><strong class="mono">2 - t = '+fmt(2-t,2)+'</strong></div><div class="calc-step"><span>selected area</span><strong class="mono">1 - (2-t)^2 / 2</strong></div><div class="calc-step"><span>F_S(t)</span><strong class="mono">'+fmtShort(f)+'</strong></div>'}else{html+='<p>The entire unit square is selected.</p><div class="calc-step"><span>Area</span><strong class="mono">1</strong></div>'}html+='<p class="math">joint density = 1, so area = probability.</p>';els.areaCalc.innerHTML=html}
+  function syncControls(){els.tSlider.value=fmt(state.t,2);els.tInput.value=fmt(state.t,2);document.querySelectorAll("[data-preset]").forEach(function(b){b.classList.toggle("active",Math.abs(Number(b.dataset.preset)-state.t)<.005)})}
+  function setT(v){state.t=clamp(Number(v),-.25,2.25);render()}
+  function stop(){state.playing=false;if(state.raf)cancelAnimationFrame(state.raf);state.raf=null;els.play.textContent="Play";els.play.classList.remove("active");els.play.setAttribute("aria-pressed","false")}
+  function playFrame(ts){if(!state.playing)return;if(!state.last)state.last=ts;var dt=Math.min(40,ts-state.last)/1000;state.last=ts;var next=state.t+state.direction*dt*(prefersReduced?.9:.45);if(next>=2.25){next=2.25;state.direction=-1}else if(next<=-.25){next=-.25;state.direction=1}state.t=next;render();state.raf=requestAnimationFrame(playFrame)}
+  function togglePlay(){if(state.playing){stop();return}state.playing=true;state.last=0;els.play.textContent="Pause";els.play.classList.add("active");els.play.setAttribute("aria-pressed","true");state.raf=requestAnimationFrame(playFrame)}
+  function pointer(e){var rect=els.canvas.getBoundingClientRect(),p=e.touches&&e.touches[0]?e.touches[0]:e;return {x:p.clientX-rect.left,y:p.clientY-rect.top}}
+  function inRect(p,r){return p.x>=r.l&&p.x<=r.l+r.w&&p.y>=r.t&&p.y<=r.t+r.h}
+  function tFromPointer(p){if(inRect(p,layout.xy)){var q=xyInv(layout.xy,p.x,p.y);return q.x+q.y}if(inRect(p,layout.cdf))return -.25+(p.x-layout.cdf.l)/layout.cdf.w*2.5;if(inRect(p,layout.pdf))return -.25+(p.x-layout.pdf.l)/layout.pdf.w*2.5;return null}
+  els.tSlider.addEventListener("input",function(){stop();setT(els.tSlider.value)});
+  els.tInput.addEventListener("change",function(){stop();setT(els.tInput.value)});
+  els.tInput.addEventListener("keydown",function(e){if(e.key==="Enter"){stop();setT(els.tInput.value)}});
+  els.canvas.addEventListener("keydown",function(e){var step=e.shiftKey?.1:.01;if(e.key==="ArrowLeft"||e.key==="ArrowDown"){e.preventDefault();stop();setT(state.t-step)}if(e.key==="ArrowRight"||e.key==="ArrowUp"){e.preventDefault();stop();setT(state.t+step)}if(e.key==="Home"){e.preventDefault();stop();setT(-.25)}if(e.key==="End"){e.preventDefault();stop();setT(2.25)}});
+  els.canvas.addEventListener("pointerdown",function(e){var p=pointer(e),v=tFromPointer(p);if(v==null)return;els.canvas.setPointerCapture(e.pointerId);state.drag=true;stop();setT(v)});
+  els.canvas.addEventListener("pointermove",function(e){if(!state.drag)return;var v=tFromPointer(pointer(e));if(v!=null)setT(v)});
+  els.canvas.addEventListener("pointerup",function(e){state.drag=false;try{els.canvas.releasePointerCapture(e.pointerId)}catch(err){}});
+  els.canvas.addEventListener("pointercancel",function(){state.drag=false});
+  els.play.addEventListener("click",togglePlay);
+  els.reset.addEventListener("click",function(){stop();state.direction=1;setT(.5)});
+  els.toggleCalc.addEventListener("click",function(){state.showAreaCalc=!state.showAreaCalc;render()});
+  els.areaCalc.addEventListener("pointerdown",function(e){if(!state.showAreaCalc)return;var rect=els.areaCalc.getBoundingClientRect();state.calcDrag={dx:e.clientX-rect.left,dy:e.clientY-rect.top};els.areaCalc.classList.add("dragging");try{els.areaCalc.setPointerCapture(e.pointerId)}catch(err){}e.stopPropagation()});
+  els.areaCalc.addEventListener("pointermove",function(e){if(!state.calcDrag)return;var parent=els.canvas.parentElement.getBoundingClientRect();state.calcPos={x:e.clientX-parent.left-state.calcDrag.dx,y:e.clientY-parent.top-state.calcDrag.dy};positionAreaCalculation();e.stopPropagation()});
+  function stopCalcDrag(e){if(!state.calcDrag)return;state.calcDrag=null;els.areaCalc.classList.remove("dragging");try{els.areaCalc.releasePointerCapture(e.pointerId)}catch(err){}}
+  els.areaCalc.addEventListener("pointerup",stopCalcDrag);
+  els.areaCalc.addEventListener("pointercancel",stopCalcDrag);
+  document.querySelectorAll("[data-preset]").forEach(function(btn){btn.addEventListener("click",function(){stop();setT(btn.dataset.preset)})});
+  window.addEventListener("resize",render);
+  function setupLearningPopovers(){var triggers=Array.prototype.slice.call(document.querySelectorAll("[data-popover]"));if(!triggers.length)return;var popover=document.createElement("div");popover.id="learningPopover";popover.className="learning-popover";popover.setAttribute("role","tooltip");document.body.appendChild(popover);var active=null;function positionPopover(trigger){var rect=trigger.getBoundingClientRect();popover.style.left="0px";popover.style.top="0px";var gap=8,margin=10,popRect=popover.getBoundingClientRect();var left=rect.left+rect.width/2-popRect.width/2;left=clamp(left,margin,window.innerWidth-popRect.width-margin);var top=rect.bottom+gap;if(top+popRect.height+margin>window.innerHeight)top=rect.top-popRect.height-gap;top=clamp(top,margin,window.innerHeight-popRect.height-margin);popover.style.left=left+"px";popover.style.top=top+"px"}function openPopover(trigger){if(active&&active!==trigger)active.setAttribute("aria-expanded","false");active=trigger;popover.textContent=trigger.getAttribute("data-popover")||"";popover.classList.add("show");trigger.setAttribute("aria-expanded","true");positionPopover(trigger)}function closePopover(trigger){if(trigger&&active!==trigger)return;if(active)active.setAttribute("aria-expanded","false");active=null;popover.classList.remove("show")}triggers.forEach(function(trigger){trigger.classList.add("popover-trigger");if(!trigger.hasAttribute("tabindex")&&!/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(trigger.tagName))trigger.tabIndex=0;trigger.setAttribute("aria-describedby",popover.id);trigger.setAttribute("aria-expanded","false");trigger.addEventListener("mouseenter",function(){openPopover(trigger)});trigger.addEventListener("mouseleave",function(){closePopover(trigger)});trigger.addEventListener("focus",function(){openPopover(trigger)});trigger.addEventListener("blur",function(){closePopover(trigger)});trigger.addEventListener("click",function(e){if(trigger.tagName==="LABEL")e.preventDefault();if(active===trigger&&popover.classList.contains("show"))closePopover(trigger);else openPopover(trigger);if(trigger.tagName!=="BUTTON")e.stopPropagation()})});document.addEventListener("click",function(e){if(!active)return;if(active.contains(e.target))return;closePopover()});document.addEventListener("keydown",function(e){if(e.key==="Escape")closePopover()});window.addEventListener("resize",function(){if(active)positionPopover(active)});window.addEventListener("scroll",function(){if(active)positionPopover(active)},true)}
+  function feedbackContext(){return ["Course: 10.022 Modelling Uncertainty","Week: 9","Class: 2","Demo: Uniform Sum Geometry","t: "+fmt(state.t,3),"F_S(t): "+fmtShort(cdf(state.t)),"f_S(t): "+fmtShort(pdf(state.t))].join("\n")}
+  function initFeedback(){var overlay=document.getElementById("fbOverlay"),btn=document.getElementById("fbButton"),close=document.getElementById("fbClose"),form=document.getElementById("fbForm"),copy=document.getElementById("fbCopy"),status=document.getElementById("fbStatus"),prepared=document.getElementById("fbPreparedText");function preparedText(){var cat=document.getElementById("fbCategory").value||"General feedback",desc=document.getElementById("fbDescription").value.trim(),exp=document.getElementById("fbExpected").value.trim();return feedbackContext()+"\n\nFeedback type: "+cat+"\n\nYour feedback:\n"+desc+(exp?"\n\nWhat could make it better?\n"+exp:"")}function open(){overlay.classList.add("show");document.getElementById("fbDescription").focus()}function shut(){overlay.classList.remove("show")}btn.addEventListener("click",open);close.addEventListener("click",shut);overlay.addEventListener("click",function(e){if(e.target===overlay)shut()});form.addEventListener("submit",function(e){e.preventDefault();var body=preparedText();if(!document.getElementById("fbDescription").value.trim()){status.textContent="Please enter your feedback.";return}var cat=document.getElementById("fbCategory").value||"General";var subject=FEEDBACK_EMAIL_CONFIG.subjectPrefix+" [Uniform Sum] ["+cat+"]";window.location.href="mailto:"+FEEDBACK_EMAIL_CONFIG.recipient+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);prepared.textContent=body;prepared.classList.add("show");status.textContent="Email draft opened. If it did not open, use Copy feedback."});copy.addEventListener("click",function(){var text=preparedText();prepared.textContent=text;prepared.classList.add("show");if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){status.textContent="Feedback copied."}).catch(function(){status.textContent="Copy the prepared text below."});else status.textContent="Copy the prepared text below."})}
+  function initEditLabels(){if(!/[?&]edit=1\b/.test(location.search))return;document.documentElement.classList.add("edit-on");document.querySelectorAll("[data-edit-id]").forEach(function(node){var badge=document.createElement("span");badge.className="edit-badge";badge.textContent=node.getAttribute("data-edit-id");badge.addEventListener("click",function(e){e.stopPropagation();if(navigator.clipboard)navigator.clipboard.writeText(badge.textContent)});node.insertBefore(badge,node.firstChild)})}
+  setupLearningPopovers();initFeedback();initEditLabels();render();
+})();
+</script>
+</body>
+</html>
