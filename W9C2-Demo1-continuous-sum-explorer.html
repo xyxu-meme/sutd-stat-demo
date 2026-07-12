@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+Stage 1 standalone interactive demo.
+Source PDF: Letcure notes/week9class2_solution.pdf, Week 9 Class 2, slides 10-25.
+Purpose: compare and simulate S = X + Y for selected independent continuous random variables.
+-->
+<title>Add Two Random Variables</title>
+<style>
+  :root{
+    --paper:#FAF7F0; --ink:#1F2937; --bar:#2E4374; --navy:var(--bar);
+    --amber:#E0793F; --sage:#3F6F5E; --hair:#DDD6C7; --hair-2:#C9C0AC;
+    --muted:#8A8272; --soft:#F2EEE3; --white:#FFFFFF; --grid:#E9E2D5;
+    --active:#D99A00; --x-color:#2E4374; --y-color:#3F6F5E; --s-color:#E0793F;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh; margin:0; padding:28px 14px 44px; display:flex; justify-content:center;
+    background-color:var(--paper); background-image:radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size:18px 18px; color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .page{width:100%;max-width:1180px}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace}
+  .math{font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif}
+  header{margin:0 0 16px}
+  .eyebrow{margin:0 0 7px;color:var(--sage);font-size:12.5px;font-weight:700;letter-spacing:.075em;text-transform:uppercase}
+  h1{margin:0 0 8px;color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;font-size:clamp(28px,4.2vw,40px);line-height:1.12;font-weight:650}
+  .lede{max-width:920px;margin:0;color:#4B5159;font-size:15.5px;line-height:1.55}
+  .panel{background:var(--white);border:1px solid var(--hair);border-radius:14px;box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.055);padding:16px clamp(13px,2.6vw,24px) 20px}
+  .top-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 16px;align-items:end;padding-bottom:13px;margin-bottom:14px;border-bottom:1px dashed var(--hair)}
+  .switch-group{min-width:0}
+  .label{display:block;margin:0 0 7px;color:#4B5159;font-size:13px;font-weight:650}
+  .segmented{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border-radius:999px;background:var(--soft)}
+  .seg-btn{appearance:none;min-height:36px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:#6B6459;cursor:pointer;font-size:12.5px;font-weight:750}
+  .seg-btn.active{background:var(--ink);color:#fff}
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px 14px;align-items:end;padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed var(--hair)}
+  .control-block{min-width:0}
+  .slider-row{display:grid;grid-template-columns:minmax(102px,1fr) auto;gap:9px;align-items:center}
+  button,input,textarea,select{font-family:inherit}
+  button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  input[type="range"]{width:100%;accent-color:var(--amber)}
+  .value-pill{width:78px;padding:6px 7px;border:1px solid var(--hair);border-radius:8px;background:#fffdf9;color:#8A4B22;text-align:center;font-size:12.5px;font-weight:750}
+  input.value-pill{appearance:textfield}
+  .btn{appearance:none;min-height:38px;border:1px solid rgba(46,67,116,.18);border-radius:10px;background:var(--navy);color:#fff;padding:9px 12px;cursor:pointer;font-size:13px;font-weight:750}
+  .btn.secondary{background:#fffdf9;color:var(--navy)}
+  .btn.active{background:var(--amber);border-color:rgba(124,63,26,.18)}
+  .btn.compact{min-height:34px;padding:7px 10px;border-radius:9px;font-size:12.5px;line-height:1}
+  .btn-row,.sampling-actions,.display-toggles{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .sampling-toolbar{display:flex;justify-content:space-between;gap:8px 12px;align-items:center;width:100%}
+  .sampling-options{margin-left:auto}
+  .display-toggle{background:#fffdf9;color:var(--navy)}
+  .display-toggle[aria-pressed="true"]{background:rgba(63,111,94,.12);border-color:rgba(63,111,94,.42);box-shadow:inset 0 0 0 1px rgba(63,111,94,.16)}
+  .display-toggle[aria-pressed="true"]::before{content:"✓";margin-right:5px;color:var(--sage);font-weight:900}
+  .btn:focus-visible,.seg-btn:focus-visible,input:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:2px solid rgba(224,121,63,.72);outline-offset:2px}
+  .view{display:none}.view.active{display:block}
+  .sampling-tools{display:none;gap:5px;padding:8px 9px;margin-bottom:9px;border:1px solid rgba(201,192,172,.76);border-radius:12px;background:#fffaf2}
+  .sampling-tools.active{display:flex;flex-direction:column}
+  .equation{min-height:28px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0;padding:2px 1px;color:#273449;font-size:13.5px;font-weight:700;line-height:1.25}
+  .equation .eq-term{display:inline-flex;align-items:center}
+  .workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,360px);gap:14px;align-items:stretch}
+  #compareView .workspace,#samplingView .workspace{align-items:start}
+  .canvas-card,.readout,.note-card{position:relative;min-width:0;border:1px solid var(--hair);border-radius:12px;background:#fffdf9;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+  .canvas-card{height:650px;overflow:hidden}
+  #samplingView .canvas-card{height:600px}
+  canvas{display:block;width:100%;height:100%;border-radius:12px;background:linear-gradient(180deg,#fffdf9 0%,#fbf6eb 100%)}
+  .canvas-badge{position:absolute;top:12px;left:12px;z-index:2;max-width:calc(100% - 24px);padding:5px 8px;border:1px solid rgba(46,67,116,.16);border-radius:999px;background:rgba(255,255,255,.9);color:var(--navy);font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif;font-size:12px;font-weight:750;pointer-events:none}
+  .canvas-badge[data-popover]{pointer-events:auto}
+  .popover-trigger{cursor:help}
+  .popover-trigger:focus-visible{outline:2px solid rgba(224,121,63,.72);outline-offset:2px}
+  .learning-popover{position:fixed;z-index:1500;display:none;max-width:260px;padding:9px 10px;border:1px solid rgba(201,192,172,.92);border-left:4px solid var(--sage);border-radius:10px;background:rgba(255,253,249,.98);color:var(--ink);box-shadow:0 12px 28px rgba(31,41,55,.18);font:600 12.5px/1.42 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none}
+  .learning-popover.show{display:block}
+  .side-stack{display:grid;gap:12px;align-content:start}
+  .readout,.note-card{padding:13px}
+  .readout h2,.note-card h2{margin:0 0 8px;color:var(--navy);font-size:15px;line-height:1.25}
+  .dist-card{margin-bottom:11px;padding-bottom:10px;border-bottom:1px dashed rgba(201,192,172,.76)}
+  .dist-card:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+  .dist-card h3{margin:0 0 6px;font-size:13.5px;line-height:1.25}
+  .read-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;color:#4B5159;font-size:12.7px}
+  .read-row strong{color:var(--ink)}
+  .formula-line{margin:0 0 6px;color:#273449;font-size:13px;line-height:1.42}
+  .note-card{border-left:5px solid var(--amber);color:#4B5159;font-size:13.5px;line-height:1.48}
+  #compareView .note-card,#samplingView .note-card{padding:10px 12px;font-size:13px;line-height:1.4}
+  #compareView .note-card h2,#samplingView .note-card h2{margin-bottom:5px;font-size:14px}
+  .status{min-height:22px;margin:12px 0 0;color:#6F3A18;font-size:13px;font-weight:700}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin:13px 0 0;color:#5A6270;font-size:12.5px;font-weight:650}
+  .key{display:inline-flex;align-items:center;gap:6px}.swatch{width:20px;height:10px;border-radius:999px;border:1px solid transparent}
+  .s-x{background:var(--x-color)}.s-y{background:var(--y-color)}.s-s{background:var(--s-color)}.s-hist{background:rgba(224,121,63,.40);border-color:rgba(224,121,63,.72)}.s-marker{background:var(--active)}
+  footer{margin-top:16px;padding:0 4px}.byline{color:var(--muted);font-size:12.5px;line-height:1.5;text-align:right}
+  #fbButton{position:fixed;right:18px;bottom:18px;z-index:1000;border:0;border-radius:999px;background:var(--navy);color:#fff;padding:11px 14px;box-shadow:0 8px 22px rgba(31,41,55,.18);cursor:pointer;font-weight:750}
+  #fbOverlay{position:fixed;inset:0;z-index:1100;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(31,41,55,.30)}
+  #fbOverlay.show{display:flex}.fb-panel{width:min(560px,100%);max-height:92vh;overflow:auto;border:1px solid var(--hair);border-radius:14px;background:#fffdf9;box-shadow:0 18px 50px rgba(31,41,55,.22);padding:16px}
+  .fb-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:8px}.fb-head h3{margin:0;color:var(--navy);font-size:18px}.fb-close{border:0;background:transparent;color:var(--muted);font-size:24px;line-height:1;cursor:pointer}
+  .fb-panel label{display:block;margin:12px 0 6px;color:#4B5159;font-size:13px;font-weight:700}.fb-panel textarea,.fb-panel select{width:100%;padding:9px 10px;border:1px solid var(--hair);border-radius:10px;background:#fff;color:var(--ink)}.fb-panel textarea{min-height:94px;resize:vertical}
+  .fb-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.fb-status{min-height:20px;margin-top:8px;color:#6F3A18;font-size:12.5px;font-weight:700}.fb-prepared{display:none;white-space:pre-wrap;margin-top:10px;padding:10px;border:1px dashed var(--hair-2);border-radius:10px;background:#fffaf2;font-size:12px}.fb-prepared.show{display:block}
+  .edit-badge{position:absolute;z-index:20;display:none;max-width:180px;padding:3px 6px;border-radius:7px;background:rgba(46,67,116,.92);color:#fff;font-size:10px;font-weight:800;letter-spacing:.02em;cursor:pointer}.edit-on .edit-badge{display:inline-block}
+  .edit-indicator{position:fixed;left:14px;bottom:14px;z-index:1200;display:none;padding:7px 9px;border-radius:999px;background:var(--ink);color:#fff;font-size:12px;font-weight:800}.edit-on .edit-indicator{display:block}
+  @media (max-width:980px){.controls{grid-template-columns:1fr 1fr}.workspace{grid-template-columns:1fr}.canvas-card{height:630px}#samplingView .canvas-card{height:570px}.sampling-toolbar{align-items:flex-start}.top-row{align-items:start}}
+  @media (max-width:760px){.sampling-toolbar{flex-direction:column;align-items:stretch}.sampling-actions,.display-toggles{gap:6px}.sampling-options{margin-left:0}.btn.compact{min-height:40px;padding:8px 10px}}
+  @media (max-width:640px){body{padding:20px 10px 72px}.controls{grid-template-columns:1fr}.canvas-card{height:610px}#samplingView .canvas-card{height:540px}.byline{text-align:left}#fbButton{right:12px;bottom:12px}}
+</style>
+</head>
+<body>
+<div class="page" id="pageRoot">
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 9, Class 2 &middot; Singapore University of Technology and Design</p>
+    <h1>Add Two Random Variables</h1>
+    <p class="lede">Compare the distributions of <span class="math">X</span>, <span class="math">Y</span>, and <span class="math">S = X + Y</span>, then generate samples to see all three empirical histograms build together.</p>
+  </header>
+  <main class="panel" data-edit-id="W9C2-D1-DEMO">
+    <span class="edit-badge">W9C2-D1-DEMO</span>
+    <section class="top-row" aria-label="Distribution family and learning mode">
+      <div class="switch-group">
+        <span class="label popover-trigger" id="familyLabel" tabindex="0" data-popover="Choose the original distributions of X and Y. Compare how their sum changes shape, centre, and spread.">Distribution family</span>
+        <div class="segmented" role="tablist" aria-labelledby="familyLabel">
+          <button class="seg-btn active" type="button" data-family="normal" role="tab" aria-selected="true">Normal + Normal</button>
+          <button class="seg-btn" type="button" data-family="uniform" role="tab" aria-selected="false">Uniform + Uniform</button>
+          <button class="seg-btn" type="button" data-family="exponential" role="tab" aria-selected="false">Exponential + Exponential</button>
+        </div>
+      </div>
+      <div class="switch-group">
+        <span class="label" id="modeLabel">Learning mode</span>
+        <div class="segmented" role="tablist" aria-labelledby="modeLabel">
+          <button class="seg-btn active popover-trigger" type="button" data-mode="compare" role="tab" aria-selected="true" data-popover="Compare the theoretical distributions of X, Y, and S = X + Y. Watch how the centre, spread, and shape of the sum differ from the two original distributions.">Compare</button>
+          <button class="seg-btn popover-trigger" type="button" data-mode="sampling" role="tab" aria-selected="false" data-popover="Generate x_i and y_i independently, then form s_i = x_i + y_i. The three histograms show how the sampled X, Y, and sum distributions build together.">Generate by samples</button>
+        </div>
+      </div>
+      <button class="btn secondary" id="resetParams" type="button">Reset parameters</button>
+    </section>
+    <section class="controls" id="paramControls" aria-label="Distribution parameters" data-edit-id="W9C2-D1-SLIDERS"></section>
+    <section class="sampling-tools" id="samplingTools" aria-label="Sampling controls">
+      <div class="sampling-toolbar">
+        <div class="sampling-actions">
+          <button class="btn secondary compact popover-trigger" id="draw1" type="button" data-popover="Try one draw first. Watch how one value x_i is generated from X, one value y_i is generated from Y, and their sum s_i = x_i + y_i is added to the third distribution.">Draw 1</button>
+          <button class="btn secondary compact" id="draw20" type="button" aria-label="Draw 20 samples">20</button>
+          <button class="btn secondary compact popover-trigger" id="draw200" type="button" aria-label="Draw 200 samples" data-popover="Use 200 draws to begin seeing the empirical histograms take shape. Compare the sampled X, Y, and X + Y distributions with their theoretical curves.">200</button>
+          <button class="btn secondary compact popover-trigger" id="draw1000" type="button" aria-label="Draw 1000 samples" data-popover="Use 1000 draws to examine large-sample behaviour. The empirical histograms and summary statistics should move closer to the theoretical distributions.">1000</button>
+          <button class="btn compact" id="playSamples" type="button" aria-pressed="false">Play</button>
+          <button class="btn secondary compact" id="clearSamples" type="button" aria-label="Clear all samples">Clear</button>
+        </div>
+        <div class="sampling-options display-toggles" aria-label="Sampling plot display options">
+          <button class="btn compact display-toggle popover-trigger" id="showSamplingPdf" type="button" aria-pressed="true" data-popover="Show or hide the theoretical density curves while keeping the empirical histograms visible.">Theory</button>
+          <button class="btn compact display-toggle popover-trigger" id="showSamplingSd" type="button" aria-pressed="true" data-popover="Show or hide the theoretical mean markers and one-standard-deviation intervals.">Mean ± SD</button>
+        </div>
+      </div>
+      <div class="equation math popover-trigger" id="sampleEquation" tabindex="0" data-popover="The highlighted x_i, y_i, and s_i markers all belong to the same random draw.">Each draw creates x<sub>i</sub>, y<sub>i</sub>, and s<sub>i</sub> = x<sub>i</sub> + y<sub>i</sub>.</div>
+    </section>
+    <section class="view active" id="compareView">
+      <div class="workspace">
+        <div class="canvas-card" data-edit-id="W9C2-D1-PLOT-COMPARE">
+          <canvas id="compareCanvas" tabindex="0" aria-label="Compare theoretical densities for X, Y, and S equals X plus Y"></canvas>
+          <div class="canvas-badge mono popover-trigger" id="compareBadge" tabindex="0" data-popover="Compare the two original bell curves with the sum. The sum remains normal, with means and variances added.">theoretical distributions</div>
+        </div>
+        <aside class="side-stack">
+          <section class="readout" id="compareReadout" aria-live="polite"></section>
+          <section class="note-card popover-trigger" id="formulaCard" tabindex="0" data-popover="For independent random variables, means and variances add. The shape of the sum depends on the original distributions."></section>
+        </aside>
+      </div>
+    </section>
+    <section class="view" id="samplingView">
+      <div class="workspace">
+        <div class="canvas-card" data-edit-id="W9C2-D1-PLOT-SAMPLING">
+          <canvas id="samplingCanvas" tabindex="0" aria-label="Three empirical histograms for sampled X, Y, and S equals X plus Y"></canvas>
+          <div class="canvas-badge mono popover-trigger" id="samplingBadge" tabindex="0" data-popover="Each draw produces one x_i, one y_i, and one s_i = x_i + y_i. The three histograms are built from the same sample triplets.">sampled X, Y, and S histograms</div>
+        </div>
+        <aside class="side-stack">
+          <section class="readout popover-trigger" id="sampleReadout" tabindex="0" aria-live="polite" data-popover="As the sample size grows, the empirical means and standard deviations should move closer to their theoretical values."></section>
+          <section class="note-card"><h2>What to watch</h2><p>Each draw creates one <span class="math">x_i</span>, one <span class="math">y_i</span>, and one <span class="math">s_i = x_i + y_i</span>. The highlighted markers and equation come from the same draw.</p></section>
+        </aside>
+      </div>
+    </section>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="legend" aria-label="Plot legend">
+      <span class="key"><span class="swatch s-x"></span>X</span>
+      <span class="key"><span class="swatch s-y"></span>Y</span>
+      <span class="key"><span class="swatch s-s"></span>S = X + Y</span>
+      <span class="key"><span class="swatch s-hist"></span>empirical histogram density</span>
+      <span class="key"><span class="swatch s-marker"></span>current draw marker</span>
+    </div>
+  </main>
+  <footer><div class="byline">XU, Ying &middot; xu_ying@sutd.edu.sg &middot; 10.022 Modelling Uncertainty</div></footer>
+  <div class="edit-indicator">Edit labels ON</div>
+</div>
+<button id="fbButton" type="button">Share feedback</button>
+<div id="fbOverlay" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+  <form class="fb-panel" id="fbForm">
+    <div class="fb-head"><h3 id="fbTitle">Share your feedback</h3><button class="fb-close" id="fbClose" type="button" aria-label="Close feedback panel">&times;</button></div>
+    <p class="lede" style="font-size:13px;">Tell us what worked well and what could be improved.</p>
+    <label for="fbCategory">Feedback type</label>
+    <select id="fbCategory" required><option value="" selected disabled>Select feedback type</option><option>Something I found helpful</option><option>A suggestion for improvement</option><option>A content or explanation issue</option><option>A technical problem</option><option>General feedback</option></select>
+    <label for="fbDescription">Your feedback</label><textarea id="fbDescription" required></textarea>
+    <label for="fbExpected">What could make the demo better? <span class="muted">(optional)</span></label><textarea id="fbExpected"></textarea>
+    <div class="fb-actions"><button class="btn" type="submit">Send by email</button><button class="btn secondary" id="fbCopy" type="button">Copy feedback</button></div>
+    <div class="fb-status" id="fbStatus" aria-live="polite"></div><div id="fbPreparedText" class="fb-prepared" aria-label="Prepared feedback email"></div>
+  </form>
+</div>
+<script>
+(function(){
+  "use strict";
+  var TAU=Math.PI*2;
+  var C={x:"#2E4374",y:"#3F6F5E",s:"#E0793F",navy:"#2E4374",amber:"#E0793F",sage:"#3F6F5E",grid:"#E9E2D5",muted:"#8A8272",ink:"#1F2937",active:"#D99A00"};
+  var FEEDBACK_EMAIL_CONFIG={recipient:"10022mufeedback@gmail.com",subjectPrefix:"[10.022 MU Demo Feedback]"};
+  var prefersReduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var state={family:"normal",mode:"compare",normal:{mu1:0,sigma1:1,mu2:0,sigma2:1},uniform:{a1:0,b1:1,a2:0,b2:1},exponential:{lambda1:1,lambda2:1},xs:[],ys:[],ss:[],current:null,showSamplingPdf:true,showSamplingSd:true,playing:false,batchTimer:null,playTimer:null};
+  var els={paramControls:document.getElementById("paramControls"),compareCanvas:document.getElementById("compareCanvas"),samplingCanvas:document.getElementById("samplingCanvas"),compareReadout:document.getElementById("compareReadout"),sampleReadout:document.getElementById("sampleReadout"),formulaCard:document.getElementById("formulaCard"),sampleEquation:document.getElementById("sampleEquation"),samplingTools:document.getElementById("samplingTools"),status:document.getElementById("status"),playSamples:document.getElementById("playSamples"),showSamplingPdf:document.getElementById("showSamplingPdf"),showSamplingSd:document.getElementById("showSamplingSd"),compareBadge:document.getElementById("compareBadge"),samplingBadge:document.getElementById("samplingBadge")};
+  var cCompare=els.compareCanvas.getContext("2d"), cSampling=els.samplingCanvas.getContext("2d"), spare=null;
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+  function fmt(v,d){return Number(v).toFixed(d==null?2:d)}
+  function fmtShort(v){var a=Math.abs(v); if(!isFinite(v))return "-"; return a>=100?fmt(v,1):a>=10?fmt(v,2):fmt(v,3)}
+  function normalPdf(x,mu,sigma){var z=(x-mu)/sigma;return Math.exp(-.5*z*z)/(sigma*Math.sqrt(TAU))}
+  function stdNormal(){if(spare!==null){var out=spare;spare=null;return out}var u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();var r=Math.sqrt(-2*Math.log(u)),t=TAU*v;spare=r*Math.sin(t);return r*Math.cos(t)}
+  function expSample(lam){var u=0;while(u===0)u=Math.random();return -Math.log(u)/lam}
+  function uniformPdf(x,a,b){return x>=a&&x<=b?1/(b-a):0}
+  function uniformSumPdf(z,a,b,c,d){var lo=Math.max(a,z-d), hi=Math.min(b,z-c);return Math.max(0,hi-lo)/((b-a)*(d-c))}
+  function expPdf(x,lam){return x<0?0:lam*Math.exp(-lam*x)}
+  function expSumPdf(z,l1,l2){if(z<0)return 0;if(Math.abs(l1-l2)<1e-8)return l1*l1*z*Math.exp(-l1*z);return (l1*l2/(l2-l1))*(Math.exp(-l1*z)-Math.exp(-l2*z))}
+  function activeSpec(){
+    var p=state[state.family];
+    if(state.family==="normal"){
+      var vx=p.sigma1*p.sigma1, vy=p.sigma2*p.sigma2, vs=vx+vy, sigS=Math.sqrt(vs);
+      return {name:"Normal + Normal",params:p,items:[
+        {key:"x",name:"X",label:"X ~ N("+fmt(p.mu1,1)+", "+fmt(vx,2)+")",mean:p.mu1,variance:vx,sd:p.sigma1,color:C.x,shape:"circle",pdf:function(z){return normalPdf(z,p.mu1,p.sigma1)},sample:function(){return p.mu1+p.sigma1*stdNormal()}},
+        {key:"y",name:"Y",label:"Y ~ N("+fmt(p.mu2,1)+", "+fmt(vy,2)+")",mean:p.mu2,variance:vy,sd:p.sigma2,color:C.y,shape:"square",pdf:function(z){return normalPdf(z,p.mu2,p.sigma2)},sample:function(){return p.mu2+p.sigma2*stdNormal()}},
+        {key:"s",name:"S = X + Y",label:"S ~ N("+fmt(p.mu1+p.mu2,1)+", "+fmt(vs,2)+")",mean:p.mu1+p.mu2,variance:vs,sd:sigS,color:C.s,shape:"triangle",pdf:function(z){return normalPdf(z,p.mu1+p.mu2,sigS)}}
+      ],formula:["X ~ N(μ₁, σ₁²), Y ~ N(μ₂, σ₂²)","S ~ N(μ₁ + μ₂, σ₁² + σ₂²)","Variances add; standard deviations do not."],popCompare:["Both originals are bell-shaped.","The sum is also bell-shaped.","The centre moves to μ₁ + μ₂.","Variances add."]};
+    }
+    if(state.family==="uniform"){
+      var lx=p.b1-p.a1, ly=p.b2-p.a2, mx=(p.a1+p.b1)/2, my=(p.a2+p.b2)/2, vxu=lx*lx/12, vyu=ly*ly/12;
+      return {name:"Uniform + Uniform",params:p,items:[
+        {key:"x",name:"X",label:"X ~ U("+fmt(p.a1,1)+", "+fmt(p.b1,1)+")",mean:mx,variance:vxu,sd:Math.sqrt(vxu),color:C.x,shape:"circle",pdf:function(z){return uniformPdf(z,p.a1,p.b1)},sample:function(){return p.a1+Math.random()*lx}},
+        {key:"y",name:"Y",label:"Y ~ U("+fmt(p.a2,1)+", "+fmt(p.b2,1)+")",mean:my,variance:vyu,sd:Math.sqrt(vyu),color:C.y,shape:"square",pdf:function(z){return uniformPdf(z,p.a2,p.b2)},sample:function(){return p.a2+Math.random()*ly}},
+        {key:"s",name:"S = X + Y",label:"S has a trapezoid/triangle density",mean:mx+my,variance:vxu+vyu,sd:Math.sqrt(vxu+vyu),color:C.s,shape:"triangle",pdf:function(z){return uniformSumPdf(z,p.a1,p.b1,p.a2,p.b2)}}
+      ],formula:["X ~ U(a₁,b₁), Y ~ U(a₂,b₂)","E(S)=E(X)+E(Y), Var(S)=Var(X)+Var(Y)","For U(0,1)+U(0,1), the sum density is triangular."],popCompare:["Each original distribution is flat.","The sum is not flat.","For U(0,1)+U(0,1), the sum is triangular.","Middle values can be formed in more ways."]};
+    }
+    var l1=p.lambda1,l2=p.lambda2, vxe=1/(l1*l1), vye=1/(l2*l2);
+    return {name:"Exponential + Exponential",params:p,items:[
+      {key:"x",name:"X",label:"X ~ Exp("+fmt(l1,2)+")",mean:1/l1,variance:vxe,sd:1/l1,color:C.x,shape:"circle",pdf:function(z){return expPdf(z,l1)},sample:function(){return expSample(l1)}},
+      {key:"y",name:"Y",label:"Y ~ Exp("+fmt(l2,2)+")",mean:1/l2,variance:vye,sd:1/l2,color:C.y,shape:"square",pdf:function(z){return expPdf(z,l2)},sample:function(){return expSample(l2)}},
+      {key:"s",name:"S = X + Y",label:Math.abs(l1-l2)<1e-8?"S has Erlang/Gamma shape":"S has hypoexponential shape",mean:1/l1+1/l2,variance:vxe+vye,sd:Math.sqrt(vxe+vye),color:C.s,shape:"triangle",pdf:function(z){return expSumPdf(z,l1,l2)}}
+    ],formula:["X ~ Exp(λ₁), Y ~ Exp(λ₂)","E(S)=1/λ₁ + 1/λ₂, Var(S)=1/λ₁² + 1/λ₂²",Math.abs(l1-l2)<1e-8?"If λ₁=λ₂=λ, f_S(s)=λ²s exp(−λs).":"For unequal rates, the sum is hypoexponential."],popCompare:["Each original distribution decreases from 0.","The sum is not exponential.","The sum rises and then falls.","Middle-range sums receive contributions from many pairs."]};
+  }
+  function makeTriplet(){var spec=activeSpec(), x=spec.items[0].sample(), y=spec.items[1].sample();return {x:x,y:y,s:x+y}}
+  function addTriplet(t){state.xs.push(t.x);state.ys.push(t.y);state.ss.push(t.s);state.current=t}
+  function clearSamples(){state.xs=[];state.ys=[];state.ss=[];state.current=null}
+  function stats(arr){var n=arr.length;if(!n)return null;var sum=0;for(var i=0;i<n;i++)sum+=arr[i];var mean=sum/n,ss=0;for(var j=0;j<n;j++){var z=arr[j]-mean;ss+=z*z}return {n:n,mean:mean,sd:Math.sqrt(ss/n)}}
+  function stopSimulation(){state.playing=false;if(state.batchTimer)clearTimeout(state.batchTimer);if(state.playTimer)clearInterval(state.playTimer);state.batchTimer=null;state.playTimer=null;els.playSamples.textContent="Play";els.playSamples.classList.remove("active");els.playSamples.setAttribute("aria-pressed","false")}
+  function resizeCanvas(canvas){var dpr=window.devicePixelRatio||1, rect=canvas.parentElement.getBoundingClientRect(), w=Math.max(320,Math.round(rect.width)), h=Math.max(420,Math.round(rect.height));canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.width=w+"px";canvas.style.height=h+"px";canvas.getContext("2d").setTransform(dpr,0,0,dpr,0,0)}
+  function size(canvas){var dpr=window.devicePixelRatio||1;return {w:canvas.width/dpr,h:canvas.height/dpr}}
+  function plotRange(includeSamples){
+    var spec=activeSpec(), min=Infinity, max=-Infinity;
+    if(state.family==="uniform"){
+      var p=spec.params;
+      min=Math.min(p.a1,p.a2,p.a1+p.a2);
+      max=Math.max(p.b1,p.b2,p.b1+p.b2);
+      if(max<=min)max=min+1;
+      return {min:min,max:max};
+    }
+    if(state.family==="exponential"){
+      min=0;
+      max=Math.max(spec.items[0].mean+6*spec.items[0].sd,spec.items[1].mean+6*spec.items[1].sd,spec.items[2].mean+5*spec.items[2].sd);
+      if(includeSamples)[state.xs,state.ys,state.ss].forEach(function(arr){arr.forEach(function(v){max=Math.max(max,v)})});
+      return {min:0,max:max*1.03};
+    }
+    spec.items.forEach(function(it){min=Math.min(min,it.mean-4*it.sd);max=Math.max(max,it.mean+4*it.sd)});
+    if(includeSamples)[state.xs,state.ys,state.ss].forEach(function(arr){arr.forEach(function(v){min=Math.min(min,v);max=Math.max(max,v)})});
+    var span=max-min||1;
+    return {min:min-span*.05,max:max+span*.05};
+  }
+  function niceStep(span,target){var raw=span/target,pow=Math.pow(10,Math.floor(Math.log10(raw))),n=raw/pow;if(n<=1)return pow;if(n<=2)return 2*pow;if(n<=5)return 5*pow;return 10*pow}
+  function ticks(min,max,target){var step=niceStep(max-min,target||6),start=Math.ceil(min/step)*step,arr=[];for(var v=start;v<=max+step*.25;v+=step)arr.push(Math.abs(v)<1e-10?0:v);return arr}
+  function panels(w,h){var gap=22,pad={l:58,r:24,t:48,b:44},ph=(h-pad.t-pad.b-gap*2)/3;return [0,1,2].map(function(i){var top=pad.t+i*(ph+gap);return {l:pad.l,r:w-pad.r,t:top,b:top+ph,w:w-pad.l-pad.r,h:ph}})}
+  function mapX(r,x,rg){return r.l+(x-rg.min)/(rg.max-rg.min)*r.w} function mapY(r,y,yMax){return r.b-y/yMax*r.h}
+  function line(ctx,a,b,color,width,dash){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width||1.5;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
+  function label(ctx,text,x,y,color,align){ctx.save();ctx.fillStyle=color||C.ink;ctx.font="700 12.5px system-ui,-apple-system,Segoe UI,sans-serif";ctx.textAlign=align||"center";ctx.textBaseline="middle";ctx.fillText(text,x,y);ctx.restore()}
+  function labelBox(ctx,text,x,y,color){ctx.save();ctx.font="750 12px system-ui,-apple-system,Segoe UI,sans-serif";var m=ctx.measureText(text),bw=m.width+14,bh=24,sw=ctx.canvas.width/(window.devicePixelRatio||1),sh=ctx.canvas.height/(window.devicePixelRatio||1);x=clamp(x,8+bw/2,sw-8-bw/2);y=clamp(y,8+bh/2,sh-8-bh/2);ctx.fillStyle="rgba(255,253,249,.94)";ctx.strokeStyle=color||C.active;ctx.lineWidth=1.3;ctx.beginPath();ctx.roundRect(x-bw/2,y-bh/2,bw,bh,8);ctx.fill();ctx.stroke();ctx.fillStyle=color||C.ink;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,x,y+1);ctx.restore()}
+  function histogram(arr,rg,bins){var width=(rg.max-rg.min)/bins, counts=new Array(bins).fill(0);arr.forEach(function(v){var idx=Math.floor((v-rg.min)/width);if(v===rg.max)idx=bins-1;if(idx>=0&&idx<bins)counts[idx]++});return {counts:counts,width:width,density:counts.map(function(c){return arr.length?c/(arr.length*width):0})}}
+  function yMaxFor(rg,items,hists){var max=.05;items.forEach(function(it){for(var i=0;i<=240;i++){var x=rg.min+(rg.max-rg.min)*i/240;max=Math.max(max,it.pdf(x))}});if(hists)hists.forEach(function(h){h.density.forEach(function(v){max=Math.max(max,v)})});return max*1.18}
+  function drawAxes(ctx,r,rg,yMax){ctx.save();ctx.strokeStyle=C.grid;ctx.lineWidth=1;ticks(rg.min,rg.max,7).forEach(function(v){var x=mapX(r,v,rg);ctx.beginPath();ctx.moveTo(x,r.t);ctx.lineTo(x,r.b);ctx.stroke();ctx.fillStyle="#6B7280";ctx.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";ctx.textAlign="center";ctx.fillText(fmtShort(v),x,r.b+17)});ticks(0,yMax,4).forEach(function(v){var y=mapY(r,v,yMax);ctx.beginPath();ctx.moveTo(r.l,y);ctx.lineTo(r.r,y);ctx.stroke();ctx.fillStyle="#6B7280";ctx.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(fmtShort(v),r.l-9,y)});ctx.strokeStyle=C.navy;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(r.l,r.t);ctx.lineTo(r.l,r.b);ctx.lineTo(r.r,r.b);ctx.stroke();ctx.restore()}
+  function drawCurve(ctx,r,rg,yMax,it,dash){ctx.save();ctx.strokeStyle=it.color;ctx.lineWidth=2.6;if(dash)ctx.setLineDash(dash);ctx.beginPath();for(var i=0;i<=280;i++){var x=rg.min+(rg.max-rg.min)*i/280,p={x:mapX(r,x,rg),y:mapY(r,it.pdf(x),yMax)};if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y)}ctx.stroke();ctx.restore()}
+  function drawMeanSd(ctx,r,rg,it){var x0=mapX(r,it.mean-it.sd,rg),x1=mapX(r,it.mean+it.sd,rg),xm=mapX(r,it.mean,rg),y=r.b-10,labelX=clamp((clamp(x0,r.l,r.r)+clamp(x1,r.l,r.r))/2,r.l+50,r.r-50);line(ctx,{x:x0,y:y},{x:x1,y:y},it.color,5);line(ctx,{x:xm,y:r.t+8},{x:xm,y:r.b},it.color,1.6,[5,4]);label(ctx,"mean ± 1 SD",labelX,y-16,it.color)}
+  function drawHistogram(ctx,r,rg,yMax,h,color){ctx.save();for(var i=0;i<h.counts.length;i++){var x0=mapX(r,rg.min+i*h.width,rg),x1=mapX(r,rg.min+(i+1)*h.width,rg),y=mapY(r,h.density[i],yMax);ctx.fillStyle=color;ctx.strokeStyle="rgba(124,63,26,.42)";ctx.lineWidth=1;ctx.fillRect(x0+1,y,Math.max(1,x1-x0-2),r.b-y);ctx.strokeRect(x0+1,y,Math.max(1,x1-x0-2),r.b-y)}ctx.restore()}
+  function marker(ctx,r,rg,yMax,value,it,text){var x=mapX(r,value,rg),y=mapY(r,it.pdf(value),yMax);line(ctx,{x:x,y:r.b},{x:x,y:y},C.active,2.2,[4,4]);ctx.save();ctx.fillStyle=C.active;ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();if(it.shape==="square")ctx.rect(x-6,y-6,12,12);else if(it.shape==="triangle"){ctx.moveTo(x,y-8);ctx.lineTo(x+8,y+7);ctx.lineTo(x-8,y+7);ctx.closePath()}else ctx.arc(x,y,6,0,TAU);ctx.fill();ctx.stroke();ctx.restore();labelBox(ctx,text,x+48,y-18,C.active)}
+  function drawCompare(){resizeCanvas(els.compareCanvas);var sz=size(els.compareCanvas),w=sz.w,h=sz.h;cCompare.clearRect(0,0,w,h);var spec=activeSpec(),rg=plotRange(false),ps=panels(w,h),yMax=yMaxFor(rg,spec.items,null);ps.forEach(function(r,i){drawAxes(cCompare,r,rg,yMax);drawMeanSd(cCompare,r,rg,spec.items[i]);drawCurve(cCompare,r,rg,yMax,spec.items[i],i===1?[7,4]:null);label(cCompare,spec.items[i].label,r.l+150,r.t+18,spec.items[i].color)});label(cCompare,"shared measurement scale",w/2,h-16,C.navy)}
+  function drawSampling(){resizeCanvas(els.samplingCanvas);var sz=size(els.samplingCanvas),w=sz.w,h=sz.h;cSampling.clearRect(0,0,w,h);var spec=activeSpec(),rg=plotRange(true),ps=panels(w,h),bins=34,arrs=[state.xs,state.ys,state.ss],fills=["rgba(46,67,116,.30)","rgba(63,111,94,.30)","rgba(224,121,63,.36)"],curr=state.current?[state.current.x,state.current.y,state.current.s]:[null,null,null],hists=arrs.map(function(a){return histogram(a,rg,bins)}),yMax=yMaxFor(rg,spec.items,hists);ps.forEach(function(r,i){drawAxes(cSampling,r,rg,yMax);if(arrs[i].length)drawHistogram(cSampling,r,rg,yMax,hists[i],fills[i]);if(state.showSamplingPdf)drawCurve(cSampling,r,rg,yMax,spec.items[i],i===1?[7,4]:null);if(state.showSamplingSd)drawMeanSd(cSampling,r,rg,spec.items[i]);label(cSampling,(i===0?"sampled X":i===1?"sampled Y":"sampled S = X + Y"),r.l+105,r.t+18,spec.items[i].color);if(state.current)marker(cSampling,r,rg,yMax,curr[i],spec.items[i],(i===0?"xᵢ = ":i===1?"yᵢ = ":"sᵢ = ")+fmt(curr[i],2))});label(cSampling,"same horizontal scale and bin boundaries in all three panels",w/2,h-16,C.navy)}
+  function compareCard(title,color,it){return '<div class="dist-card"><h3 style="color:'+color+'">'+title+'</h3><div class="read-row"><span>Theory mean</span><strong class="mono">'+fmtShort(it.mean)+'</strong></div><div class="read-row"><span>Theory variance</span><strong class="mono">'+fmtShort(it.variance)+'</strong></div><div class="read-row"><span>Theory SD</span><strong class="mono">'+fmtShort(it.sd)+'</strong></div></div>'}
+  function sampleCard(title,color,it,emp){return '<div class="dist-card"><h3 style="color:'+color+'">'+title+'</h3><div class="read-row"><span>Theory mean</span><strong class="mono">'+fmtShort(it.mean)+'</strong></div><div class="read-row"><span>Theory SD</span><strong class="mono">'+fmtShort(it.sd)+'</strong></div><div class="read-row"><span>Sample mean</span><strong class="mono">'+(emp?fmtShort(emp.mean):"-")+'</strong></div><div class="read-row"><span>Sample SD</span><strong class="mono">'+(emp?fmtShort(emp.sd):"-")+'</strong></div></div>'}
+  function compareBadgePopover(){
+    if(state.family==="uniform")return "The original densities are flat, but their sum is triangular or trapezoidal rather than uniform.";
+    if(state.family==="exponential")return "The original densities decrease from zero, but their sum rises and then falls.";
+    return "Compare the two original bell curves with the sum. The sum remains normal, with means and variances added.";
+  }
+  function updateReadouts(){var spec=activeSpec(),sx=stats(state.xs),sy=stats(state.ys),ss=stats(state.ss);els.compareBadge.setAttribute("data-popover",compareBadgePopover());els.compareReadout.innerHTML='<h2>Live comparison</h2>'+compareCard("X",C.x,spec.items[0])+compareCard("Y",C.y,spec.items[1])+compareCard("S = X + Y",C.s,spec.items[2]);els.sampleReadout.innerHTML='<h2>Empirical summaries</h2><div class="read-row"><span>Sample triplets</span><strong class="mono">'+state.ss.length.toLocaleString()+'</strong></div>'+sampleCard("X",C.x,spec.items[0],sx)+sampleCard("Y",C.y,spec.items[1],sy)+sampleCard("S = X + Y",C.s,spec.items[2],ss);els.formulaCard.innerHTML='<h2>Formula notes</h2>'+spec.formula.map(function(s){return '<p class="formula-line math">'+s+'</p>'}).join('')+'<p>For independent random variables, means add and variances add. The shape of the sum depends on the original distributions.</p>';if(state.current){els.sampleEquation.innerHTML='<span class="eq-term">x<sub>i</sub> = '+fmt(state.current.x,2)+'</span><span>+</span><span class="eq-term">y<sub>i</sub> = '+fmt(state.current.y,2)+'</span><span>=</span><span class="eq-term">s<sub>i</sub> = '+fmt(state.current.s,2)+'</span>'}else els.sampleEquation.innerHTML='Each draw creates x<sub>i</sub>, y<sub>i</sub>, and s<sub>i</sub> = x<sub>i</sub> + y<sub>i</sub>.';els.status.textContent=state.ss.length?"Each histogram is density-normalized and uses the same bin boundaries.":"Changing family or parameters clears samples and updates the theoretical curves."}
+  function renderControls(){var p=state[state.family],html="";function ctl(key,label,min,max,step,val){return '<div class="control-block"><label class="label" for="'+key+'Slider">'+label+'</label><div class="slider-row"><input id="'+key+'Slider" data-param="'+key+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" aria-label="'+label+'"><input class="value-pill mono" id="'+key+'Input" data-param="'+key+'" type="number" min="'+min+'" max="'+max+'" step="'+step+'" value="'+fmt(val,2)+'" aria-label="'+label+' numeric input"></div></div>'}if(state.family==="normal"){html+=ctl("mu1","Mean μ₁",-4,4,.1,p.mu1)+ctl("sigma1","SD σ₁",.3,3,.05,p.sigma1)+ctl("mu2","Mean μ₂",-4,4,.1,p.mu2)+ctl("sigma2","SD σ₂",.3,3,.05,p.sigma2)}else if(state.family==="uniform"){html+=ctl("a1","Lower a₁",-4,4,.1,p.a1)+ctl("b1","Upper b₁",-3.5,6,.1,p.b1)+ctl("a2","Lower a₂",-4,4,.1,p.a2)+ctl("b2","Upper b₂",-3.5,6,.1,p.b2)}else{html+=ctl("lambda1","Rate λ₁",.3,3,.05,p.lambda1)+ctl("lambda2","Rate λ₂",.3,3,.05,p.lambda2)}els.paramControls.innerHTML=html;els.paramControls.querySelectorAll("input").forEach(function(input){input.addEventListener(input.type==="range"?"input":"change",function(){setParam(input.getAttribute("data-param"),Number(input.value))});input.addEventListener("keydown",function(e){if(e.key==="Enter")setParam(input.getAttribute("data-param"),Number(input.value))})})}
+  function sanitizeUniform(p,key,val){p[key]=val;if(p.b1<=p.a1){if(key==="a1")p.b1=p.a1+.1;else p.a1=p.b1-.1}if(p.b2<=p.a2){if(key==="a2")p.b2=p.a2+.1;else p.a2=p.b2-.1}p.a1=clamp(p.a1,-4,4);p.a2=clamp(p.a2,-4,4);p.b1=clamp(p.b1,-3.5,6);p.b2=clamp(p.b2,-3.5,6)}
+  function setParam(key,value){if(!isFinite(value))return;stopSimulation();clearSamples();var p=state[state.family];if(state.family==="uniform")sanitizeUniform(p,key,value);else p[key]=value;renderControls();render()}
+  function syncDisplayToggles(){els.showSamplingPdf.setAttribute("aria-pressed",state.showSamplingPdf?"true":"false");els.showSamplingSd.setAttribute("aria-pressed",state.showSamplingSd?"true":"false")}
+  function render(){document.querySelectorAll("[data-family]").forEach(function(b){var a=b.getAttribute("data-family")===state.family;b.classList.toggle("active",a);b.setAttribute("aria-selected",a?"true":"false")});document.querySelectorAll("[data-mode]").forEach(function(b){var a=b.getAttribute("data-mode")===state.mode;b.classList.toggle("active",a);b.setAttribute("aria-selected",a?"true":"false")});document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===state.mode+"View")});els.samplingTools.classList.toggle("active",state.mode==="sampling");syncDisplayToggles();drawCompare();drawSampling();updateReadouts()}
+  function drawBatch(total){stopSimulation();if(prefersReduced){for(var i=0;i<total;i++)addTriplet(makeTriplet());render();return}var animated=Math.min(total,total>=200?5:total>=20?4:1),done=0;function step(){addTriplet(makeTriplet());done++;render();if(done<animated)state.batchTimer=setTimeout(step,260);else{for(var i=done;i<total;i++)addTriplet(makeTriplet());state.batchTimer=null;render()}}step()}
+  function togglePlay(){if(state.playing){stopSimulation();return}state.playing=true;els.playSamples.textContent="Pause";els.playSamples.classList.add("active");els.playSamples.setAttribute("aria-pressed","true");function one(){addTriplet(makeTriplet());render()}one();state.playTimer=setInterval(one,prefersReduced?160:520)}
+  document.querySelectorAll("[data-family]").forEach(function(btn){btn.addEventListener("click",function(){stopSimulation();clearSamples();state.family=btn.getAttribute("data-family");renderControls();render()})});
+  document.querySelectorAll("[data-mode]").forEach(function(btn){btn.addEventListener("click",function(){stopSimulation();state.mode=btn.getAttribute("data-mode");render()})});
+  document.getElementById("resetParams").addEventListener("click",function(){stopSimulation();clearSamples();state.normal={mu1:0,sigma1:1,mu2:0,sigma2:1};state.uniform={a1:0,b1:1,a2:0,b2:1};state.exponential={lambda1:1,lambda2:1};renderControls();render()});
+  document.getElementById("draw1").addEventListener("click",function(){drawBatch(1)});document.getElementById("draw20").addEventListener("click",function(){drawBatch(20)});document.getElementById("draw200").addEventListener("click",function(){drawBatch(200)});document.getElementById("draw1000").addEventListener("click",function(){drawBatch(1000)});els.showSamplingPdf.addEventListener("click",function(){state.showSamplingPdf=!state.showSamplingPdf;render()});els.showSamplingSd.addEventListener("click",function(){state.showSamplingSd=!state.showSamplingSd;render()});els.playSamples.addEventListener("click",togglePlay);document.getElementById("clearSamples").addEventListener("click",function(){stopSimulation();clearSamples();render()});window.addEventListener("resize",render);
+  function setupLearningPopovers(){
+    var triggers=Array.prototype.slice.call(document.querySelectorAll("[data-popover]"));
+    if(!triggers.length)return;
+    var popover=document.createElement("div");
+    popover.id="learningPopover";
+    popover.className="learning-popover";
+    popover.setAttribute("role","tooltip");
+    document.body.appendChild(popover);
+    var active=null;
+    function positionPopover(trigger){
+      var rect=trigger.getBoundingClientRect();
+      popover.style.left="0px";
+      popover.style.top="0px";
+      var gap=8, margin=10, popRect=popover.getBoundingClientRect();
+      var left=rect.left+rect.width/2-popRect.width/2;
+      left=clamp(left,margin,window.innerWidth-popRect.width-margin);
+      var top=rect.bottom+gap;
+      if(top+popRect.height+margin>window.innerHeight)top=rect.top-popRect.height-gap;
+      top=clamp(top,margin,window.innerHeight-popRect.height-margin);
+      popover.style.left=left+"px";
+      popover.style.top=top+"px";
+    }
+    function openPopover(trigger){
+      if(active&&active!==trigger)active.setAttribute("aria-expanded","false");
+      active=trigger;
+      popover.textContent=trigger.getAttribute("data-popover")||"";
+      popover.classList.add("show");
+      trigger.setAttribute("aria-expanded","true");
+      positionPopover(trigger);
+    }
+    function closePopover(trigger){
+      if(trigger&&active!==trigger)return;
+      if(active)active.setAttribute("aria-expanded","false");
+      active=null;
+      popover.classList.remove("show");
+    }
+    triggers.forEach(function(trigger){
+      trigger.classList.add("popover-trigger");
+      if(!trigger.hasAttribute("tabindex")&&!/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(trigger.tagName))trigger.tabIndex=0;
+      trigger.setAttribute("aria-describedby",popover.id);
+      trigger.setAttribute("aria-expanded","false");
+      trigger.addEventListener("mouseenter",function(){openPopover(trigger)});
+      trigger.addEventListener("mouseleave",function(){closePopover(trigger)});
+      trigger.addEventListener("focus",function(){openPopover(trigger)});
+      trigger.addEventListener("blur",function(){closePopover(trigger)});
+      trigger.addEventListener("click",function(e){
+        openPopover(trigger);
+        if(trigger.tagName==="BUTTON")setTimeout(function(){closePopover(trigger)},900);
+        else e.stopPropagation();
+      });
+    });
+    document.addEventListener("click",function(e){
+      if(!active)return;
+      if(active.contains(e.target))return;
+      closePopover();
+    });
+    document.addEventListener("keydown",function(e){if(e.key==="Escape")closePopover()});
+    window.addEventListener("resize",function(){if(active)positionPopover(active)});
+    window.addEventListener("scroll",function(){if(active)positionPopover(active)},true);
+  }
+  function initFeedback(){var overlay=document.getElementById("fbOverlay"),form=document.getElementById("fbForm"),status=document.getElementById("fbStatus"),prepared=document.getElementById("fbPreparedText");function context(){var p=state[state.family],parts=["Course: 10.022 Modelling Uncertainty","Week: 9","Class: 2","Demo: Add Two Random Variables","Family: "+activeSpec().name,"Mode: "+(state.mode==="compare"?"Compare":"Generate by samples"),"sample count: "+state.ss.length];Object.keys(p).forEach(function(k){parts.push(k+": "+fmt(p[k],3))});return parts.join("\n")}function email(){var type=document.getElementById("fbCategory").value,feedback=document.getElementById("fbDescription").value.trim(),expected=document.getElementById("fbExpected").value.trim();if(!type||!feedback)return null;var tags={"Something I found helpful":"[Helpful]","A suggestion for improvement":"[Suggestion]","A content or explanation issue":"[Content Issue]","A technical problem":"[Technical Issue]","General feedback":"[General]"};return {recipient:FEEDBACK_EMAIL_CONFIG.recipient,subject:FEEDBACK_EMAIL_CONFIG.subjectPrefix+" "+(tags[type]||"[General]")+" Add Two Random Variables",body:["Feedback type:",type,"","Student feedback:",feedback,"","Suggested improvement:",expected||"(not provided)","","Context:",context()].join("\n")}}function show(mail){prepared.textContent="To: "+mail.recipient+"\nSubject: "+mail.subject+"\n\n"+mail.body;prepared.classList.add("show")}document.getElementById("fbButton").addEventListener("click",function(){overlay.classList.add("show");document.getElementById("fbDescription").focus()});document.getElementById("fbClose").addEventListener("click",function(){overlay.classList.remove("show")});overlay.addEventListener("click",function(e){if(e.target===overlay)overlay.classList.remove("show")});form.addEventListener("submit",function(e){e.preventDefault();var mail=email();if(!mail){status.textContent="Please choose a feedback type and enter your feedback.";return}show(mail);window.location.href="mailto:"+encodeURIComponent(mail.recipient)+"?subject="+encodeURIComponent(mail.subject)+"&body="+encodeURIComponent(mail.body);status.textContent="Your email app should now be open. Please review the message and press Send."});document.getElementById("fbCopy").addEventListener("click",function(){var mail=email();if(!mail){status.textContent="Please choose a feedback type and enter your feedback.";return}show(mail);if(navigator.clipboard)navigator.clipboard.writeText(prepared.textContent).then(function(){status.textContent="Feedback copied."}).catch(function(){status.textContent="Clipboard access failed. The prepared email is shown below."});else status.textContent="Clipboard is unavailable. The prepared email is shown below."})}
+  function initEditLabels(){if(!/[?&]edit=1\b/.test(location.search))return;document.body.classList.add("edit-on");document.querySelectorAll("[data-edit-id]").forEach(function(node){var badge=node.querySelector(":scope > .edit-badge");if(!badge){badge=document.createElement("span");badge.className="edit-badge";node.appendChild(badge)}badge.textContent=node.getAttribute("data-edit-id");badge.addEventListener("click",function(e){e.stopPropagation();if(navigator.clipboard)navigator.clipboard.writeText(badge.textContent)})})}
+  if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);return this}}
+  renderControls();setupLearningPopovers();initFeedback();initEditLabels();render();
+})();
+</script>
+</body>
+</html>
