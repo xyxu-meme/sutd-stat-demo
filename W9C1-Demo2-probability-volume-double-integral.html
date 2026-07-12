@@ -967,7 +967,7 @@ Purpose: show probability as volume under a joint pdf over a selected region of 
   var MATH_FONT_STACK = '"Cambria Math","STIX Two Text","Latin Modern Math",serif';
   var DEFAULT_VIEW_SETTINGS = { yaw:-0.78, pitch:1.25, zoom:1.14, centerX:.50, centerY:.59, zScale:1.35, selectedVolumeLabelX:.42, selectedVolumeLabelY:.28 };
   var VIEW_SETTINGS_BY_EXAMPLE = {
-    triangle:{ yaw:.76, pitch:1.27, zoom:1.00, centerX:.42, centerY:.76, zScale:1.20, selectedVolumeLabelX:.21, selectedVolumeLabelY:.62 },
+    triangle:{ yaw:-1.29, pitch:1.22, zoom:.81, centerX:.49, centerY:.70, zScale:2.04, selectedVolumeLabelX:.21, selectedVolumeLabelY:.62 },
     expo:{ yaw:-.72, pitch:1.18, zoom:1.18, centerX:.50, centerY:.61, zScale:1.55, selectedVolumeLabelX:.62, selectedVolumeLabelY:.34 }
   };
   var FEEDBACK_EMAIL_CONFIG = {
@@ -1201,8 +1201,9 @@ Purpose: show probability as volume under a joint pdf over a selected region of 
   function project(pt,w,h){
     var yaw = state.camera.yaw;
     var pitch = state.camera.pitch;
-    var x = (pt.x - .5) * 2.04;
-    var y = (pt.y - .5) * 2.04;
+    var xyScale = state.example === "triangle" ? 2.05 : 2.04;
+    var x = (pt.x - .5) * xyScale;
+    var y = (pt.y - .5) * xyScale;
     var z = pt.z * (state.camera.zScale || DEFAULT_VIEW_SETTINGS.zScale || 1.35);
     var cy = Math.cos(yaw), sy = Math.sin(yaw);
     var cp = Math.cos(pitch), sp = Math.sin(pitch);
@@ -1211,7 +1212,9 @@ Purpose: show probability as volume under a joint pdf over a selected region of 
     var rz = z;
     var py = ry * cp - rz * sp;
     var pz = ry * sp + rz * cp;
-    var scale = Math.min(w,h) * .31 * state.camera.zoom / (1 + pz * .15);
+    var scale = state.example === "triangle"
+      ? Math.min(w,h) * .335 * state.camera.zoom
+      : Math.min(w,h) * .31 * state.camera.zoom / (1 + pz * .15);
     var centerX = w * (state.camera.centerX == null ? DEFAULT_VIEW_SETTINGS.centerX : state.camera.centerX);
     var centerY = h * (state.camera.centerY == null ? DEFAULT_VIEW_SETTINGS.centerY : state.camera.centerY);
     return { x:centerX + rx*scale, y:centerY + py*scale, depth:pz, z:pt.z };
@@ -1427,29 +1430,46 @@ Purpose: show probability as volume under a joint pdf over a selected region of 
       y:h * state.view.selectedVolumeLabelY
     };
   }
+  function mixRgb(a,b,t){
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+  }
+  function rgbaFromRgb(rgb,alpha){
+    return "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + alpha + ")";
+  }
+  function prismWallFill(angle,alpha){
+    var light = [212,225,222];
+    var dark = [46,67,116];
+    var brightness = clamp(.35 + .55 * Math.max(0,Math.cos(state.camera.yaw - angle)), .35, 1);
+    return rgbaFromRgb(mixRgb(light,dark,brightness),alpha);
+  }
   function drawTriangleSurface(w,h,d){
     var z = pdf(.2,.2) / d.zMax;
     var c = clamp(state.c,0,1);
-    var shapes = [];
+    var prismShapes = [];
+    var selectedShapes = [];
     function P(x,y,zv){ return project({x:normX(x,d),y:normY(y,d),z:zv},w,h); }
     var base = [P(0,0,0),P(1,0,0),P(0,1,0)];
     var top = [P(0,0,z),P(1,0,z),P(0,1,z)];
     var eventBase = [P(0,0,0),P(c,0,0),P(c,1-c,0),P(0,1,0)];
     var eventTop = [P(0,0,z),P(c,0,z),P(c,1-c,z),P(0,1,z)];
 
-    addQuad(shapes,base,"rgba(244,241,232,.50)","rgba(46,67,116,.16)",1);
-    addQuad(shapes,top,"rgba(46,67,116,.16)","rgba(46,67,116,.44)",1.1);
-    addQuad(shapes,[base[0],base[1],top[1],top[0]],"rgba(46,67,116,.065)","rgba(46,67,116,.30)",1);
-    addQuad(shapes,[base[1],base[2],top[2],top[1]],"rgba(63,111,94,.07)","rgba(46,67,116,.34)",1);
-    addQuad(shapes,[base[2],base[0],top[0],top[2]],"rgba(46,67,116,.055)","rgba(46,67,116,.28)",1);
-    addQuad(shapes,eventBase,"rgba(224,121,63,.24)",null,1);
-    addQuad(shapes,[eventBase[0],eventBase[1],eventTop[1],eventTop[0]],"rgba(224,121,63,.18)","rgba(224,121,63,.34)",1);
-    addQuad(shapes,[eventBase[1],eventBase[2],eventTop[2],eventTop[1]],"rgba(224,121,63,.20)","rgba(224,121,63,.42)",1);
-    addQuad(shapes,[eventBase[2],eventBase[3],eventTop[3],eventTop[2]],"rgba(224,121,63,.16)","rgba(224,121,63,.28)",1);
-    addQuad(shapes,eventTop,"rgba(224,121,63,.42)","rgba(224,121,63,.80)",1.4);
+    addQuad(prismShapes,base,"rgba(244,241,232,.16)","rgba(46,67,116,.20)",1);
+    addQuad(prismShapes,[base[0],base[1],top[1],top[0]],prismWallFill(-1.107,.24),"rgba(46,67,116,.44)",1);
+    addQuad(prismShapes,[base[1],base[2],top[2],top[1]],prismWallFill(.785,.26),"rgba(46,67,116,.48)",1);
+    addQuad(prismShapes,[base[2],base[0],top[0],top[2]],prismWallFill(2.678,.22),"rgba(46,67,116,.42)",1);
+    addQuad(prismShapes,top,"rgba(46,67,116,.22)","rgba(46,67,116,.78)",1.1);
+    addQuad(selectedShapes,eventBase,"rgba(224,121,63,.24)",null,1);
+    addQuad(selectedShapes,[eventBase[0],eventBase[1],eventTop[1],eventTop[0]],"rgba(224,121,63,.18)","rgba(224,121,63,.34)",1);
+    addQuad(selectedShapes,[eventBase[1],eventBase[2],eventTop[2],eventTop[1]],"rgba(224,121,63,.20)","rgba(224,121,63,.42)",1);
+    addQuad(selectedShapes,[eventBase[2],eventBase[3],eventTop[3],eventTop[2]],"rgba(224,121,63,.16)","rgba(224,121,63,.28)",1);
+    addQuad(selectedShapes,eventTop,"rgba(224,121,63,.42)","rgba(224,121,63,.80)",1.4);
 
-    shapes.sort(function(a,b){ return b.depth - a.depth; });
-    shapes.forEach(function(shape){ poly(sctx,shape.pts,shape.fill,shape.stroke,shape.width); });
+    prismShapes.sort(function(a,b){ return b.depth - a.depth; });
+    prismShapes.forEach(function(shape){ poly(sctx,shape.pts,shape.fill,shape.stroke,shape.width); });
     line(sctx,P(0,0,z),P(1,0,z),"rgba(46,67,116,.70)",1.4);
     line(sctx,P(1,0,z),P(0,1,z),"rgba(46,67,116,.70)",1.4);
     line(sctx,P(0,1,z),P(0,0,z),"rgba(46,67,116,.70)",1.4);
@@ -1459,6 +1479,8 @@ Purpose: show probability as volume under a joint pdf over a selected region of 
     line(sctx,P(0,0,0),P(0,0,z),"rgba(46,67,116,.54)",1.15);
     line(sctx,P(1,0,0),P(1,0,z),"rgba(46,67,116,.54)",1.15);
     line(sctx,P(0,1,0),P(0,1,z),"rgba(46,67,116,.54)",1.15);
+    selectedShapes.sort(function(a,b){ return b.depth - a.depth; });
+    selectedShapes.forEach(function(shape){ poly(sctx,shape.pts,shape.fill,shape.stroke,shape.width); });
     line(sctx,P(c,0,z),P(c,1-c,z),"rgba(224,121,63,.95)",2);
     line(sctx,P(c,0,0),P(c,1-c,0),"rgba(224,121,63,.75)",1.5);
     labelBox(
@@ -2310,7 +2332,7 @@ Purpose: show probability as volume under a joint pdf over a selected region of 
     { key:"zoom", label:"zoom", min:.70, max:1.60, step:.01 },
     { key:"centerX", label:"centerX", min:.35, max:.65, step:.01 },
     { key:"centerY", label:"centerY", min:.40, max:.80, step:.01 },
-    { key:"zScale", label:"zScale", min:.80, max:2.00, step:.01 },
+    { key:"zScale", label:"zScale", min:.80, max:3.20, step:.01 },
     { key:"selectedVolumeLabelX", label:"volume label X", min:.05, max:.95, step:.01 },
     { key:"selectedVolumeLabelY", label:"volume label Y", min:.05, max:.95, step:.01 }
   ];
