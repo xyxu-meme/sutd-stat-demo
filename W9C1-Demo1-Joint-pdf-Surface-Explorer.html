@@ -442,6 +442,84 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     padding-left:12px;
     white-space:nowrap;
   }
+  .tuning-panel{
+    display:none;
+    margin:14px 0 0;
+    padding:14px;
+    border:1px solid rgba(46,67,116,.18);
+    border-left:5px solid var(--sage);
+    border-radius:12px;
+    background:rgba(255,253,249,.97);
+    box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 22px rgba(31,41,55,.045);
+  }
+  .tuning-panel.show{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:120;
+    display:block;
+    width:min(420px,calc(100vw - 28px));
+    max-height:calc(100vh - 28px);
+    overflow:auto;
+  }
+  .tuning-panel h2{
+    margin:0 0 8px;
+    color:var(--bar);
+    font-size:15px;
+    line-height:1.25;
+  }
+  .tune-note{
+    margin:0 0 12px;
+    color:#4B5159;
+    font-size:12.5px;
+    line-height:1.45;
+  }
+  .tune-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:9px 12px;
+  }
+  .tune-control{
+    display:grid;
+    grid-template-columns:minmax(110px,auto) minmax(90px,1fr) 54px;
+    gap:8px;
+    align-items:center;
+    min-width:0;
+    color:#4B5159;
+    font-size:12.5px;
+    font-weight:750;
+  }
+  .tune-control input[type="range"]{ min-width:0; }
+  .tune-value{
+    color:var(--bar);
+    text-align:right;
+    font-weight:800;
+  }
+  .tune-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    margin-top:12px;
+  }
+  .tune-output{
+    width:100%;
+    min-height:128px;
+    border:1px solid var(--hair);
+    border-radius:8px;
+    background:#fff;
+    padding:8px;
+    color:#374151;
+    font-size:12px;
+    line-height:1.35;
+    resize:vertical;
+  }
+  .tune-status{
+    min-height:18px;
+    color:#2F6F4E;
+    font-size:12.5px;
+    font-weight:750;
+  }
   .math-var{
     font-style:italic;
   }
@@ -687,6 +765,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   @media (max-width:620px){
     body{ padding:18px 10px 34px; }
     .panel{ padding:15px 12px 18px; border-radius:12px; }
+    .tune-control{ grid-template-columns:96px minmax(80px,1fr) 50px; }
     .side-view{ grid-template-columns:1fr; }
     .canvas-card.hero{ height:429px; }
     .canvas-card.small{ height:260px; }
@@ -880,6 +959,16 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
       </aside>
     </section>
   </main>
+  <section class="tuning-panel" id="tuningPanel" aria-labelledby="tuningTitle">
+    <h2 id="tuningTitle">Teacher tuning helper</h2>
+    <p class="tune-note">Temporary controls for adjusting the Demo 1 prism view and calculation-card anchors. Open this page with <span class="mono">?tune=1</span> to use it.</p>
+    <div class="tune-grid" id="tuneControls"></div>
+    <div class="tune-actions">
+      <button class="btn primary" id="copyTuningValues" type="button">Copy tuning values</button>
+      <span class="tune-status" id="tuneStatus" role="status"></span>
+    </div>
+    <textarea class="tune-output mono" id="tuneOutput" readonly aria-label="Current tuning values"></textarea>
+  </section>
   <footer>
     <div class="byline">XU, Ying · xu_ying@sutd.edu.sg · 10.022 Modelling Uncertainty</div>
   </footer>
@@ -952,9 +1041,10 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   var TAU = Math.PI * 2;
   var MATH_FONT_STACK = '"Cambria Math","STIX Two Text","Latin Modern Math",serif';
   var prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var TEACHING_CAMERA = { yaw:-.78, pitch:1.25, zoom:1.14, centerX:.50, centerY:.61 };
+  var tuningEnabled = new URLSearchParams(window.location.search).get("tune") === "1";
+  var TEACHING_CAMERA = { yaw:-.78, pitch:1.25, zoom:1.14, centerX:.50, centerY:.61, zScale:1.18, calculationButtonX:.96, calculationButtonY:.05, calculationOverlayX:.96, calculationOverlayY:.15 };
   var TEACHING_CAMERA_BY_DIST = {
-    triangle:{ yaw:.68, pitch:1.02, zoom:1.06, centerX:.50, centerY:.68 }
+    triangle:{ yaw:-1.29, pitch:1.22, zoom:.81, centerX:.49, centerY:.70, zScale:2.30, calculationButtonX:.98, calculationButtonY:.02, calculationOverlayX:.98, calculationOverlayY:.02 }
   };
   var FEEDBACK_EMAIL_CONFIG = {
     recipient:"10022mufeedback@gmail.com",
@@ -1044,7 +1134,18 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     a:1,
     b:1,
     showCalculation:false,
-    camera:{ yaw:TEACHING_CAMERA.yaw, pitch:TEACHING_CAMERA.pitch, zoom:TEACHING_CAMERA.zoom, centerX:TEACHING_CAMERA.centerX, centerY:TEACHING_CAMERA.centerY },
+    camera:{
+      yaw:TEACHING_CAMERA.yaw,
+      pitch:TEACHING_CAMERA.pitch,
+      zoom:TEACHING_CAMERA.zoom,
+      centerX:TEACHING_CAMERA.centerX,
+      centerY:TEACHING_CAMERA.centerY,
+      zScale:TEACHING_CAMERA.zScale,
+      calculationButtonX:TEACHING_CAMERA.calculationButtonX,
+      calculationButtonY:TEACHING_CAMERA.calculationButtonY,
+      calculationOverlayX:TEACHING_CAMERA.calculationOverlayX,
+      calculationOverlayY:TEACHING_CAMERA.calculationOverlayY
+    },
     dragging:false,
     dragMode:null,
     lastX:0,
@@ -1075,7 +1176,12 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     rateASlider:document.getElementById("rateASlider"),
     rateBSlider:document.getElementById("rateBSlider"),
     rateAValue:document.getElementById("rateAValue"),
-    rateBValue:document.getElementById("rateBValue")
+    rateBValue:document.getElementById("rateBValue"),
+    tuningPanel:document.getElementById("tuningPanel"),
+    tuneControls:document.getElementById("tuneControls"),
+    copyTuningValues:document.getElementById("copyTuningValues"),
+    tuneStatus:document.getElementById("tuneStatus"),
+    tuneOutput:document.getElementById("tuneOutput")
   };
   var ctx = els.surface.getContext("2d");
   var sctx = els.support.getContext("2d");
@@ -1447,6 +1553,27 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
       "area under cross-section = " + fmt(calcValue(dist))
     ];
   }
+  function percentAnchor(value){
+    return (clamp(Number(value),0,1) * 100).toFixed(2) + "%";
+  }
+  function applyCalculationPlacement(){
+    if (!tuningEnabled) return;
+    var camera = state.camera;
+    if (els.areaCalcPopover){
+      els.areaCalcPopover.style.left = percentAnchor(camera.calculationButtonX);
+      els.areaCalcPopover.style.top = percentAnchor(camera.calculationButtonY);
+      els.areaCalcPopover.style.right = "auto";
+      els.areaCalcPopover.style.bottom = "auto";
+      els.areaCalcPopover.style.transform = "translate(-100%, 0)";
+    }
+    if (els.areaCalcPanel){
+      els.areaCalcPanel.style.left = percentAnchor(camera.calculationOverlayX);
+      els.areaCalcPanel.style.top = percentAnchor(camera.calculationOverlayY);
+      els.areaCalcPanel.style.right = "auto";
+      els.areaCalcPanel.style.bottom = "auto";
+      els.areaCalcPanel.style.transform = "translate(-100%, 0)";
+    }
+  }
   function renderAreaCalculation(dist){
     if (!els.areaCalcToggle || !els.areaCalcPanel) return;
     var hasSlice = state.slice !== "none";
@@ -1479,6 +1606,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
         rows +
       '</div>' +
       '<p>This equals ' + marginalSymbol() + '.</p>';
+    applyCalculationPlacement();
   }
 
   function setupLearningPopovers(){
@@ -1564,7 +1692,8 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     var pitch = state.camera.pitch;
     var x = (pt.x - .5) * 2.05;
     var y = (pt.y - .5) * 2.05;
-    var z = pt.z * 1.18;
+    var zScale = state.camera.zScale == null ? TEACHING_CAMERA.zScale : state.camera.zScale;
+    var z = pt.z * zScale;
     var cy = Math.cos(yaw), sy = Math.sin(yaw);
     var cp = Math.cos(pitch), sp = Math.sin(pitch);
     var xr = x * cy - y * sy;
@@ -1641,12 +1770,41 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     faceFromUVW(faces,w,h,[[1,0,0],[1,1,0],[1,1,z],[1,0,z]],"rgba(63,111,94,.08)","rgba(46,67,116,.40)",1);
     faceFromUVW(faces,w,h,[[0,1,0],[1,1,0],[1,1,z],[0,1,z]],"rgba(63,111,94,.06)","rgba(46,67,116,.32)",1);
   }
+  function mixRgb(a,b,t){
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+  }
+  function rgbaFromRgb(rgb,alpha){
+    return "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + alpha + ")";
+  }
+  function prismWallFill(angle,alpha){
+    var light = [212,225,222];
+    var dark = [46,67,116];
+    var brightness = clamp(.35 + .55 * Math.max(0,Math.cos(state.camera.yaw - angle)), .35, 1);
+    return rgbaFromRgb(mixRgb(light,dark,brightness),alpha);
+  }
   function addTrianglePrism(faces,w,h){
     var z = 2 / dists.triangle.zMax;
-    faceFromUVW(faces,w,h,[[0,0,z],[1,0,z],[0,1,z]],"rgba(46,67,116,.24)","rgba(46,67,116,.90)",1.4);
-    faceFromUVW(faces,w,h,[[0,0,0],[1,0,0],[1,0,z],[0,0,z]],"rgba(46,67,116,.08)","rgba(46,67,116,.42)",1);
-    faceFromUVW(faces,w,h,[[0,0,0],[0,1,0],[0,1,z],[0,0,z]],"rgba(63,111,94,.08)","rgba(46,67,116,.42)",1);
-    faceFromUVW(faces,w,h,[[1,0,0],[0,1,0],[0,1,z],[1,0,z]],"rgba(63,111,94,.07)","rgba(46,67,116,.46)",1);
+    faceFromUVW(faces,w,h,[[-.16,-.16,0],[1.16,-.16,0],[1.16,1.16,0],[-.16,1.16,0]],"rgba(244,241,232,.16)","rgba(46,67,116,.20)",.8);
+    faceFromUVW(faces,w,h,[[0,0,0],[1,0,0],[1,0,z],[0,0,z]],prismWallFill(-1.107,.24),"rgba(46,67,116,.44)",.9);
+    faceFromUVW(faces,w,h,[[0,0,0],[0,1,0],[0,1,z],[0,0,z]],prismWallFill(2.678,.22),"rgba(46,67,116,.42)",.9);
+    faceFromUVW(faces,w,h,[[1,0,0],[0,1,0],[0,1,z],[1,0,z]],prismWallFill(.785,.26),"rgba(46,67,116,.48)",.9);
+    faceFromUVW(faces,w,h,[[0,0,z],[1,0,z],[0,1,z]],"rgba(46,67,116,.22)","rgba(46,67,116,.78)",1.1);
+  }
+  function drawTrianglePrismEdges(c,w,h){
+    var z = 2 / dists.triangle.zMax;
+    var b0 = P(0,0,0,w,h), b1 = P(1,0,0,w,h), b2 = P(0,1,0,w,h);
+    var t0 = P(0,0,z,w,h), t1 = P(1,0,z,w,h), t2 = P(0,1,z,w,h);
+    var topEdge = "rgba(46,67,116,.82)";
+    var sideEdge = "rgba(46,67,116,.48)";
+    drawPolyline(c,[b0,b1,b2,b0],sideEdge,.9);
+    drawPolyline(c,[b0,t0],sideEdge,1);
+    drawPolyline(c,[b1,t1],sideEdge,1);
+    drawPolyline(c,[b2,t2],sideEdge,1);
+    drawPolyline(c,[t0,t1,t2,t0],topEdge,1.25);
   }
   function addBellSurface(faces,w,h,dist){
     var n = 28;
@@ -1793,11 +1951,12 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     var dist = dists[state.dist];
     var faces = [];
     drawGrid3D(ctx,w,h);
-    addSupportSurface(faces,w,h,dist);
+    if (dist.id !== "triangle") addSupportSurface(faces,w,h,dist);
     if (dist.id === "uniform") addUniformPrism(faces,w,h);
     if (dist.id === "triangle") addTrianglePrism(faces,w,h);
     if (dist.id === "bell" || dist.id === "expo") addBellSurface(faces,w,h,dist);
     drawFaces(ctx,faces);
+    if (dist.id === "triangle") drawTrianglePrismEdges(ctx,w,h);
     drawSliceOverlay(ctx,w,h,dist);
     drawAxes3D(ctx,w,h,dist);
     els.surfaceBadge.textContent = dist.id === "bell" ? "φ(x)φ(y)" : (dist.id === "expo" ? "ab exp(−ax−by)" : (dist.id === "triangle" ? "height 2 on T" : "height 1"));
@@ -2042,6 +2201,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     drawSupport();
     drawMarginals();
     updateReadout();
+    updateTuningPanel();
   }
   function resizeAll(){
     resizeCanvas(els.surface);
@@ -2055,7 +2215,18 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   }
   function resetTeachingCamera(){
     var camera = TEACHING_CAMERA_BY_DIST[state.dist] || TEACHING_CAMERA;
-    state.camera = { yaw:camera.yaw, pitch:camera.pitch, zoom:camera.zoom, centerX:camera.centerX == null ? TEACHING_CAMERA.centerX : camera.centerX, centerY:camera.centerY };
+    state.camera = {
+      yaw:camera.yaw,
+      pitch:camera.pitch,
+      zoom:camera.zoom,
+      centerX:camera.centerX == null ? TEACHING_CAMERA.centerX : camera.centerX,
+      centerY:camera.centerY == null ? TEACHING_CAMERA.centerY : camera.centerY,
+      zScale:camera.zScale == null ? TEACHING_CAMERA.zScale : camera.zScale,
+      calculationButtonX:camera.calculationButtonX == null ? TEACHING_CAMERA.calculationButtonX : camera.calculationButtonX,
+      calculationButtonY:camera.calculationButtonY == null ? TEACHING_CAMERA.calculationButtonY : camera.calculationButtonY,
+      calculationOverlayX:camera.calculationOverlayX == null ? TEACHING_CAMERA.calculationOverlayX : camera.calculationOverlayX,
+      calculationOverlayY:camera.calculationOverlayY == null ? TEACHING_CAMERA.calculationOverlayY : camera.calculationOverlayY
+    };
   }
   function setDist(id){
     stopSweep();
@@ -2262,6 +2433,87 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     });
   }
 
+  var TUNE_CONTROLS = [
+    { key:"yaw", label:"yaw", min:-3.14, max:3.14, step:.01 },
+    { key:"pitch", label:"pitch", min:.18, max:1.42, step:.01 },
+    { key:"zoom", label:"zoom", min:.70, max:1.60, step:.01 },
+    { key:"centerX", label:"centerX", min:.20, max:.80, step:.01 },
+    { key:"centerY", label:"centerY", min:.30, max:.85, step:.01 },
+    { key:"zScale", label:"zScale", min:.80, max:3.20, step:.01 },
+    { key:"calculationButtonX", label:"calc button X", min:.05, max:.98, step:.01 },
+    { key:"calculationButtonY", label:"calc button Y", min:.02, max:.86, step:.01 },
+    { key:"calculationOverlayX", label:"calc panel X", min:.08, max:.98, step:.01 },
+    { key:"calculationOverlayY", label:"calc panel Y", min:.02, max:.86, step:.01 }
+  ];
+  function tuneSnippet(){
+    var lines = [state.dist + ":{"];
+    TUNE_CONTROLS.forEach(function(control,idx){
+      var comma = idx === TUNE_CONTROLS.length - 1 ? "" : ",";
+      lines.push("  " + control.key + ":" + Number(state.camera[control.key]).toFixed(2) + comma);
+    });
+    lines.push("}");
+    return lines.join("\n");
+  }
+  function updateTuningPanel(){
+    if (!tuningEnabled || !els.tuningPanel) return;
+    TUNE_CONTROLS.forEach(function(control){
+      var input = els.tuningPanel.querySelector('[data-tune-key="' + control.key + '"]');
+      var value = els.tuningPanel.querySelector('[data-tune-value="' + control.key + '"]');
+      if (input && document.activeElement !== input) input.value = state.camera[control.key];
+      if (value) value.textContent = Number(state.camera[control.key]).toFixed(2);
+    });
+    if (els.tuneOutput) els.tuneOutput.value = tuneSnippet();
+  }
+  function setupTuning(){
+    if (!tuningEnabled || !els.tuningPanel || !els.tuneControls) return;
+    els.tuningPanel.classList.add("show");
+    TUNE_CONTROLS.forEach(function(control){
+      var row = document.createElement("label");
+      row.className = "tune-control";
+      var name = document.createElement("span");
+      name.textContent = control.label;
+      var input = document.createElement("input");
+      input.type = "range";
+      input.min = control.min;
+      input.max = control.max;
+      input.step = control.step;
+      input.value = state.camera[control.key];
+      input.setAttribute("data-tune-key",control.key);
+      var value = document.createElement("span");
+      value.className = "tune-value mono";
+      value.setAttribute("data-tune-value",control.key);
+      value.textContent = Number(state.camera[control.key]).toFixed(2);
+      input.addEventListener("input",function(){
+        state.camera[control.key] = Number(input.value);
+        if (els.tuneStatus) els.tuneStatus.textContent = "";
+        render();
+      });
+      row.appendChild(name);
+      row.appendChild(input);
+      row.appendChild(value);
+      els.tuneControls.appendChild(row);
+    });
+    if (els.copyTuningValues){
+      els.copyTuningValues.addEventListener("click",function(){
+        var text = tuneSnippet();
+        function copied(){ if (els.tuneStatus) els.tuneStatus.textContent = "Copied tuning values."; }
+        function fallback(){
+          if (els.tuneOutput){
+            els.tuneOutput.focus();
+            els.tuneOutput.select();
+          }
+          if (els.tuneStatus) els.tuneStatus.textContent = "Select the values below to copy.";
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(copied,fallback);
+        } else {
+          fallback();
+        }
+      });
+    }
+    updateTuningPanel();
+  }
+
   document.querySelectorAll("[data-dist]").forEach(function(btn){
     btn.addEventListener("click", function(){ setDist(btn.getAttribute("data-dist")); });
   });
@@ -2440,8 +2692,15 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
 
   setupFeedback();
   setupLearningPopovers();
-  setDist("bell");
-  setSlice("none");
+  if (tuningEnabled){
+    setDist("triangle");
+    setSlice("x");
+    state.showCalculation = true;
+    setupTuning();
+  } else {
+    setDist("bell");
+    setSlice("none");
+  }
   resizeAll();
 })();
 </script>
