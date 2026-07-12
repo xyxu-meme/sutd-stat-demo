@@ -223,6 +223,55 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     gap:8px;
     align-items:center;
   }
+  .model-card{
+    margin:0 0 14px;
+    padding:12px 13px;
+    border:1px solid var(--hair);
+    border-left:4px solid var(--sage);
+    border-radius:12px;
+    background:rgba(255,253,249,.97);
+    box-shadow:0 1px 2px rgba(31,41,55,.04);
+  }
+  .model-card-title{
+    margin:0 0 10px;
+    color:var(--navy);
+    font-size:14px;
+    font-weight:850;
+    line-height:1.25;
+  }
+  .model-grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+  }
+  .model-block{
+    min-width:0;
+    padding:9px 10px;
+    border:1px solid rgba(201,192,172,.72);
+    border-radius:9px;
+    background:#fffaf2;
+  }
+  .model-heading{
+    margin:0 0 6px;
+    color:#6B6459;
+    font-size:12px;
+    font-weight:850;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .model-line{
+    margin:3px 0;
+    color:var(--ink);
+    font-size:13px;
+    line-height:1.42;
+    overflow-wrap:anywhere;
+  }
+  .model-interpretation{
+    margin-top:6px;
+    color:#4B5159;
+    font-size:12.5px;
+    line-height:1.42;
+  }
   .views{
     display:grid;
     grid-template-columns:minmax(0,1.45fr) minmax(300px,.8fr);
@@ -257,6 +306,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   }
   #surfaceCanvas{ cursor:grab; }
   #surfaceCanvas.dragging{ cursor:grabbing; }
+  #surfaceCanvas.panning{ cursor:move; }
   .canvas-badge{
     position:absolute;
     left:12px;
@@ -396,75 +446,14 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     font-style:italic;
   }
   .below{
-    display:grid;
-    grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);
-    gap:14px;
     margin-top:14px;
   }
-  .readout,.explain{
+  .explain{
     min-width:0;
     border:1px solid var(--hair);
     border-radius:12px;
     background:#fffdf9;
     padding:11px 13px;
-  }
-  .readout{
-    display:grid;
-    gap:6px;
-    align-content:start;
-  }
-  .row{
-    display:grid;
-    grid-template-columns:140px minmax(0,1fr);
-    gap:10px;
-    align-items:start;
-    font-size:13.5px;
-    line-height:1.36;
-  }
-  .row .k{ color:#6B6459; font-weight:700; }
-  .row .v{
-    min-width:0;
-    overflow-wrap:anywhere;
-    color:var(--ink);
-  }
-  .row.slice{
-    margin-top:4px;
-    padding:9px 10px;
-    border-radius:9px;
-    background:#FCEEE2;
-  }
-  .row.slice .k{ color:#8A4B22; }
-  .row.slice .v{ color:#7C3F1A; font-weight:750; }
-  .slice-summary{
-    margin:0 0 5px;
-  }
-  .slice-derivation{
-    display:grid;
-    gap:2px;
-    margin-top:4px;
-    padding:7px 9px;
-    border:1px solid rgba(224,121,63,.24);
-    border-radius:7px;
-    background:rgba(255,253,249,.62);
-    color:#6F3A18;
-    font-weight:650;
-    overflow-x:auto;
-  }
-  .slice-derivation .step{
-    white-space:nowrap;
-  }
-  .slice-derivation math{
-    font-family:"Cambria Math","STIX Two Math","STIX Two Text","Latin Modern Math",serif;
-    font-size:15px;
-    line-height:1.2;
-  }
-  .slice-derivation .continued{
-    padding-left:1.8em;
-  }
-  .readout .v{
-    font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
-    font-size:14px;
-    line-height:1.55;
   }
   .explain .formula-text{
     font-family:"Cambria Math","STIX Two Text","Latin Modern Math",serif;
@@ -690,7 +679,8 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     .dist-control .segmented{
       flex-wrap:wrap;
     }
-    .views,.below{ grid-template-columns:1fr; }
+    .views{ grid-template-columns:1fr; }
+    .model-grid{ grid-template-columns:1fr; }
     .side-view{ grid-template-columns:1fr 1fr; grid-template-rows:auto; }
     .canvas-card.hero{ height:468px; }
   }
@@ -701,7 +691,6 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     .canvas-card.hero{ height:429px; }
     .canvas-card.small{ height:260px; }
     .param-controls.show{ grid-template-columns:1fr; }
-    .row{ grid-template-columns:1fr; gap:3px; }
     .slider-row{ grid-template-columns:auto minmax(120px,1fr) auto; }
     .slider-row .value-editor,
     .slider-row .value-pill,
@@ -788,13 +777,30 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   </header>
 
   <main class="panel">
+    <section class="model-card" aria-labelledby="modelCardTitle" aria-live="polite">
+      <h2 class="model-card-title" id="modelCardTitle">Current joint pdf and slice setup</h2>
+      <div class="model-grid">
+        <div class="model-block">
+          <div class="model-heading">Joint pdf</div>
+          <div class="math" id="modelPdf"></div>
+          <div class="math" id="modelSupport"></div>
+          <div class="math" id="modelMarginals"></div>
+        </div>
+        <div class="model-block">
+          <div class="model-heading">Slice setup</div>
+          <div class="math" id="modelSlice"></div>
+          <div class="math" id="modelParams"></div>
+          <div class="model-interpretation" id="modelInterpretation"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="controls" aria-label="Demo controls">
       <div class="control-block dist-control">
         <span class="label popover-trigger" id="distLabel" tabindex="0" data-popover="Choose a joint pdf. Watch how the surface, xy-plane view, and marginal curve update together.">Distribution</span>
         <div class="segmented" role="tablist" aria-labelledby="distLabel">
-          <button class="seg-btn" type="button" data-dist="uniform" role="tab">Independent uniforms</button>
-          <button class="seg-btn active" type="button" data-dist="triangle" role="tab" aria-selected="true">Example 2 triangular prism</button>
-          <button class="seg-btn" type="button" data-dist="bell" role="tab">Bell-shaped joint pdf</button>
+          <button class="seg-btn active" type="button" data-dist="bell" role="tab" aria-selected="true">Bell-shaped joint pdf</button>
+          <button class="seg-btn" type="button" data-dist="triangle" role="tab">Example 2 triangular prism</button>
           <button class="seg-btn" type="button" data-dist="expo" role="tab">Example 3 exponential lifetimes</button>
         </div>
       </div>
@@ -842,11 +848,11 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     <section class="views" aria-label="Linked visualizations">
       <div class="hero-view">
         <div class="canvas-card hero">
-          <canvas id="surfaceCanvas" tabindex="0" aria-label="Joint pdf surface in teaching view. Drag to rotate; use arrow keys to rotate from keyboard."></canvas>
+          <canvas id="surfaceCanvas" tabindex="0" aria-label="Joint pdf surface in teaching view. Drag to rotate; Shift-drag to move; use arrow keys to rotate or Shift plus arrow keys to move from keyboard."></canvas>
           <div class="canvas-badge mono popover-trigger" id="surfaceBadge" tabindex="0" data-popover="The height f(x,y) is density, not probability by itself. Areas and volumes give probability-related values.">f(x,y)</div>
           <span class="area-calc-popover popover-trigger" id="areaCalcPopover" tabindex="-1" hidden data-popover="Open this to see why the cross-section area equals the marginal value at the selected c."><button class="btn area-calc-toggle" id="areaCalcToggle" type="button" aria-controls="areaCalcPanel" aria-expanded="false" disabled>Show area calculation</button></span>
           <div class="area-calc-panel" id="areaCalcPanel" aria-live="polite"></div>
-          <button class="btn plot-reset active" type="button" data-camera="reset">Reset view · drag to rotate</button>
+          <button class="btn plot-reset active" type="button" data-camera="reset">Reset view · drag rotate · Shift-drag move</button>
         </div>
       </div>
       <div class="side-view">
@@ -862,15 +868,9 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     </section>
 
     <section class="below">
-      <div class="readout mono" aria-live="polite" id="readout">
-        <div class="row"><span class="k">Joint pdf</span><span class="v" id="formulaJoint"></span></div>
-        <div class="row"><span class="k">Support</span><span class="v" id="formulaSupport"></span></div>
-        <div class="row"><span class="k">Marginals</span><span class="v" id="formulaMarginals"></span></div>
-      </div>
       <aside class="explain">
         <h2 id="messageTitle">What to notice</h2>
         <p id="messageBody"></p>
-        <p>The xy panel shows where the joint density lives. The 3D panel shows how high the density is. The marginal panels summarize the joint density along one variable.</p>
         <div class="legend" aria-label="Legend">
           <span class="key"><span class="swatch s-surface"></span>surface</span>
           <span class="key"><span class="swatch s-support"></span>support</span>
@@ -952,9 +952,9 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   var TAU = Math.PI * 2;
   var MATH_FONT_STACK = '"Cambria Math","STIX Two Text","Latin Modern Math",serif';
   var prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var TEACHING_CAMERA = { yaw:-.78, pitch:1.25, zoom:1.14, centerY:.61 };
+  var TEACHING_CAMERA = { yaw:-.78, pitch:1.25, zoom:1.14, centerX:.50, centerY:.61 };
   var TEACHING_CAMERA_BY_DIST = {
-    triangle:{ yaw:.68, pitch:1.02, zoom:1.06, centerY:.68 }
+    triangle:{ yaw:.68, pitch:1.02, zoom:1.06, centerX:.50, centerY:.68 }
   };
   var FEEDBACK_EMAIL_CONFIG = {
     recipient:"10022mufeedback@gmail.com",
@@ -1038,14 +1038,15 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   };
 
   var state = {
-    dist:"triangle",
+    dist:"bell",
     slice:"none",
     c:.35,
     a:1,
     b:1,
     showCalculation:false,
-    camera:{ yaw:TEACHING_CAMERA.yaw, pitch:TEACHING_CAMERA.pitch, zoom:TEACHING_CAMERA.zoom, centerY:TEACHING_CAMERA.centerY },
+    camera:{ yaw:TEACHING_CAMERA.yaw, pitch:TEACHING_CAMERA.pitch, zoom:TEACHING_CAMERA.zoom, centerX:TEACHING_CAMERA.centerX, centerY:TEACHING_CAMERA.centerY },
     dragging:false,
+    dragMode:null,
     lastX:0,
     lastY:0,
     anim:null
@@ -1055,9 +1056,12 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     surface:document.getElementById("surfaceCanvas"),
     support:document.getElementById("supportCanvas"),
     marginal:document.getElementById("marginalCanvas"),
-    formulaJoint:document.getElementById("formulaJoint"),
-    formulaSupport:document.getElementById("formulaSupport"),
-    formulaMarginals:document.getElementById("formulaMarginals"),
+    modelPdf:document.getElementById("modelPdf"),
+    modelSupport:document.getElementById("modelSupport"),
+    modelMarginals:document.getElementById("modelMarginals"),
+    modelSlice:document.getElementById("modelSlice"),
+    modelParams:document.getElementById("modelParams"),
+    modelInterpretation:document.getElementById("modelInterpretation"),
     messageBody:document.getElementById("messageBody"),
     sliceSlider:document.getElementById("sliceSlider"),
     sliceValue:document.getElementById("sliceValue"),
@@ -1569,7 +1573,9 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     var yp = yr * cp - zr * sp;
     var zp = yr * sp + zr * cp;
     var scale = Math.min(w,h) * .335 * state.camera.zoom;
-    return { x:w*.5 + xr*scale, y:h*(state.camera.centerY || TEACHING_CAMERA.centerY) + yp*scale, depth:zp };
+    var centerX = state.camera.centerX == null ? TEACHING_CAMERA.centerX : state.camera.centerX;
+    var centerY = state.camera.centerY == null ? TEACHING_CAMERA.centerY : state.camera.centerY;
+    return { x:w*centerX + xr*scale, y:h*centerY + yp*scale, depth:zp };
   }
   function P(u,v,z,w,h){ return projectRaw({x:u,y:v,z:z},w,h); }
   function addFace(faces, pts, fill, stroke, width){
@@ -1972,11 +1978,50 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     drawSliceToMarginalLink(mctx,r,dist,yMax,w);
   }
 
+  function setModelLines(el,lines){
+    if (!el) return;
+    el.replaceChildren();
+    lines.filter(function(text){ return String(text || "").trim() !== ""; }).forEach(function(text){
+      var div = document.createElement("div");
+      div.className = "model-line";
+      div.textContent = text;
+      el.appendChild(div);
+    });
+  }
+  function updateModelCard(dist){
+    var pdfLine = dist.id === "expo"
+      ? dist.formula
+      : dist.formula;
+    var supportLine = "Support: " + dist.support;
+    var marginalLine = "Marginals: " + dist.marginals;
+    setModelLines(els.modelPdf,[pdfLine]);
+    setModelLines(els.modelSupport,[supportLine]);
+    setModelLines(els.modelMarginals,[marginalLine]);
+    if (state.slice === "none"){
+      setModelLines(els.modelSlice,["No slice selected"]);
+      setModelLines(els.modelParams,[
+        dist.id === "expo"
+          ? "Current a = " + fmt(state.a) + ", b = " + fmt(state.b) + "; f(0,0) = ab = " + fmt(state.a * state.b)
+          : "Current c = " + fmtCInput(state.c)
+      ]);
+      els.modelInterpretation.textContent = "Choose Fix x = c or Fix y = c to see one cross-section of the joint pdf surface.";
+      return;
+    }
+    var fixed = state.slice === "x" ? "x" : "y";
+    var rangeText = dist.sliceRange(state.slice,state.c);
+    var marginalName = state.slice === "x" ? "f_X(c)" : "f_Y(c)";
+    setModelLines(els.modelSlice,[
+      "Fix " + fixed + " = c"
+    ]);
+    setModelLines(els.modelParams,[
+      "Current c = " + fmtCInput(state.c) + ", " + rangeText,
+      dist.id === "expo" ? "Current a = " + fmt(state.a) + ", b = " + fmt(state.b) : ""
+    ]);
+    els.modelInterpretation.textContent = "The area under this cross-section equals the marginal value " + marginalName + ".";
+  }
   function updateReadout(){
     var dist = dists[state.dist];
-    els.formulaJoint.textContent = dist.id === "expo" ? dist.formula + "; current a = " + fmt(state.a) + ", b = " + fmt(state.b) + ", f(0,0) = ab = " + fmt(state.a * state.b) : dist.formula;
-    els.formulaSupport.textContent = dist.support;
-    els.formulaMarginals.textContent = dist.marginals;
+    updateModelCard(dist);
     if (dist.id === "expo"){
       els.messageBody.textContent = dist.message + " " + expInterpretation();
     } else {
@@ -2010,7 +2055,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   }
   function resetTeachingCamera(){
     var camera = TEACHING_CAMERA_BY_DIST[state.dist] || TEACHING_CAMERA;
-    state.camera = { yaw:camera.yaw, pitch:camera.pitch, zoom:camera.zoom, centerY:camera.centerY };
+    state.camera = { yaw:camera.yaw, pitch:camera.pitch, zoom:camera.zoom, centerX:camera.centerX == null ? TEACHING_CAMERA.centerX : camera.centerX, centerY:camera.centerY };
   }
   function setDist(id){
     stopSweep();
@@ -2280,47 +2325,89 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     state.showCalculation = !state.showCalculation;
     render();
   });
+  function surfaceDragMode(e){
+    if (e && e.touches && e.touches.length >= 2) return "pan";
+    if (e && (e.shiftKey || e.button === 1 || e.button === 2)) return "pan";
+    return "rotate";
+  }
+  function panSurfaceCamera(dx,dy){
+    var s = size(els.surface);
+    var w = Math.max(1,s.w || 1);
+    var h = Math.max(1,s.h || 1);
+    state.camera.centerX = clamp((state.camera.centerX == null ? TEACHING_CAMERA.centerX : state.camera.centerX) + dx / w, .18, .82);
+    state.camera.centerY = clamp((state.camera.centerY == null ? TEACHING_CAMERA.centerY : state.camera.centerY) + dy / h, .18, .88);
+  }
+  function updateSurfaceDragClass(){
+    els.surface.classList.toggle("panning",state.dragMode === "pan");
+    els.surface.classList.toggle("dragging",state.dragMode !== "pan" && state.dragging);
+  }
+  function touchCenter(e){
+    if (!e.touches || e.touches.length < 2) return pointer(e);
+    var rect = els.surface.getBoundingClientRect();
+    return {
+      x:((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left,
+      y:((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top
+    };
+  }
   els.surface.addEventListener("mousedown", function(e){
     var p = pointer(e);
     state.dragging = true;
+    state.dragMode = surfaceDragMode(e);
     state.lastX = p.x;
     state.lastY = p.y;
-    els.surface.classList.add("dragging");
+    updateSurfaceDragClass();
+    if (state.dragMode === "pan") e.preventDefault();
   });
+  els.surface.addEventListener("contextmenu", function(e){ e.preventDefault(); });
   window.addEventListener("mousemove", function(e){
     if (!state.dragging) return;
     var p = pointer(e);
-    state.camera.yaw += (p.x - state.lastX) * .008;
-    state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+    if (state.dragMode === "pan"){
+      panSurfaceCamera(p.x - state.lastX,p.y - state.lastY);
+    } else {
+      state.camera.yaw += (p.x - state.lastX) * .008;
+      state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+    }
     state.lastX = p.x;
     state.lastY = p.y;
     render();
   });
   window.addEventListener("mouseup", function(){
     state.dragging = false;
+    state.dragMode = null;
     els.surface.classList.remove("dragging");
+    els.surface.classList.remove("panning");
   });
   els.surface.addEventListener("touchstart", function(e){
-    var p = pointer(e);
+    var p = touchCenter(e);
     state.dragging = true;
+    state.dragMode = surfaceDragMode(e);
     state.lastX = p.x;
     state.lastY = p.y;
-    els.surface.classList.add("dragging");
+    updateSurfaceDragClass();
     e.preventDefault();
   }, { passive:false });
   els.surface.addEventListener("touchmove", function(e){
     if (!state.dragging) return;
-    var p = pointer(e);
-    state.camera.yaw += (p.x - state.lastX) * .008;
-    state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+    var p = touchCenter(e);
+    if (state.dragMode === "pan" || (e.touches && e.touches.length >= 2)){
+      state.dragMode = "pan";
+      panSurfaceCamera(p.x - state.lastX,p.y - state.lastY);
+    } else {
+      state.camera.yaw += (p.x - state.lastX) * .008;
+      state.camera.pitch = clamp(state.camera.pitch + (p.y - state.lastY) * .006, .18, 1.42);
+    }
     state.lastX = p.x;
     state.lastY = p.y;
+    updateSurfaceDragClass();
     render();
     e.preventDefault();
   }, { passive:false });
   els.surface.addEventListener("touchend", function(){
     state.dragging = false;
+    state.dragMode = null;
     els.surface.classList.remove("dragging");
+    els.surface.classList.remove("panning");
   });
   els.surface.addEventListener("wheel", function(e){
     state.camera.zoom = clamp(state.camera.zoom * (e.deltaY > 0 ? .94 : 1.06), .72, 1.48);
@@ -2328,6 +2415,15 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     e.preventDefault();
   }, { passive:false });
   els.surface.addEventListener("keydown", function(e){
+    if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")){
+      var step = e.key === "ArrowLeft" || e.key === "ArrowUp" ? -.025 : .025;
+      var surfaceSize = size(els.surface);
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") panSurfaceCamera(step * surfaceSize.w,0);
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") panSurfaceCamera(0,step * surfaceSize.h);
+      render();
+      e.preventDefault();
+      return;
+    }
     if (e.key === "ArrowLeft" || e.key === "ArrowRight"){
       state.camera.yaw += e.key === "ArrowLeft" ? -.08 : .08;
       render();
@@ -2344,7 +2440,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
 
   setupFeedback();
   setupLearningPopovers();
-  setDist("triangle");
+  setDist("bell");
   setSlice("none");
   resizeAll();
 })();
@@ -2355,6 +2451,7 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
   var PREFIX = "W9C1-D1";
   var TARGETS = [
     ["main.panel","DEMO"],
+    [".model-card","FORMULA-SETUP"],
     [".controls","SLIDER-GROUPS"],
     [".dist-control","SLIDER-DISTRIBUTION"],
     [".slice-control","SLIDER-SLICE-MODE"],
@@ -2364,7 +2461,6 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     [".canvas-card.hero","PLOT-SURFACE"],
     [".side-view .canvas-card:nth-of-type(1)","PLOT-SUPPORT"],
     [".side-view .canvas-card:nth-of-type(2)","PLOT-MARGINALS"],
-    ["#readout","FORMULA-SUMMARY"],
     [".explain","EXPLAIN-RELATIONSHIP"],
     ["#areaCalcPanel","CALC"]
   ];
@@ -2379,9 +2475,10 @@ Known limitations: The 3D view uses a compact custom canvas renderer, so it is i
     [".segmented","OPTION-GROUP"],
     [".canvas-badge","PLOT-LABEL"],
     [".view-title","PLOT-TITLE"],
-    ["#readout .row","FORMULA-ROW"],
+    [".model-card .model-block","FORMULA-BLOCK"],
+    [".model-card .model-line","FORMULA-LINE"],
     [".legend","EXPLAIN-LEGEND"],
-    [".legend .item","EXPLAIN-LEGEND-ITEM"],
+    [".legend .key","EXPLAIN-LEGEND-ITEM"],
     ["#areaCalcPanel .calc-label","CALC-LABEL"],
     ["#areaCalcPanel .calc-eq","CALC-STEP"]
   ];
