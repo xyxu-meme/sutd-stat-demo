@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+Stage 1 standalone interactive demo.
+Source PDF: Letcure notes/week9class2_solution.pdf, Week 9 Class 2.
+Purpose: compare and simulate S = X + Y for selected independent discrete random variables.
+-->
+<title>Add Two Discrete Random Variables</title>
+<style>
+  :root{
+    --paper:#FAF7F0; --ink:#1F2937; --bar:#2E4374; --navy:var(--bar);
+    --amber:#E0793F; --sage:#3F6F5E; --hair:#DDD6C7; --hair-2:#C9C0AC;
+    --muted:#8A8272; --soft:#F2EEE3; --white:#FFFFFF; --grid:#E9E2D5;
+    --active:#D99A00; --x-color:#2E4374; --y-color:#3F6F5E; --s-color:#E0793F;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;margin:0;padding:28px 14px 44px;display:flex;justify-content:center;
+    background-color:var(--paper);background-image:radial-gradient(var(--hair-2) 1px, transparent 1px);
+    background-size:18px 18px;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .page{width:100%;max-width:1180px}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace}
+  .math{font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif}
+  header{margin:0 0 16px}
+  .eyebrow{margin:0 0 7px;color:var(--sage);font-size:12.5px;font-weight:700;letter-spacing:.075em;text-transform:uppercase}
+  h1{margin:0 0 8px;color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;font-size:clamp(28px,4.2vw,40px);line-height:1.12;font-weight:650}
+  .lede{max-width:920px;margin:0;color:#4B5159;font-size:15.5px;line-height:1.55}
+  .panel{background:var(--white);border:1px solid var(--hair);border-radius:14px;box-shadow:0 1px 2px rgba(31,41,55,.04),0 8px 24px rgba(31,41,55,.055);padding:16px clamp(13px,2.6vw,24px) 20px}
+  .top-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 16px;align-items:end;padding-bottom:13px;margin-bottom:14px;border-bottom:1px dashed var(--hair)}
+  .switch-group{min-width:0}
+  .label{display:block;margin:0 0 7px;color:#4B5159;font-size:13px;font-weight:650}
+  .segmented{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border-radius:999px;background:var(--soft)}
+  .seg-btn{appearance:none;min-height:36px;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:#6B6459;cursor:pointer;font-size:12.5px;font-weight:750}
+  .seg-btn.active{background:var(--ink);color:#fff}
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px 14px;align-items:end;padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed var(--hair)}
+  .control-block{min-width:0}
+  .slider-row{display:grid;grid-template-columns:minmax(100px,1fr) auto;gap:9px;align-items:center}
+  button,input,textarea,select{font-family:inherit}
+  button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  input[type="range"]{width:100%;accent-color:var(--amber)}
+  .value-pill{width:78px;padding:6px 7px;border:1px solid var(--hair);border-radius:8px;background:#fffdf9;color:#8A4B22;text-align:center;font-size:12.5px;font-weight:750}
+  input.value-pill{appearance:textfield}
+  .btn{appearance:none;min-height:38px;border:1px solid rgba(46,67,116,.18);border-radius:10px;background:var(--navy);color:#fff;padding:9px 12px;cursor:pointer;font-size:13px;font-weight:750}
+  .btn.secondary{background:#fffdf9;color:var(--navy)}
+  .btn.active{background:var(--amber);border-color:rgba(124,63,26,.18)}
+  .btn.compact{min-height:34px;padding:7px 10px;border-radius:9px;font-size:12.5px;line-height:1}
+  .sampling-actions,.display-toggles{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .sampling-toolbar{display:flex;justify-content:space-between;gap:8px 12px;align-items:center;width:100%}
+  .sampling-options{margin-left:auto}
+  .display-toggle{background:#fffdf9;color:var(--navy)}
+  .display-toggle[aria-pressed="true"]{background:rgba(63,111,94,.12);border-color:rgba(63,111,94,.42);box-shadow:inset 0 0 0 1px rgba(63,111,94,.16)}
+  .display-toggle[aria-pressed="true"]::before{content:"\2713";margin-right:5px;color:var(--sage);font-weight:900}
+  .btn:focus-visible,.seg-btn:focus-visible,input:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:2px solid rgba(224,121,63,.72);outline-offset:2px}
+  .view{display:none}.view.active{display:block}
+  .sampling-tools{display:none;gap:5px;padding:8px 9px;margin-bottom:9px;border:1px solid rgba(201,192,172,.76);border-radius:12px;background:#fffaf2}
+  .sampling-tools.active{display:flex;flex-direction:column}
+  .equation{min-height:28px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0;padding:2px 1px;color:#273449;font-size:13.5px;font-weight:700;line-height:1.25}
+  .equation .eq-term{display:inline-flex;align-items:center}
+  .workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,360px);gap:14px;align-items:stretch}
+  #compareView .workspace,#samplingView .workspace{align-items:start}
+  .canvas-card,.readout,.note-card{position:relative;min-width:0;border:1px solid var(--hair);border-radius:12px;background:#fffdf9;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+  .canvas-card{height:650px;overflow:hidden}
+  #samplingView .canvas-card{height:600px}
+  canvas{display:block;width:100%;height:100%;border-radius:12px;background:linear-gradient(180deg,#fffdf9 0%,#fbf6eb 100%)}
+  .canvas-badge{position:absolute;top:12px;left:12px;z-index:2;max-width:calc(100% - 24px);padding:5px 8px;border:1px solid rgba(46,67,116,.16);border-radius:999px;background:rgba(255,255,255,.9);color:var(--navy);font-family:"Cambria Math","STIX Two Text","Latin Modern Math",Georgia,serif;font-size:12px;font-weight:750;pointer-events:none}
+  .canvas-badge[data-popover]{pointer-events:auto}
+  .popover-trigger{cursor:help}
+  .popover-trigger:focus-visible{outline:2px solid rgba(224,121,63,.72);outline-offset:2px}
+  .learning-popover{position:fixed;z-index:1500;display:none;max-width:260px;padding:9px 10px;border:1px solid rgba(201,192,172,.92);border-left:4px solid var(--sage);border-radius:10px;background:rgba(255,253,249,.98);color:var(--ink);box-shadow:0 12px 28px rgba(31,41,55,.18);font:600 12.5px/1.42 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none}
+  .learning-popover.show{display:block}
+  .side-stack{display:grid;gap:12px;align-content:start}
+  .readout,.note-card{padding:13px}
+  .readout h2,.note-card h2{margin:0 0 8px;color:var(--navy);font-size:15px;line-height:1.25}
+  .dist-card{margin-bottom:11px;padding-bottom:10px;border-bottom:1px dashed rgba(201,192,172,.76)}
+  .dist-card:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+  .dist-card h3{margin:0 0 6px;font-size:13.5px;line-height:1.25}
+  .read-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;color:#4B5159;font-size:12.7px}
+  .read-row strong{color:var(--ink)}
+  .formula-line{margin:0 0 6px;color:#273449;font-size:13px;line-height:1.42}
+  .note-card{border-left:5px solid var(--amber);color:#4B5159;font-size:13.5px;line-height:1.48}
+  #compareView .note-card{padding:10px 12px;font-size:13px;line-height:1.4}
+  #compareView .note-card h2{margin-bottom:5px;font-size:14px}
+  #samplingView .note-card{padding:9px 11px;font-size:12.8px;line-height:1.38}
+  #samplingView .note-card h2{margin-bottom:4px;font-size:13.5px}
+  .status{min-height:22px;margin:12px 0 0;color:#6F3A18;font-size:13px;font-weight:700}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin:13px 0 0;color:#5A6270;font-size:12.5px;font-weight:650}
+  .key{display:inline-flex;align-items:center;gap:6px}.swatch{width:20px;height:10px;border-radius:999px;border:1px solid transparent}
+  .s-x{background:var(--x-color)}.s-y{background:var(--y-color)}.s-s{background:var(--s-color)}.s-emp{background:rgba(224,121,63,.40);border-color:rgba(224,121,63,.72)}.s-theory{background:#fff;border-color:var(--navy)}.s-marker{background:var(--active)}
+  footer{margin-top:16px;padding:0 4px}.byline{color:var(--muted);font-size:12.5px;line-height:1.5;text-align:right}
+  #fbButton{position:fixed;right:18px;bottom:18px;z-index:1000;border:0;border-radius:999px;background:var(--navy);color:#fff;padding:11px 14px;box-shadow:0 8px 22px rgba(31,41,55,.18);cursor:pointer;font-weight:750}
+  #fbOverlay{position:fixed;inset:0;z-index:1100;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(31,41,55,.30)}
+  #fbOverlay.show{display:flex}.fb-panel{width:min(560px,100%);max-height:92vh;overflow:auto;border:1px solid var(--hair);border-radius:14px;background:#fffdf9;box-shadow:0 18px 50px rgba(31,41,55,.22);padding:16px}
+  .fb-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:8px}.fb-head h3{margin:0;color:var(--navy);font-size:18px}.fb-close{border:0;background:transparent;color:var(--muted);font-size:24px;line-height:1;cursor:pointer}
+  .fb-panel label{display:block;margin:12px 0 6px;color:#4B5159;font-size:13px;font-weight:700}.fb-panel textarea,.fb-panel select{width:100%;padding:9px 10px;border:1px solid var(--hair);border-radius:10px;background:#fff;color:var(--ink)}.fb-panel textarea{min-height:94px;resize:vertical}
+  .fb-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.fb-status{min-height:20px;margin-top:8px;color:#6F3A18;font-size:12.5px;font-weight:700}.fb-prepared{display:none;white-space:pre-wrap;margin-top:10px;padding:10px;border:1px dashed var(--hair-2);border-radius:10px;background:#fffaf2;font-size:12px}.fb-prepared.show{display:block}
+  .edit-badge{position:absolute;z-index:20;display:none;max-width:180px;padding:3px 6px;border-radius:7px;background:rgba(46,67,116,.92);color:#fff;font-size:10px;font-weight:800;letter-spacing:.02em;cursor:pointer}.edit-on .edit-badge{display:inline-block}
+  .edit-indicator{position:fixed;left:14px;bottom:14px;z-index:1200;display:none;padding:7px 9px;border-radius:999px;background:var(--ink);color:#fff;font-size:12px;font-weight:800}.edit-on .edit-indicator{display:block}
+  @media (max-width:980px){.controls{grid-template-columns:1fr 1fr}.workspace{grid-template-columns:1fr}.canvas-card{height:630px}#samplingView .canvas-card{height:570px}.top-row{align-items:start}}
+  @media (max-width:760px){.sampling-toolbar{flex-direction:column;align-items:stretch}.sampling-actions,.display-toggles{gap:6px}.sampling-options{margin-left:0}.btn.compact{min-height:40px;padding:8px 10px}}
+  @media (max-width:640px){body{padding:20px 10px 72px}.controls{grid-template-columns:1fr}.canvas-card{height:610px}#samplingView .canvas-card{height:540px}.byline{text-align:left}#fbButton{right:12px;bottom:12px}}
+</style>
+</head>
+<body>
+<div class="page" id="pageRoot">
+  <header>
+    <p class="eyebrow">10.022 Modelling Uncertainty &middot; Week 9, Class 2 &middot; Singapore University of Technology and Design</p>
+    <h1>Add Two Discrete Random Variables</h1>
+    <p class="lede">Compare the pmfs of <span class="math">X</span>, <span class="math">Y</span>, and <span class="math">S = X + Y</span>, then generate paired samples to see all three empirical pmfs build together.</p>
+  </header>
+  <main class="panel" data-edit-id="W9C2-D3-DEMO">
+    <span class="edit-badge">W9C2-D3-DEMO</span>
+    <section class="top-row" aria-label="Distribution family and learning mode">
+      <div class="switch-group">
+        <span class="label popover-trigger" id="familyLabel" tabindex="0" data-popover="Choose two discrete random variables and compare how their sum changes support and pmf shape.">Distribution family</span>
+        <div class="segmented" role="tablist" aria-labelledby="familyLabel">
+          <button class="seg-btn active" type="button" data-family="dice" role="tab" aria-selected="true">Two fair dice</button>
+          <button class="seg-btn" type="button" data-family="binomial" role="tab" aria-selected="false">Binomial + Binomial</button>
+          <button class="seg-btn" type="button" data-family="poisson" role="tab" aria-selected="false">Poisson + Poisson</button>
+        </div>
+      </div>
+      <div class="switch-group">
+        <span class="label" id="modeLabel">Learning mode</span>
+        <div class="segmented" role="tablist" aria-labelledby="modeLabel">
+          <button class="seg-btn active popover-trigger" type="button" data-mode="compare" role="tab" aria-selected="true" data-popover="Compare the theoretical pmfs of X, Y, and S = X + Y. Notice how the support, centre, spread, and shape change.">Compare</button>
+          <button class="seg-btn popover-trigger" type="button" data-mode="sampling" role="tab" aria-selected="false" data-popover="Generate x_i and y_i, then form s_i = x_i + y_i. The three empirical pmfs are built from the same sampled pairs.">Generate by samples</button>
+        </div>
+      </div>
+      <button class="btn secondary" id="resetParams" type="button">Reset parameters</button>
+    </section>
+    <section class="controls" id="paramControls" aria-label="Distribution parameters" data-edit-id="W9C2-D3-SLIDERS"></section>
+    <section class="sampling-tools" id="samplingTools" aria-label="Sampling controls">
+      <div class="sampling-toolbar">
+        <div class="sampling-actions">
+          <button class="btn secondary compact popover-trigger" id="draw1" type="button" data-popover="Try one draw first. Watch one value from X, one value from Y, and their sum appear together.">Draw 1</button>
+          <button class="btn secondary compact" id="draw20" type="button" aria-label="Draw 20 samples">20</button>
+          <button class="btn secondary compact popover-trigger" id="draw200" type="button" aria-label="Draw 200 samples" data-popover="Use 200 draws to see the empirical relative frequencies begin to match the theoretical pmfs.">200</button>
+          <button class="btn secondary compact popover-trigger" id="draw1000" type="button" aria-label="Draw 1000 samples" data-popover="Use 1000 draws to examine large-sample behaviour and compare empirical and theoretical probabilities.">1000</button>
+          <button class="btn compact" id="playSamples" type="button" aria-pressed="false">Play</button>
+          <button class="btn secondary compact" id="clearSamples" type="button" aria-label="Clear all samples">Clear</button>
+        </div>
+        <div class="sampling-options display-toggles" aria-label="Sampling plot display options">
+          <button class="btn compact display-toggle popover-trigger" id="showTheory" type="button" aria-pressed="true" data-popover="Show or hide the theoretical pmf while keeping the empirical relative-frequency bars visible.">Theory</button>
+          <button class="btn compact display-toggle popover-trigger" id="showMeanSd" type="button" aria-pressed="true" data-popover="Show or hide the theoretical mean and one-standard-deviation interval.">Mean ± SD</button>
+        </div>
+      </div>
+      <div class="equation math popover-trigger" id="sampleEquation" tabindex="0" data-popover="The highlighted x_i, y_i, and s_i values belong to the same random draw.">Each draw creates x<sub>i</sub>, y<sub>i</sub>, and s<sub>i</sub> = x<sub>i</sub> + y<sub>i</sub>.</div>
+    </section>
+    <section class="view active" id="compareView">
+      <div class="workspace">
+        <div class="canvas-card" data-edit-id="W9C2-D3-PLOT-COMPARE">
+          <canvas id="compareCanvas" tabindex="0" aria-label="Compare theoretical pmfs for X, Y, and S equals X plus Y"></canvas>
+          <div class="canvas-badge mono">theoretical discrete pmfs</div>
+        </div>
+        <aside class="side-stack">
+          <section class="readout" id="compareReadout" aria-live="polite"></section>
+          <section class="note-card" id="formulaCard"></section>
+        </aside>
+      </div>
+    </section>
+    <section class="view" id="samplingView">
+      <div class="workspace">
+        <div class="canvas-card" data-edit-id="W9C2-D3-PLOT-SAMPLING">
+          <canvas id="samplingCanvas" tabindex="0" aria-label="Three empirical relative-frequency plots for sampled X, Y, and S equals X plus Y"></canvas>
+          <div class="canvas-badge mono">sampled X, Y, and S pmfs</div>
+        </div>
+        <aside class="side-stack">
+          <section class="readout popover-trigger" id="sampleReadout" tabindex="0" aria-live="polite" data-popover="As the sample size grows, empirical means, standard deviations, and relative frequencies should approach their theoretical values."></section>
+          <section class="note-card sampling-note"><h2>What to watch</h2><p>Filled bars show empirical relative frequencies; outlined markers show theoretical probabilities.</p></section>
+        </aside>
+      </div>
+    </section>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="legend" aria-label="Plot legend">
+      <span class="key"><span class="swatch s-x"></span>X</span>
+      <span class="key"><span class="swatch s-y"></span>Y</span>
+      <span class="key"><span class="swatch s-s"></span>S = X + Y</span>
+      <span class="key"><span class="swatch s-emp"></span>empirical relative frequency</span>
+      <span class="key"><span class="swatch s-theory"></span>theoretical pmf</span>
+      <span class="key"><span class="swatch s-marker"></span>current draw marker</span>
+    </div>
+  </main>
+  <footer><div class="byline">XU, Ying &middot; xu_ying@sutd.edu.sg &middot; 10.022 Modelling Uncertainty</div></footer>
+  <div class="edit-indicator">Edit labels ON</div>
+</div>
+<button id="fbButton" type="button">Share feedback</button>
+<div id="fbOverlay" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+  <form class="fb-panel" id="fbForm">
+    <div class="fb-head"><h3 id="fbTitle">Share your feedback</h3><button class="fb-close" id="fbClose" type="button" aria-label="Close feedback panel">&times;</button></div>
+    <p class="lede" style="font-size:13px;">Tell us what worked well and what could be improved.</p>
+    <label for="fbCategory">Feedback type</label>
+    <select id="fbCategory" required><option value="" selected disabled>Select feedback type</option><option>Something I found helpful</option><option>A suggestion for improvement</option><option>A content or explanation issue</option><option>A technical problem</option><option>General feedback</option></select>
+    <label for="fbDescription">Your feedback</label><textarea id="fbDescription" required></textarea>
+    <label for="fbExpected">What could make the demo better? <span class="muted">(optional)</span></label><textarea id="fbExpected"></textarea>
+    <div class="fb-actions"><button class="btn" type="submit">Send by email</button><button class="btn secondary" id="fbCopy" type="button">Copy feedback</button></div>
+    <div class="fb-status" id="fbStatus" aria-live="polite"></div><div id="fbPreparedText" class="fb-prepared" aria-label="Prepared feedback email"></div>
+  </form>
+</div>
+<script>
+(function(){
+  "use strict";
+  var TAU=Math.PI*2;
+  var C={ink:"#1F2937",navy:"#2E4374",x:"#2E4374",y:"#3F6F5E",s:"#E0793F",grid:"#E9E2D5",active:"#D99A00",muted:"#8A8272"};
+  var FEEDBACK_EMAIL_CONFIG={recipient:"10022mufeedback@gmail.com",subjectPrefix:"[10.022 MU Demo Feedback]"};
+  var prefersReduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var state={
+    family:"dice",mode:"compare",
+    dice:{},binomial:{n1:5,p1:.4,n2:5,p2:.4},poisson:{lambda1:2,lambda2:3},
+    xs:[],ys:[],ss:[],current:null,showTheory:true,showMeanSd:true,playing:false,batchTimer:null,playTimer:null
+  };
+  var els={paramControls:document.getElementById("paramControls"),compareCanvas:document.getElementById("compareCanvas"),samplingCanvas:document.getElementById("samplingCanvas"),compareReadout:document.getElementById("compareReadout"),sampleReadout:document.getElementById("sampleReadout"),formulaCard:document.getElementById("formulaCard"),sampleEquation:document.getElementById("sampleEquation"),samplingTools:document.getElementById("samplingTools"),status:document.getElementById("status"),playSamples:document.getElementById("playSamples"),showTheory:document.getElementById("showTheory"),showMeanSd:document.getElementById("showMeanSd")};
+  var cCompare=els.compareCanvas.getContext("2d"), cSampling=els.samplingCanvas.getContext("2d");
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+  function fmt(v,d){return Number(v).toFixed(d==null?2:d)}
+  function fmtShort(v){return Math.abs(v-Math.round(v))<1e-10?String(Math.round(v)):Number(v).toFixed(Math.abs(v)<10?3:2).replace(/0+$/,"").replace(/\.$/,"")}
+  function intRange(a,b){var out=[];for(var k=a;k<=b;k++)out.push(k);return out}
+  function normalizePmf(entries){var sum=entries.reduce(function(a,e){return a+e.p},0)||1;return entries.map(function(e){return {k:e.k,p:e.p/sum}})}
+  function pmfMean(pmf){return pmf.reduce(function(a,e){return a+e.k*e.p},0)}
+  function pmfVar(pmf,mean){return pmf.reduce(function(a,e){var z=e.k-mean;return a+z*z*e.p},0)}
+  function item(key,label,pmf,color,shape,sample,exact){
+    var mean=exact&&exact.mean!=null?exact.mean:pmfMean(pmf), variance=exact&&exact.variance!=null?exact.variance:pmfVar(pmf,mean);
+    return {key:key,label:label,pmf:pmf,mean:mean,variance:variance,sd:Math.sqrt(variance),support:[pmf[0].k,pmf[pmf.length-1].k],color:color,shape:shape,sample:sample};
+  }
+  function binomCoeff(n,k){if(k<0||k>n)return 0;var r=1,m=Math.min(k,n-k);for(var i=1;i<=m;i++)r=r*(n-m+i)/i;return r}
+  function binomPmf(n,p){return intRange(0,n).map(function(k){return {k:k,p:binomCoeff(n,k)*Math.pow(p,k)*Math.pow(1-p,n-k)}})}
+  function poissonPmf(lambda,upper){var arr=[],p=Math.exp(-lambda);arr.push({k:0,p:p});for(var k=1;k<=upper;k++){p=p*lambda/k;arr.push({k:k,p:p})}return arr}
+  function convolve(a,b){var map={};a.forEach(function(x){b.forEach(function(y){var k=x.k+y.k;map[k]=(map[k]||0)+x.p*y.p})});return Object.keys(map).map(Number).sort(function(x,y){return x-y}).map(function(k){return {k:k,p:map[k]}})}
+  function sampleFromPmf(pmf){var u=Math.random(),s=0;for(var i=0;i<pmf.length;i++){s+=pmf[i].p;if(u<=s)return pmf[i].k}return pmf[pmf.length-1].k}
+  function poissonSample(lambda){var L=Math.exp(-lambda),p=1,k=0;do{k++;p*=Math.random()}while(p>L);return k-1}
+  function activeSpec(){
+    if(state.family==="dice"){
+      var die=intRange(1,6).map(function(k){return {k:k,p:1/6}}), sum=convolve(die,die);
+      return {name:"Two fair dice",axis:{min:1,max:12},items:[item("x","X: fair die",die,C.x,"circle",function(){return 1+Math.floor(Math.random()*6)}),item("y","Y: fair die",die,C.y,"square",function(){return 1+Math.floor(Math.random()*6)}),item("s","S = X + Y: triangular pmf",sum,C.s,"triangle",null)],formula:["X,Y in {1,2,3,4,5,6}, with P(X=x)=P(Y=y)=1/6.","E(S)=E(X)+E(Y)=7.","Var(S)=Var(X)+Var(Y)=35/6.","X and Y are flat, but their sum has a triangular pmf."]};
+    }
+    if(state.family==="binomial"){
+      var p=state.binomial, bx=binomPmf(p.n1,p.p1), by=binomPmf(p.n2,p.p2), bs=convolve(bx,by);
+      var same=Math.abs(p.p1-p.p2)<1e-12;
+      return {name:"Binomial + Binomial",axis:{min:0,max:p.n1+p.n2},items:[item("x","X ~ Bin("+p.n1+", "+fmt(p.p1,2)+")",bx,C.x,"circle",function(){return sampleFromPmf(bx)}),item("y","Y ~ Bin("+p.n2+", "+fmt(p.p2,2)+")",by,C.y,"square",function(){return sampleFromPmf(by)}),item("s",same?"S ~ Bin("+(p.n1+p.n2)+", "+fmt(p.p1,2)+")":"S from discrete convolution",bs,C.s,"triangle",null)],formula:["P(S=s)=sum_x P(X=x)P(Y=s-x).","E(S)=n1 p1 + n2 p2.","Var(S)=n1 p1(1-p1)+n2 p2(1-p2).",same?"When p1=p2=p, S ~ Bin(n1+n2,p).":"The sum is binomial only when the two success probabilities are the same."]};
+    }
+    var q=state.poisson, upper=Math.max(12,Math.ceil(Math.max(q.lambda1,q.lambda2,q.lambda1+q.lambda2)+4*Math.sqrt(q.lambda1+q.lambda2)));
+    var px=poissonPmf(q.lambda1,upper), py=poissonPmf(q.lambda2,upper), ps=poissonPmf(q.lambda1+q.lambda2,upper);
+    return {name:"Poisson + Poisson",axis:{min:0,max:upper},items:[item("x","X ~ Poisson("+fmt(q.lambda1,1)+")",px,C.x,"circle",function(){return poissonSample(q.lambda1)},{mean:q.lambda1,variance:q.lambda1}),item("y","Y ~ Poisson("+fmt(q.lambda2,1)+")",py,C.y,"square",function(){return poissonSample(q.lambda2)},{mean:q.lambda2,variance:q.lambda2}),item("s","S ~ Poisson("+fmt(q.lambda1+q.lambda2,1)+")",ps,C.s,"triangle",null,{mean:q.lambda1+q.lambda2,variance:q.lambda1+q.lambda2})],formula:["X ~ Poisson(lambda1), Y ~ Poisson(lambda2).","S ~ Poisson(lambda1 + lambda2).","E(S)=lambda1 + lambda2.","Var(S)=lambda1 + lambda2."]};
+  }
+  function makeTriplet(){var spec=activeSpec(),x=spec.items[0].sample(),y=spec.items[1].sample();return {x:x,y:y,s:x+y}}
+  function addTriplet(t){state.xs.push(t.x);state.ys.push(t.y);state.ss.push(t.s);state.current=t}
+  function clearSamples(){state.xs=[];state.ys=[];state.ss=[];state.current=null}
+  function stats(arr){var n=arr.length;if(!n)return null;var sum=0;for(var i=0;i<n;i++)sum+=arr[i];var mean=sum/n,ss=0;for(var j=0;j<n;j++){var z=arr[j]-mean;ss+=z*z}return {n:n,mean:mean,sd:Math.sqrt(ss/n)}}
+  function stopSimulation(){state.playing=false;if(state.batchTimer)clearTimeout(state.batchTimer);if(state.playTimer)clearInterval(state.playTimer);state.batchTimer=null;state.playTimer=null;els.playSamples.textContent="Play";els.playSamples.classList.remove("active");els.playSamples.setAttribute("aria-pressed","false")}
+  function resizeCanvas(canvas){var dpr=window.devicePixelRatio||1,rect=canvas.parentElement.getBoundingClientRect(),w=Math.max(320,Math.round(rect.width)),h=Math.max(420,Math.round(rect.height));canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.width=w+"px";canvas.style.height=h+"px";canvas.getContext("2d").setTransform(dpr,0,0,dpr,0,0)}
+  function size(canvas){var dpr=window.devicePixelRatio||1;return {w:canvas.width/dpr,h:canvas.height/dpr}}
+  function panels(w,h){var gap=22,pad={l:58,r:24,t:48,b:44},ph=(h-pad.t-pad.b-gap*2)/3;return [0,1,2].map(function(i){var top=pad.t+i*(ph+gap);return {l:pad.l,r:w-pad.r,t:top,b:top+ph,w:w-pad.l-pad.r,h:ph}})}
+  function axisRange(spec,includeSamples){var max=spec.axis.max;if(includeSamples)[state.xs,state.ys,state.ss].forEach(function(arr){arr.forEach(function(v){max=Math.max(max,v)})});return {min:spec.axis.min,max:max}}
+  function mapX(r,k,rg){return r.l+(k-rg.min)/(rg.max-rg.min)*r.w}
+  function mapY(r,p,yMax){return r.b-p/yMax*r.h}
+  function line(ctx,a,b,color,width,dash){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width||1.5;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
+  function label(ctx,text,x,y,color,align){ctx.save();ctx.fillStyle=color||C.ink;ctx.font="700 12.5px system-ui,-apple-system,Segoe UI,sans-serif";ctx.textAlign=align||"center";ctx.textBaseline="middle";ctx.fillText(text,x,y);ctx.restore()}
+  function labelBox(ctx,text,x,y,color){ctx.save();ctx.font="750 12px system-ui,-apple-system,Segoe UI,sans-serif";var m=ctx.measureText(text),bw=m.width+14,bh=24,sw=ctx.canvas.width/(window.devicePixelRatio||1),sh=ctx.canvas.height/(window.devicePixelRatio||1);x=clamp(x,8+bw/2,sw-8-bw/2);y=clamp(y,8+bh/2,sh-8-bh/2);ctx.fillStyle="rgba(255,253,249,.94)";ctx.strokeStyle=color||C.active;ctx.lineWidth=1.3;ctx.beginPath();ctx.roundRect(x-bw/2,y-bh/2,bw,bh,8);ctx.fill();ctx.stroke();ctx.fillStyle=color||C.ink;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,x,y+1);ctx.restore()}
+  function pmfAt(pmf,k){for(var i=0;i<pmf.length;i++)if(pmf[i].k===k)return pmf[i].p;return 0}
+  function countsFor(arr,rg){var counts={},total=arr.length;for(var k=rg.min;k<=rg.max;k++)counts[k]=0;arr.forEach(function(v){if(v>=rg.min&&v<=rg.max)counts[v]=(counts[v]||0)+1});return {counts:counts,total:total}}
+  function yMaxFor(items,counts){var max=.05;items.forEach(function(it){it.pmf.forEach(function(e){max=Math.max(max,e.p)})});if(counts)counts.forEach(function(c){for(var k in c.counts)max=Math.max(max,c.total?c.counts[k]/c.total:0)});return max*1.22}
+  function drawAxes(ctx,r,rg,yMax){ctx.save();ctx.strokeStyle=C.grid;ctx.lineWidth=1;for(var k=rg.min;k<=rg.max;k++){var x=mapX(r,k,rg);ctx.beginPath();ctx.moveTo(x,r.t);ctx.lineTo(x,r.b);ctx.stroke();if((rg.max-rg.min)<=16||k%2===0){ctx.fillStyle="#6B7280";ctx.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";ctx.textAlign="center";ctx.fillText(k,x,r.b+17)}}[0,yMax/2,yMax].forEach(function(v){var y=mapY(r,v,yMax);ctx.beginPath();ctx.moveTo(r.l,y);ctx.lineTo(r.r,y);ctx.stroke();ctx.fillStyle="#6B7280";ctx.font="11px ui-monospace,SFMono-Regular,Consolas,monospace";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(fmtShort(v),r.l-9,y)});ctx.strokeStyle=C.navy;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(r.l,r.t);ctx.lineTo(r.l,r.b);ctx.lineTo(r.r,r.b);ctx.stroke();ctx.restore()}
+  function barWidth(r,rg){return Math.max(6,Math.min(26,r.w/(rg.max-rg.min+1)*.62))}
+  function drawTheory(ctx,r,rg,yMax,it){var bw=barWidth(r,rg);ctx.save();ctx.strokeStyle=it.color;ctx.lineWidth=2;it.pmf.forEach(function(e){if(e.k<rg.min||e.k>rg.max)return;var x=mapX(r,e.k,rg),y=mapY(r,e.p,yMax);ctx.strokeRect(x-bw/2,y,bw,r.b-y);ctx.beginPath();ctx.arc(x,y,3.5,0,TAU);ctx.fillStyle="#fffdf9";ctx.fill();ctx.stroke()});ctx.restore()}
+  function drawEmpirical(ctx,r,rg,yMax,c,color){if(!c.total)return;var bw=barWidth(r,rg);ctx.save();ctx.fillStyle=color;ctx.strokeStyle="rgba(124,63,26,.42)";for(var k=rg.min;k<=rg.max;k++){var h=(c.counts[k]||0)/c.total,x=mapX(r,k,rg),y=mapY(r,h,yMax);ctx.fillRect(x-bw/2,y,bw,r.b-y);ctx.strokeRect(x-bw/2,y,bw,r.b-y)}ctx.restore()}
+  function drawMeanSd(ctx,r,rg,it){var x0=mapX(r,it.mean-it.sd,rg),x1=mapX(r,it.mean+it.sd,rg),xm=mapX(r,it.mean,rg),y=r.b-10,labelX=clamp((clamp(x0,r.l,r.r)+clamp(x1,r.l,r.r))/2,r.l+50,r.r-50);line(ctx,{x:x0,y:y},{x:x1,y:y},it.color,5);line(ctx,{x:xm,y:r.t+8},{x:xm,y:r.b},it.color,1.6,[5,4]);label(ctx,"mean ± 1 SD",labelX,y-16,it.color)}
+  function marker(ctx,r,rg,yMax,k,it,text){var x=mapX(r,k,rg),y=mapY(r,pmfAt(it.pmf,k),yMax);line(ctx,{x:x,y:r.b},{x:x,y:y},C.active,2.2,[4,4]);ctx.save();ctx.fillStyle=C.active;ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();if(it.shape==="square")ctx.rect(x-6,y-6,12,12);else if(it.shape==="triangle"){ctx.moveTo(x,y-8);ctx.lineTo(x+8,y+7);ctx.lineTo(x-8,y+7);ctx.closePath()}else ctx.arc(x,y,6,0,TAU);ctx.fill();ctx.stroke();ctx.restore();labelBox(ctx,text,x+48,y-18,C.active)}
+  function drawPlotStack(ctx,canvas,isSampling){resizeCanvas(canvas);var sz=size(canvas),w=sz.w,h=sz.h;ctx.clearRect(0,0,w,h);var spec=activeSpec(),rg=axisRange(spec,isSampling),ps=panels(w,h),arrs=[state.xs,state.ys,state.ss],counts=arrs.map(function(a){return countsFor(a,rg)}),yMax=yMaxFor(spec.items,isSampling?counts:null),curr=state.current?[state.current.x,state.current.y,state.current.s]:[null,null,null];ps.forEach(function(r,i){drawAxes(ctx,r,rg,yMax);if(isSampling&&arrs[i].length)drawEmpirical(ctx,r,rg,yMax,counts[i],["rgba(46,67,116,.30)","rgba(63,111,94,.30)","rgba(224,121,63,.36)"][i]);if(!isSampling||state.showTheory)drawTheory(ctx,r,rg,yMax,spec.items[i]);if(!isSampling||state.showMeanSd)drawMeanSd(ctx,r,rg,spec.items[i]);label(ctx,(isSampling?(i===0?"sampled X":i===1?"sampled Y":"sampled S = X + Y"):spec.items[i].label),r.l+155,r.t+18,spec.items[i].color);if(isSampling&&state.current)marker(ctx,r,rg,yMax,curr[i],spec.items[i],(i===0?"x_i = ":i===1?"y_i = ":"s_i = ")+curr[i])});label(ctx,"shared integer outcome scale",w/2,h-16,C.navy)}
+  function drawCompare(){drawPlotStack(cCompare,els.compareCanvas,false)}
+  function drawSampling(){drawPlotStack(cSampling,els.samplingCanvas,true)}
+  function supportText(it){return "["+it.support[0]+", "+it.support[1]+"]"}
+  function card(title,color,it){return '<div class="dist-card"><h3 style="color:'+color+'">'+title+'</h3><div class="read-row"><span>Support</span><strong class="mono">'+supportText(it)+'</strong></div><div class="read-row"><span>Theory mean</span><strong class="mono">'+fmtShort(it.mean)+'</strong></div><div class="read-row"><span>Theory variance</span><strong class="mono">'+fmtShort(it.variance)+'</strong></div><div class="read-row"><span>Theory SD</span><strong class="mono">'+fmtShort(it.sd)+'</strong></div></div>'}
+  function sampleCard(title,color,it,emp){return '<div class="dist-card"><h3 style="color:'+color+'">'+title+'</h3><div class="read-row"><span>Theory mean</span><strong class="mono">'+fmtShort(it.mean)+'</strong></div><div class="read-row"><span>Theory SD</span><strong class="mono">'+fmtShort(it.sd)+'</strong></div><div class="read-row"><span>Sample mean</span><strong class="mono">'+(emp?fmtShort(emp.mean):"-")+'</strong></div><div class="read-row"><span>Sample SD</span><strong class="mono">'+(emp?fmtShort(emp.sd):"-")+'</strong></div></div>'}
+  function updateReadouts(){var spec=activeSpec(),sx=stats(state.xs),sy=stats(state.ys),ss=stats(state.ss);els.compareReadout.innerHTML='<h2>Live comparison</h2>'+card("X",C.x,spec.items[0])+card("Y",C.y,spec.items[1])+card("S = X + Y",C.s,spec.items[2]);els.sampleReadout.innerHTML='<h2>Empirical summaries</h2><div class="read-row"><span>Sample pairs</span><strong class="mono">'+state.ss.length.toLocaleString()+'</strong></div>'+sampleCard("X",C.x,spec.items[0],sx)+sampleCard("Y",C.y,spec.items[1],sy)+sampleCard("S = X + Y",C.s,spec.items[2],ss);els.formulaCard.innerHTML='<h2>Formula notes</h2>'+spec.formula.map(function(s){return '<p class="formula-line math">'+s+'</p>'}).join('')+'<p>For independent random variables, means add and variances add. The shape of the pmf depends on the distribution family.</p>';if(state.current){els.sampleEquation.innerHTML='<span class="eq-term">x<sub>i</sub> = '+state.current.x+'</span><span>+</span><span class="eq-term">y<sub>i</sub> = '+state.current.y+'</span><span>=</span><span class="eq-term">s<sub>i</sub> = '+state.current.s+'</span>'}else els.sampleEquation.innerHTML='Each draw creates x<sub>i</sub>, y<sub>i</sub>, and s<sub>i</sub> = x<sub>i</sub> + y<sub>i</sub>.';els.status.textContent=state.ss.length?"Empirical bars show count at k divided by total sample count.":"Changing family or parameters clears samples and recomputes the theoretical pmfs."}
+  function controlHtml(key,label,min,max,step,val){return '<div class="control-block"><label class="label" for="'+key+'Slider">'+label+'</label><div class="slider-row"><input id="'+key+'Slider" data-param="'+key+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" aria-label="'+label+'"><input class="value-pill mono" id="'+key+'Input" data-param="'+key+'" type="number" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" aria-label="'+label+' numeric input"></div></div>'}
+  function renderControls(){var p=state[state.family],html="";if(state.family==="dice"){html='<div class="note-card"><h2>Fixed parameters</h2><p>Both variables are fair six-sided dice.</p></div>'}else if(state.family==="binomial"){html+=controlHtml("n1","n1",1,20,1,p.n1)+controlHtml("p1","p1",.05,.95,.05,p.p1)+controlHtml("n2","n2",1,20,1,p.n2)+controlHtml("p2","p2",.05,.95,.05,p.p2)}else{html+=controlHtml("lambda1","lambda1",.5,10,.1,p.lambda1)+controlHtml("lambda2","lambda2",.5,10,.1,p.lambda2)}els.paramControls.innerHTML=html;els.paramControls.querySelectorAll("input").forEach(function(input){input.addEventListener(input.type==="range"?"input":"change",function(){setParam(input.getAttribute("data-param"),Number(input.value))});input.addEventListener("keydown",function(e){if(e.key==="Enter")setParam(input.getAttribute("data-param"),Number(input.value))})})}
+  function setParam(key,value){if(!isFinite(value))return;stopSimulation();clearSamples();var p=state[state.family];if(/^n/.test(key))value=Math.round(value);p[key]=value;renderControls();render()}
+  function syncDisplayToggles(){els.showTheory.setAttribute("aria-pressed",state.showTheory?"true":"false");els.showMeanSd.setAttribute("aria-pressed",state.showMeanSd?"true":"false")}
+  function render(){document.querySelectorAll("[data-family]").forEach(function(b){var a=b.getAttribute("data-family")===state.family;b.classList.toggle("active",a);b.setAttribute("aria-selected",a?"true":"false")});document.querySelectorAll("[data-mode]").forEach(function(b){var a=b.getAttribute("data-mode")===state.mode;b.classList.toggle("active",a);b.setAttribute("aria-selected",a?"true":"false")});document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===state.mode+"View")});els.samplingTools.classList.toggle("active",state.mode==="sampling");syncDisplayToggles();drawCompare();drawSampling();updateReadouts()}
+  function drawBatch(total){stopSimulation();if(prefersReduced){for(var i=0;i<total;i++)addTriplet(makeTriplet());render();return}var animated=Math.min(total,total>=200?5:total>=20?4:1),done=0;function step(){addTriplet(makeTriplet());done++;render();if(done<animated)state.batchTimer=setTimeout(step,240);else{for(var i=done;i<total;i++)addTriplet(makeTriplet());state.batchTimer=null;render()}}step()}
+  function togglePlay(){if(state.playing){stopSimulation();return}state.playing=true;els.playSamples.textContent="Pause";els.playSamples.classList.add("active");els.playSamples.setAttribute("aria-pressed","true");function one(){addTriplet(makeTriplet());render()}one();state.playTimer=setInterval(one,prefersReduced?160:500)}
+  document.querySelectorAll("[data-family]").forEach(function(btn){btn.addEventListener("click",function(){stopSimulation();clearSamples();state.family=btn.getAttribute("data-family");renderControls();render()})});
+  document.querySelectorAll("[data-mode]").forEach(function(btn){btn.addEventListener("click",function(){stopSimulation();state.mode=btn.getAttribute("data-mode");render()})});
+  document.getElementById("resetParams").addEventListener("click",function(){stopSimulation();clearSamples();state.binomial={n1:5,p1:.4,n2:5,p2:.4};state.poisson={lambda1:2,lambda2:3};renderControls();render()});
+  document.getElementById("draw1").addEventListener("click",function(){drawBatch(1)});document.getElementById("draw20").addEventListener("click",function(){drawBatch(20)});document.getElementById("draw200").addEventListener("click",function(){drawBatch(200)});document.getElementById("draw1000").addEventListener("click",function(){drawBatch(1000)});els.showTheory.addEventListener("click",function(){state.showTheory=!state.showTheory;render()});els.showMeanSd.addEventListener("click",function(){state.showMeanSd=!state.showMeanSd;render()});els.playSamples.addEventListener("click",togglePlay);document.getElementById("clearSamples").addEventListener("click",function(){stopSimulation();clearSamples();render()});window.addEventListener("resize",render);
+  function setupLearningPopovers(){var triggers=Array.prototype.slice.call(document.querySelectorAll("[data-popover]"));if(!triggers.length)return;var popover=document.createElement("div");popover.id="learningPopover";popover.className="learning-popover";popover.setAttribute("role","tooltip");document.body.appendChild(popover);var active=null;function positionPopover(trigger){var rect=trigger.getBoundingClientRect();popover.style.left="0px";popover.style.top="0px";var gap=8,margin=10,popRect=popover.getBoundingClientRect();var left=rect.left+rect.width/2-popRect.width/2;left=clamp(left,margin,window.innerWidth-popRect.width-margin);var top=rect.bottom+gap;if(top+popRect.height+margin>window.innerHeight)top=rect.top-popRect.height-gap;top=clamp(top,margin,window.innerHeight-popRect.height-margin);popover.style.left=left+"px";popover.style.top=top+"px"}function openPopover(trigger){if(active&&active!==trigger)active.setAttribute("aria-expanded","false");active=trigger;popover.textContent=trigger.getAttribute("data-popover")||"";popover.classList.add("show");trigger.setAttribute("aria-expanded","true");positionPopover(trigger)}function closePopover(trigger){if(trigger&&active!==trigger)return;if(active)active.setAttribute("aria-expanded","false");active=null;popover.classList.remove("show")}triggers.forEach(function(trigger){trigger.classList.add("popover-trigger");if(!trigger.hasAttribute("tabindex")&&!/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(trigger.tagName))trigger.tabIndex=0;trigger.setAttribute("aria-describedby",popover.id);trigger.setAttribute("aria-expanded","false");trigger.addEventListener("mouseenter",function(){openPopover(trigger)});trigger.addEventListener("mouseleave",function(){closePopover(trigger)});trigger.addEventListener("focus",function(){openPopover(trigger)});trigger.addEventListener("blur",function(){closePopover(trigger)});trigger.addEventListener("click",function(e){openPopover(trigger);if(trigger.tagName==="BUTTON")setTimeout(function(){closePopover(trigger)},900);else e.stopPropagation()})});document.addEventListener("click",function(e){if(!active)return;if(active.contains(e.target))return;closePopover()});document.addEventListener("keydown",function(e){if(e.key==="Escape")closePopover()});window.addEventListener("resize",function(){if(active)positionPopover(active)});window.addEventListener("scroll",function(){if(active)positionPopover(active)},true)}
+  function feedbackContext(){return ["Course: 10.022 Modelling Uncertainty","Week: 9","Class: 2","Demo: Add Two Discrete Random Variables","Family: "+activeSpec().name,"Mode: "+(state.mode==="sampling"?"Generate by samples":"Compare"),"Sample count: "+state.ss.length].join("\n")}
+  function initFeedback(){var overlay=document.getElementById("fbOverlay"),btn=document.getElementById("fbButton"),close=document.getElementById("fbClose"),form=document.getElementById("fbForm"),copy=document.getElementById("fbCopy"),status=document.getElementById("fbStatus"),prepared=document.getElementById("fbPreparedText");function preparedText(){var cat=document.getElementById("fbCategory").value||"General feedback",desc=document.getElementById("fbDescription").value.trim(),exp=document.getElementById("fbExpected").value.trim();return feedbackContext()+"\n\nFeedback type: "+cat+"\n\nYour feedback:\n"+desc+(exp?"\n\nWhat could make it better?\n"+exp:"")}function open(){overlay.classList.add("show");document.getElementById("fbDescription").focus()}function shut(){overlay.classList.remove("show")}btn.addEventListener("click",open);close.addEventListener("click",shut);overlay.addEventListener("click",function(e){if(e.target===overlay)shut()});form.addEventListener("submit",function(e){e.preventDefault();var body=preparedText();var cat=document.getElementById("fbCategory").value||"General";var subject=FEEDBACK_EMAIL_CONFIG.subjectPrefix+" [Discrete Sum] ["+cat+"]";window.location.href="mailto:"+FEEDBACK_EMAIL_CONFIG.recipient+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);prepared.textContent=body;prepared.classList.add("show");status.textContent="Email draft opened. If it did not open, use Copy feedback."});copy.addEventListener("click",function(){var text=preparedText();prepared.textContent=text;prepared.classList.add("show");if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){status.textContent="Feedback copied."}).catch(function(){status.textContent="Copy the prepared text below."});else status.textContent="Copy the prepared text below."})}
+  function initEditLabels(){if(!/[?&]edit=1\b/.test(location.search))return;document.documentElement.classList.add("edit-on");document.querySelectorAll("[data-edit-id]").forEach(function(node){var badge=document.createElement("span");badge.className="edit-badge";badge.textContent=node.getAttribute("data-edit-id");badge.addEventListener("click",function(e){e.stopPropagation();if(navigator.clipboard)navigator.clipboard.writeText(badge.textContent)});node.insertBefore(badge,node.firstChild)})}
+  renderControls();setupLearningPopovers();initFeedback();initEditLabels();render();
+})();
+</script>
+</body>
+</html>
